@@ -1,4 +1,5 @@
 module.exports = {
   UserService: require("./user.service"),
   StudentService: require("./student.service"),
+  ProfessorService: require("./professor.service"),
 };

@@ -1,17 +1,26 @@
 const { DataTypes } = require("sequelize");
 
-module.exports = class Professor {
+module.exports = class ProfessorModel {
   constructor({ Sequelize }) {
     this.sequelize = Sequelize;
     this.defineModel();
   }
   defineModel() {
-    Professor = this.sequelize.define(
+    this.Professor = this.sequelize.define(
       "Professor",
       {
         name: {
           type: DataTypes.STRING,
           allowNull: false,
+        },
+        cedula: {
+          type: DataTypes.STRING,
+          allowNull: false,
+          unique: true,
+        },
+        status: {
+          type: DataTypes.STRING,
+          defaultValue: "active",
         },
         email: {
           type: DataTypes.STRING,
@@ -21,7 +30,7 @@ module.exports = class Professor {
         phone: {
           type: DataTypes.STRING,
         },
-        createdAt: {
+        created_at: {
           type: DataTypes.DATE,
           defaultValue: DataTypes.NOW,
         },
@@ -33,6 +42,6 @@ module.exports = class Professor {
     );
   }
   syncModel() {
-    return this.Audit.sync();
+    return this.Professor.sync();
   }
 };
