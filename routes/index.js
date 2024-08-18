@@ -3,12 +3,13 @@ const cors = require("cors");
 const morgan = require("morgan");
 
 const { ErrorMiddleware } = require("../middleware");
+const { StudentRoutes } = require("./api");
 // const swaggerUI = require("swagger-ui-express");
 //const authMiddleware = require("../middlewares/auth.middleware");
 // const { SWAGGER_PATH } = require("../config");
 //const swaggerDocument = require(SWAGGER_PATH);
 
-module.exports = function ({ UserRoutes }) {
+module.exports = function ({ UserRoutes, StudentRoutes }) {
   const router = express.Router();
   const apiRouter = express.Router();
 
@@ -17,8 +18,9 @@ module.exports = function ({ UserRoutes }) {
     .use(cors())
     .use(morgan("dev"))
     .use(express.urlencoded({ extended: true }));
-    
+
   apiRouter.use("/user", UserRoutes);
+  apiRouter.use("/student", StudentRoutes);
 
   router.use("/v1/api", apiRouter);
   router.use("/", (req, res) => {

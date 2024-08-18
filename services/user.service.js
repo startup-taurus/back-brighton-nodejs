@@ -28,7 +28,6 @@ module.exports = class UserService extends BaseService {
   });
 
   getAllUsers = catchServiceAsync(async (page = 1, limit = 10) => {
-    validateParameters({ page, limit });
     let limitNumber = parseInt(limit);
     let pageNumber = parseInt(page);
     const data = await _user.findAndCountAll({
@@ -45,7 +44,7 @@ module.exports = class UserService extends BaseService {
   });
 
   getUser = catchServiceAsync(async (id) => {
-    const user = await _user.findOne({ where: { id: id } });
+    const user = await _user.findByPk(id);
     if (!user) {
       throw new AppError("User not found", 404);
     }

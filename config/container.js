@@ -8,19 +8,19 @@ const config = require(".");
 const Routes = require("../routes");
 
 //Services
-const { UserService } = require("../services");
+const { UserService, StudentService } = require("../services");
 
 //Controllers
-const { UserController } = require("../controllers");
+const { UserController, StudentController } = require("../controllers");
 
 //Startup
 const { Database, Server } = require("../startup");
 
 //Routes
-const { UserRoutes } = require("../routes/api/index");
+const { UserRoutes, StudentRoutes } = require("../routes/api/index");
 
 //Models
-const { User } = require("../models");
+const { User, Student } = require("../models");
 
 const { protect } = require("../middleware/authMiddleware");
 const AuthUtils = require("../utils/auth");
@@ -38,18 +38,24 @@ container
   .register({
     //Configuración de los servicios
     UserService: asClass(UserService).singleton(),
+    StudentService: asClass(StudentService).singleton(),
   })
   .register({
     //Configuración de los controladores
     UserController: asClass(UserController.bind(UserController)).singleton(),
+    StudentController: asClass(
+      StudentController.bind(StudentController)
+    ).singleton(),
   })
   .register({
     //Configuración de rutas
     UserRoutes: asFunction(UserRoutes).singleton(),
+    StudentRoutes: asFunction(StudentRoutes).singleton(),
   })
   .register({
     //Configuración de modelos
     User: asClass(User).singleton(),
+    Student: asClass(Student).singleton(),
   })
   .register({
     //middlewares
