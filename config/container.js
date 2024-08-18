@@ -12,6 +12,7 @@ const {
   UserService,
   StudentService,
   ProfessorService,
+  PaymentService,
 } = require("../services");
 
 //Controllers
@@ -19,6 +20,7 @@ const {
   UserController,
   StudentController,
   ProfessorController,
+  PaymentController,
 } = require("../controllers");
 
 //Startup
@@ -29,10 +31,11 @@ const {
   UserRoutes,
   StudentRoutes,
   ProfessorRoutes,
+  PaymentRoutes,
 } = require("../routes/api/index");
 
 //Models
-const { User, Student, Professor } = require("../models");
+const { User, Student, Professor, Payment } = require("../models");
 
 const { protect } = require("../middleware/authMiddleware");
 const AuthUtils = require("../utils/auth");
@@ -52,6 +55,7 @@ container
     UserService: asClass(UserService).singleton(),
     StudentService: asClass(StudentService).singleton(),
     ProfessorService: asClass(ProfessorService).singleton(),
+    PaymentService: asClass(PaymentService).singleton(),
   })
   .register({
     //Configuración de los controladores
@@ -62,18 +66,23 @@ container
     ProfessorController: asClass(
       ProfessorController.bind(ProfessorController)
     ).singleton(),
+    PaymentController: asClass(
+      PaymentController.bind(PaymentController)
+    ).singleton(),
   })
   .register({
     //Configuración de rutas
     UserRoutes: asFunction(UserRoutes).singleton(),
     StudentRoutes: asFunction(StudentRoutes).singleton(),
     ProfessorRoutes: asFunction(ProfessorRoutes).singleton(),
+    PaymentRoutes: asFunction(PaymentRoutes).singleton(),
   })
   .register({
     //Configuración de modelos
     User: asClass(User).singleton(),
     Student: asClass(Student).singleton(),
     Professor: asClass(Professor).singleton(),
+    Payment: asClass(Payment).singleton(),
   })
   .register({
     //middlewares
