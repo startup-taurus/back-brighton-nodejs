@@ -20,6 +20,12 @@ module.exports = class ProfessorController extends BaseController {
     return appResponse(res, result);
   });
 
+  getProfessorCourses = catchControllerAsync(async (req, res) => {
+    const { id } = req.params;
+    const result = await _professorService.getProfessorCourses(id);
+    return appResponse(res, result);
+  });
+
   createProfessor = catchControllerAsync(async (req, res) => {
     const body = req.body;
     const result = await _professorService.createProfessor(body);

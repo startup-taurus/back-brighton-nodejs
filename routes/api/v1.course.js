@@ -8,6 +8,10 @@ module.exports = function ({ CourseController }) {
     "/get-one-with-students/:id",
     CourseController.getCourseWithStudents
   );
+  router.get(
+    "/get-all-with-professors",
+    CourseController.getAllCoursesWithProfessors
+  );
   router.post("/create", CourseController.createCourse);
   router.put("/update/:id", CourseController.updateCourse);
   return router;

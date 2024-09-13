@@ -34,23 +34,67 @@ module.exports = class ProfessorService extends BaseService {
       include: [
         {
           model: _course,
-          as: 'courses',
+          as: "courses",
           include: [
             {
               model: _student,
-              as: 'students',
+              as: "students",
             },
           ],
         },
       ],
     });
-  
+
     if (!professor) {
       throw new AppError("Professor not found", 404);
     }
-  
+
     return { data: professor };
-  });  
+  });
+
+  getProfessorCourses = catchServiceAsync(async (professorId) => {
+    const professor = await _professor.findByPk(professorId, {
+      include: [
+        {
+          model: _course,
+          as: "courses",
+          include: [
+            {
+              model: _student,
+              as: "students",
+              through: { attributes: [] },
+            },
+          ],
+        },
+      ],
+    });
+
+    if (!professor) {
+      throw new AppError("Professor not found", 404);
+    }
+
+    const coursesWithStudentCount = professor.courses.map((course) => ({
+      course_name: course.course_name,
+      course_number: course.course_number,
+      student_count: course.students.length,
+    }));
+
+    const totalCourses = professor.courses.length;
+
+    const totalStudents = professor.courses.reduce(
+      (acc, course) => acc + course.students.length,
+      0
+    );
+
+    return {
+      data: {
+        professor_name: professor.name,
+        total_courses: totalCourses,
+        total_students: totalStudents,
+        courses: coursesWithStudentCount,
+      },
+    };
+  });
 
   createProfessor = catchServiceAsync(async (body) => {
     const { name, cedula, email, status } = body;

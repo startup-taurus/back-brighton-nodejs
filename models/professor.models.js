@@ -1,14 +1,24 @@
 const { DataTypes } = require("sequelize");
 
 module.exports = class ProfessorModel {
-  constructor({ Sequelize }) {
+  constructor({ Sequelize, User }) {
     this.sequelize = Sequelize;
+    this.User = User; // Referencia al modelo de 'user'
     this.defineModel();
   }
+
   defineModel() {
     this.Professor = this.sequelize.define(
       "professor",
       {
+        user_id: {
+          type: DataTypes.INTEGER,
+          references: {
+            model: this.User, // Relación con la tabla 'user'
+            key: "id",
+          },
+          allowNull: false,
+        },
         cedula: {
           type: DataTypes.STRING,
           allowNull: false,
@@ -41,6 +51,7 @@ module.exports = class ProfessorModel {
       }
     );
   }
+
   syncModel() {
     return this.Professor.sync();
   }

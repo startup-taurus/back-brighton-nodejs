@@ -2,14 +2,16 @@ const catchServiceAsync = require("../utils/catch-service-async");
 const BaseService = require("./base.service");
 const AppError = require("../utils/app-error");
 const { validateParameters } = require("../utils/utils");
+let _user = null;
 let _course = null;
 let _professor = null;
 let _student = null;
 let _sequelize = null;
 
 module.exports = class CourseService extends BaseService {
-  constructor({ Sequelize, Course, Professor, Student }) {
+  constructor({ Sequelize, Course, Professor, Student, User }) {
     super(Course);
+    _user = User.User;
     _course = Course.Course;
     _professor = Professor.Professor;
     _student = Student.Student;
@@ -22,12 +24,6 @@ module.exports = class CourseService extends BaseService {
     const result = await _course.findAndCountAll({
       limit: limitNumber,
       offset: limitNumber * (pageNumber - 1),
-      include: [
-        {
-          model: _professor,
-          attributes: ["name"],
-        },
-      ],
     });
 
     return {
@@ -39,14 +35,7 @@ module.exports = class CourseService extends BaseService {
   });
 
   getCourse = catchServiceAsync(async (id) => {
-    const course = await _course.findByPk(id, {
-      include: [
-        {
-          model: _professor,
-          attributes: ["name"],
-        },
-      ],
-    });
+    const course = await _course.findByPk(id);
     if (!course) {
       throw new AppError("Course not found", 404);
     }
@@ -54,24 +43,70 @@ module.exports = class CourseService extends BaseService {
   });
 
   getCourseWithStudents = catchServiceAsync(async (courseId) => {
-    const courseWithStudentsAndProfessor = await _sequelize.query(
-      `SELECT c.*, p.id as professor_id, p.name as professor_name, s.id as student_id, s.name as student_name
-       FROM course c
-       LEFT JOIN professor p ON c.professor_id = p.id
-       LEFT JOIN course_student cs ON c.id = cs.course_id
-       LEFT JOIN student s ON cs.student_id = s.id
-       WHERE c.id = :courseId`,
-      {
-        replacements: { courseId },
-        type: _sequelize.QueryTypes.SELECT,
-      }
-    );
+    const course = await _course.findByPk(courseId, {
+      include: [
+        {
+          model: _student,
+          as: "students",
+          include: [
+            {
+              model: _user,
+              as: "user",
+              attributes: ["id", "name", "status"],
+            },
+          ],
+          through: { attributes: [] },
+        },
+      ],
+    });
 
-    if (courseWithStudentsAndProfessor.length === 0) {
-      throw new Error("Course not found");
+    if (!course) {
+      throw new AppError("Course not found", 404);
     }
 
-    return { data: courseWithStudentsAndProfessor };
+    const studentList = course.students.map((student) => ({
+      id: student.user.id,
+      name: student.user.name,
+      status: student.user.status,
+    }));
+
+    return {
+      data: {
+        course_name: course.course_name,
+        course_number: course.course_number,
+        total_students: course.students.length,
+        students: studentList,
+      },
+    };
+  });
+
+  getAllCoursesWithProfessors = catchServiceAsync(async (page = 1, limit = 10) => {
+    const courses = await _course.findAll({
+      include: [
+        {
+          model: _professor,
+          as: 'professor',
+          include: [
+            {
+              model: _user, 
+              as: 'user',
+              attributes: ['name'], 
+            },
+          ],
+        },
+      ],
+    });
+  
+    if (!courses || courses.length === 0) {
+      throw new AppError("No courses found", 404);
+    }
+  
+    return {
+      data: {
+        result: courses,
+        totalCount: courses.length,
+      },
+    };
   });
 
   createCourse = catchServiceAsync(async (body) => {
