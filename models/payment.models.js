@@ -1,15 +1,16 @@
 const { DataTypes } = require("sequelize");
 let _sequelize = null;
-let _Student = null;
+let _student = null;
+
 module.exports = class PaymentModel {
   constructor({ Sequelize, Student }) {
     _sequelize = Sequelize;
-    _Student = Student;
+    _student = Student;
     this.defineModel();
   }
   defineModel() {
     this.Payment = _sequelize.define(
-      "Payment",
+      "payment",
       {
         payment_date: {
           type: DataTypes.DATE,
@@ -27,13 +28,23 @@ module.exports = class PaymentModel {
           type: DataTypes.DECIMAL(5, 2),
           defaultValue: 0,
         },
+        observations: {
+          type: DataTypes.TEXT,
+        },
+        student_id: {
+          type: DataTypes.INTEGER,
+          allowNull: false,
+          references: {
+            model: _student,
+            key: 'id',
+          },
+        },
       },
       {
         tableName: "payment",
         timestamps: false,
       }
     );
-    this.Payment.belongsTo(_Student.Student, { foreignKey: "student_id" });
   }
   syncModel() {
     return this.Payment.sync();

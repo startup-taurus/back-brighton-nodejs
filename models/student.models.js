@@ -1,33 +1,31 @@
 const { DataTypes } = require("sequelize");
 let _sequelize = null;
+
 module.exports = class StudentModel {
   constructor({ Sequelize }) {
     _sequelize = Sequelize;
     this.defineModel();
   }
+
   defineModel() {
     this.Student = _sequelize.define(
       "student",
       {
-        name: {
-          type: DataTypes.STRING,
+        user_id: {
+          type: DataTypes.INTEGER,
           allowNull: false,
+          references: {
+            model: "user", // Hace referencia a la tabla 'user'
+            key: "id",
+          },
         },
         cedula: {
           type: DataTypes.STRING,
           allowNull: false,
           unique: true,
         },
-        last_name: {
-          type: DataTypes.STRING,
-          allowNull: false,
-        },
         level: {
           type: DataTypes.STRING,
-          allowNull: false,
-        },
-        course_id: {
-          type: DataTypes.INTEGER,
           allowNull: false,
         },
         profession: {
@@ -48,6 +46,18 @@ module.exports = class StudentModel {
           type: DataTypes.BOOLEAN,
           defaultValue: false,
         },
+        emergency_contact_name: {
+          type: DataTypes.STRING,
+          allowNull: false,
+        },
+        emergency_contact_phone: {
+          type: DataTypes.STRING,
+          allowNull: false,
+        },
+        emergency_contact_relationship: {
+          type: DataTypes.STRING,
+          allowNull: false,
+        },
         created_at: {
           type: DataTypes.DATE,
           defaultValue: DataTypes.NOW,
@@ -59,6 +69,7 @@ module.exports = class StudentModel {
       }
     );
   }
+
   syncModel() {
     return this.Student.sync();
   }

@@ -7,12 +7,8 @@ module.exports = class ProfessorModel {
   }
   defineModel() {
     this.Professor = this.sequelize.define(
-      "Professor",
+      "professor",
       {
-        name: {
-          type: DataTypes.STRING,
-          allowNull: false,
-        },
         cedula: {
           type: DataTypes.STRING,
           allowNull: false,
@@ -29,6 +25,10 @@ module.exports = class ProfessorModel {
         },
         phone: {
           type: DataTypes.STRING,
+        },
+        hourly_rate: {
+          type: DataTypes.DECIMAL(10, 2),
+          allowNull: false,
         },
         created_at: {
           type: DataTypes.DATE,

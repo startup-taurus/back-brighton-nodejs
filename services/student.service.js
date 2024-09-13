@@ -3,18 +3,33 @@ const BaseService = require("./base.service");
 const AppError = require("../utils/app-error");
 const { validateParameters } = require("../utils/utils");
 let _student = null;
+let _course = null;
+let _courseStudent = null;
+
 module.exports = class StudentService extends BaseService {
-  constructor({ Student }) {
+  constructor({ Student, Course, CourseStudent }) {
     super(Student);
     _student = Student.Student;
+    _course = Course.Course;
+    _courseStudent = CourseStudent.CourseStudent;
   }
 
   getAllStudents = catchServiceAsync(async (page, limit) => {
     let limitNumber = parseInt(limit);
     let pageNumber = parseInt(page);
     const data = await _student.findAndCountAll({
-      limitNumber,
+      limit: limitNumber,
       offset: limitNumber * (pageNumber - 1),
+      include: [
+        {
+          model: _course,
+          as: "courses",
+          attributes: ["course_name"],
+          through: {
+            attributes: [],
+          },
+        },
+      ],
     });
     return {
       data: {
@@ -47,6 +62,12 @@ module.exports = class StudentService extends BaseService {
     delete body.pendingPayments;
 
     const student = await _student.create(body);
+
+    await _courseStudent.create({
+      course_id: student.course_id,
+      student_id: student.id,
+      enrollment_date: new Date(),
+    });
 
     return { data: student };
   });

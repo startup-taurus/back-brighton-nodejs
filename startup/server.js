@@ -4,10 +4,7 @@ let _express = null;
 let _config = null;
 let _server = null;
 module.exports = class Server {
-  constructor({
-    config,
-    router,
-  }) {
+  constructor({ config, router, Association }) {
     _config = config;
     _express = express().use(router);
     _server = http.createServer(_express);

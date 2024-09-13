@@ -13,6 +13,7 @@ const {
   StudentService,
   ProfessorService,
   PaymentService,
+  CourseService,
 } = require("../services");
 
 //Controllers
@@ -21,6 +22,7 @@ const {
   StudentController,
   ProfessorController,
   PaymentController,
+  CourseController,
 } = require("../controllers");
 
 //Startup
@@ -32,10 +34,21 @@ const {
   StudentRoutes,
   ProfessorRoutes,
   PaymentRoutes,
+  CourseRoutes,
 } = require("../routes/api/index");
 
 //Models
-const { User, Student, Professor, Payment } = require("../models");
+const {
+  Association,
+  User,
+  Student,
+  Professor,
+  Payment,
+  Course,
+  CourseStudent,
+  Attendance,
+  Grades,
+} = require("../models");
 
 const { protect } = require("../middleware/authMiddleware");
 const AuthUtils = require("../utils/auth");
@@ -56,6 +69,7 @@ container
     StudentService: asClass(StudentService).singleton(),
     ProfessorService: asClass(ProfessorService).singleton(),
     PaymentService: asClass(PaymentService).singleton(),
+    CourseService: asClass(CourseService).singleton(),
   })
   .register({
     //Configuración de los controladores
@@ -69,6 +83,9 @@ container
     PaymentController: asClass(
       PaymentController.bind(PaymentController)
     ).singleton(),
+    CourseController: asClass(
+      CourseController.bind(CourseController)
+    ).singleton(),
   })
   .register({
     //Configuración de rutas
@@ -76,6 +93,11 @@ container
     StudentRoutes: asFunction(StudentRoutes).singleton(),
     ProfessorRoutes: asFunction(ProfessorRoutes).singleton(),
     PaymentRoutes: asFunction(PaymentRoutes).singleton(),
+    CourseRoutes: asFunction(CourseRoutes).singleton(),
+  })
+  .register({
+    //Configuración de las asociaciones
+    Association: asClass(Association).singleton(),
   })
   .register({
     //Configuración de modelos
@@ -83,6 +105,10 @@ container
     Student: asClass(Student).singleton(),
     Professor: asClass(Professor).singleton(),
     Payment: asClass(Payment).singleton(),
+    Course: asClass(Course).singleton(),
+    CourseStudent: asClass(CourseStudent).singleton(),
+    Attendance: asClass(Attendance).singleton(),
+    Grades: asClass(Grades).singleton(),
   })
   .register({
     //middlewares

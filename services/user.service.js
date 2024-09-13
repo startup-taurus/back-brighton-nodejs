@@ -13,17 +13,35 @@ module.exports = class UserService extends BaseService {
 
   login = catchServiceAsync(async (username, password) => {
     validateParameters({ username, password });
+
     const user = await _user.findOne({ where: { username: username } });
     if (!user) {
       throw new AppError("User not found", 404);
     }
+
+    if (user.failed_attempts >= 5) {
+      throw new AppError(
+        "Account is locked due to too many failed login attempts",
+        403
+      );
+    }
+
     const isPasswordValid = await _authUtils.comparePassword(
       password,
       user.password
     );
+    delete user.dataValues.password;
+
     if (!isPasswordValid) {
+      await user.update({ failed_attempts: user.failed_attempts + 1 });
       throw new AppError("Password incorrect", 400);
     }
+
+    await user.update({
+      failed_attempts: 0,
+      last_login: new Date(),
+    });
+
     return { data: user };
   });
 
@@ -63,8 +81,9 @@ module.exports = class UserService extends BaseService {
   updateUser = catchServiceAsync(async (id, body) => {
     const { name, username, email, password, role, status } = body;
     validateParameters({ name, username, email, password, role, status });
+    const hashedPassword = await _authUtils.hashPassword(password);
     const user = await _user.update(
-      { name, username, email, password, role, status },
+      { name, username, email, password: hashedPassword, role, status },
       { where: { id } }
     );
     return { data: user };

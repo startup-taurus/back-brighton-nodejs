@@ -26,8 +26,6 @@ module.exports = class PaymentService extends BaseService {
   updatePayment = catchServiceAsync(async (id, body) => {
     validateParameters(body);
     const transformedBody = this.transformPaymentBody(body);
-    console.log(transformedBody);
-    console.log(id);
     const result = await _payment.update(transformedBody, {
       where: { id: id },
     });

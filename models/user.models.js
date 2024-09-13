@@ -28,7 +28,7 @@ module.exports = class UserModel {
           allowNull: false,
         },
         role: {
-          type: DataTypes.STRING,
+          type: DataTypes.ENUM('professor', 'student', 'admin_staff', 'financial'),
           allowNull: false,
         },
         status: {
