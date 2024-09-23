@@ -72,8 +72,10 @@ module.exports = class UserService extends BaseService {
   createUser = catchServiceAsync(async (body) => {
     const { name, username, email, password, role, status } = body;
     validateParameters({ name, username, email, password, role, status });
+  
     const hashedPassword = await _authUtils.hashPassword(body.password);
     body.password = hashedPassword;
+  
     const user = await _user.create(body);
     return { data: user };
   });

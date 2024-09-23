@@ -2,28 +2,54 @@ const catchServiceAsync = require("../utils/catch-service-async");
 const BaseService = require("./base.service");
 const AppError = require("../utils/app-error");
 const { validateParameters } = require("../utils/utils");
-let _professor = null;
+
+let _user = null;
 let _course = null;
 let _student = null;
+let _professor = null;
+let _userService = null;
+
 module.exports = class ProfessorService extends BaseService {
-  constructor({ Professor, Course, Student }) {
+  constructor({ User, Professor, Course, Student, UserService }) {
     super(Professor);
+    _user = User.User;
     _professor = Professor.Professor;
     _course = Course.Course;
     _student = Student.Student;
+    _userService = UserService;
   }
 
   getAllProfessors = catchServiceAsync(async (page = 1, limit = 10) => {
     let limitNumber = parseInt(limit);
     let pageNumber = parseInt(page);
+
     const data = await _professor.findAndCountAll({
       limit: limitNumber,
       offset: limitNumber * (pageNumber - 1),
+      include: [
+        {
+          model: _user,
+          as: "user",
+          attributes: ["id", "name", "email"],
+        },
+      ],
     });
 
     return {
       data: {
-        result: data.rows,
+        result: data.rows.map((professor) => ({
+          id: professor.id,
+          cedula: professor.cedula,
+          status: professor.status,
+          email: professor.email,
+          phone: professor.phone,
+          hourly_rate: professor.hourly_rate,
+          user: {
+            id: professor.user.id,
+            name: professor.user.name,
+            email: professor.user.email,
+          },
+        })),
         totalCount: data.count,
       },
     };
@@ -33,14 +59,9 @@ module.exports = class ProfessorService extends BaseService {
     const professor = await _professor.findByPk(id, {
       include: [
         {
-          model: _course,
-          as: "courses",
-          include: [
-            {
-              model: _student,
-              as: "students",
-            },
-          ],
+          model: _user,
+          as: "user",
+          attributes: ["id", "name", "email"],
         },
       ],
     });
@@ -97,19 +118,88 @@ module.exports = class ProfessorService extends BaseService {
   });
 
   createProfessor = catchServiceAsync(async (body) => {
-    const { name, cedula, email, status } = body;
-    validateParameters({ name, cedula, email, status });
-    const professor = await _professor.create(body);
+    body.role = "professor";
+    const {
+      name,
+      username,
+      email,
+      password,
+      cedula,
+      status,
+      hourly_rate,
+      phone,
+    } = body;
+
+    validateParameters({
+      name,
+      username,
+      email,
+      password,
+      cedula,
+      status,
+      hourly_rate,
+    });
+
+    const userResponse = await _userService.createUser(body);
+
+    const user = userResponse.data;
+
+    const professor = await _professor.create({
+      user_id: user.id,
+      cedula,
+      status,
+      email,
+      phone,
+      hourly_rate,
+    });
+
     return { data: professor };
   });
 
   updateProfessor = catchServiceAsync(async (id, body) => {
-    const professor = await _professor.update(body, { where: { id } });
-    return { data: professor };
+    const { email, cedula, status, hourly_rate, phone } = body;
+    const professor = await _professor.findByPk(id);
+    if (!professor) {
+      throw new AppError("Professor not found", 404);
+    }
+
+    await _userService.updateUser(professor.user_id, body);
+    await _professor.update(
+      {
+        cedula,
+        status,
+        email,
+        phone,
+        hourly_rate,
+      },
+      { where: { id } }
+    );
+    const updatedProfessor = await _professor.findByPk(id, {
+      include: [
+        {
+          model: _user,
+          as: "user",
+          attributes: ["name", "username", "email", "status"],
+        },
+      ],
+    });
+
+    return { data: updatedProfessor };
   });
 
   deleteProfessor = catchServiceAsync(async (id) => {
-    const professor = await _professor.destroy({ where: { id } });
-    return { data: professor };
+    const professor = await _professor.findByPk(id);
+
+    if (!professor) {
+      throw new AppError("Professor not found", 404);
+    }
+
+    await _professor.destroy({ where: { id } });
+    await _user.destroy({ where: { id: professor.user_id } });
+
+    return {
+      message: "Professor and associated user deleted successfully",
+      data: {},
+    };
   });
 };

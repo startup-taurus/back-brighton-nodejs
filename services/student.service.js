@@ -2,69 +2,145 @@ const catchServiceAsync = require("../utils/catch-service-async");
 const BaseService = require("./base.service");
 const AppError = require("../utils/app-error");
 const { validateParameters } = require("../utils/utils");
+let _user = null;
 let _student = null;
 let _course = null;
 let _courseStudent = null;
+let _userService = null;
 
 module.exports = class StudentService extends BaseService {
-  constructor({ Student, Course, CourseStudent }) {
+  constructor({ User, Student, Course, CourseStudent, UserService }) {
     super(Student);
+    _user = User.User;
     _student = Student.Student;
     _course = Course.Course;
     _courseStudent = CourseStudent.CourseStudent;
+    _userService = UserService;
   }
 
-  getAllStudents = catchServiceAsync(async (page, limit) => {
+  getAllStudents = catchServiceAsync(async (page = 1, limit = 10) => {
     let limitNumber = parseInt(limit);
     let pageNumber = parseInt(page);
+
     const data = await _student.findAndCountAll({
       limit: limitNumber,
       offset: limitNumber * (pageNumber - 1),
       include: [
         {
-          model: _course,
-          as: "courses",
-          attributes: ["course_name"],
-          through: {
-            attributes: [],
-          },
+          model: _user,
+          as: "user",
+          attributes: ["id", "name", "email"],
         },
       ],
     });
+
     return {
       data: {
-        result: data.rows,
+        result: data.rows.map((student) => ({
+          id: student.id,
+          cedula: student.cedula,
+          level: student.level,
+          status: student.status,
+          observations: student.observations,
+          emergency_contact_name: student.emergency_contact_name,
+          emergency_contact_phone: student.emergency_contact_phone,
+          emergency_contact_relationship:
+            student.emergency_contact_relationship,
+          user: {
+            id: student.user.id,
+            name: student.user.name,
+            email: student.user.email,
+          },
+        })),
         totalCount: data.count,
       },
     };
   });
 
   getStudent = catchServiceAsync(async (id) => {
-    const student = await _student.findByPk(id);
+    const student = await _student.findByPk(id, {
+      include: [
+        {
+          model: _user,
+          as: "user",
+          attributes: ["id", "name", "email"],
+        },
+      ],
+    });
+
     if (!student) {
       throw new AppError("Student not found", 404);
     }
-    return { data: student };
+
+    return {
+      data: {
+        id: student.id,
+        cedula: student.cedula,
+        level: student.level,
+        status: student.status,
+        observations: student.observations,
+        emergency_contact_name: student.emergency_contact_name,
+        emergency_contact_phone: student.emergency_contact_phone,
+        emergency_contact_relationship: student.emergency_contact_relationship,
+        user: {
+          id: student.user.id,
+          name: student.user.name,
+          email: student.user.email,
+        },
+      },
+    };
   });
 
   createStudent = catchServiceAsync(async (body) => {
-    const { name, cedula, lastName, courseId, level, status } = body;
-    validateParameters({ name, cedula, lastName, courseId, level, status });
+    body.role = "student";
+    const {
+      name,
+      username,
+      email,
+      password,
+      cedula,
+      lastName,
+      courseId,
+      level,
+      status,
+      bookGiven,
+      pendingPayments,
+      emergency_contact_name,
+      emergency_contact_phone,
+      emergency_contact_relationship,
+    } = body;
 
-    body.last_name = lastName;
-    body.book_given = body.bookGiven;
-    body.course_id = parseInt(courseId);
-    body.pending_payments = body.pendingPayments;
+    validateParameters({
+      name,
+      username,
+      email,
+      password,
+      cedula,
+      lastName,
+      courseId,
+      level,
+      status,
+    });
 
-    delete body.lastName;
-    delete body.bookGiven;
-    delete body.courseId;
-    delete body.pendingPayments;
+    const userResponse = await _userService.createUser(body);
 
-    const student = await _student.create(body);
+    const user = userResponse.data;
+
+    const student = await _student.create({
+      user_id: user.id,
+      cedula,
+      last_name: lastName,
+      level,
+      status,
+      book_given: bookGiven,
+      pending_payments: pendingPayments,
+      emergency_contact_name,
+      emergency_contact_phone,
+      emergency_contact_relationship,
+    });
 
     await _courseStudent.create({
-      course_id: student.course_id,
+      course_id: parseInt(courseId),
       student_id: student.id,
       enrollment_date: new Date(),
     });
@@ -73,22 +149,70 @@ module.exports = class StudentService extends BaseService {
   });
 
   updateStudent = catchServiceAsync(async (id, body) => {
-    body.last_name = body.lastName;
-    body.book_given = body.bookGiven;
-    body.course_id = parseInt(body.courseId);
-    body.pending_payments = body.pendingPayments;
+    const {
+      name,
+      username,
+      email,
+      cedula,
+      level,
+      status,
+      bookGiven,
+      pendingPayments,
+      emergency_contact_name,
+      emergency_contact_phone,
+      emergency_contact_relationship,
+    } = body;
 
-    delete body.lastName;
-    delete body.bookGiven;
-    delete body.courseId;
-    delete body.pendingPayments;
+    const student = await _student.findByPk(id);
 
-    const student = await _student.update(body, { where: { id } });
-    return { data: student };
+    if (!student) {
+      throw new AppError("Student not found", 404);
+    }
+
+    await _userService.updateUser(student.user_id, {
+      name,
+      username,
+      email,
+      status,
+    });
+
+    await _student.update(
+      {
+        cedula,
+        level,
+        status,
+        book_given: bookGiven,
+        pending_payments: pendingPayments,
+        emergency_contact_name,
+        emergency_contact_phone,
+        emergency_contact_relationship,
+      },
+      { where: { id } }
+    );
+
+    const updatedStudent = await _student.findByPk(id, {
+      include: [
+        {
+          model: _user,
+          as: "user",
+          attributes: ["name", "username", "email", "status"],
+        },
+      ],
+    });
+
+    return { data: updatedStudent };
   });
 
   deleteStudent = catchServiceAsync(async (id) => {
-    const student = await _student.destroy({ where: { id } });
-    return { data: student };
+    const student = await _student.findByPk(id);
+
+    if (!student) {
+      throw new AppError("Student not found", 404);
+    }
+
+    await _student.destroy({ where: { id } });
+    await _user.destroy({ where: { id: student.user_id } });
+
+    return { message: "Student and associated user deleted successfully" };
   });
 };
