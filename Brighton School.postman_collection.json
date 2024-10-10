@@ -1,0 +1,783 @@
+{
+	"info": {
+		"_postman_id": "ced4e4a6-e74c-4b8f-ab4c-ab543671d6de",
+		"name": "Brighton School",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "7477414",
+		"_collection_link": "https://telandweb.postman.co/workspace/proyectosRichardJean~2de07861-9a08-4738-9b91-7cc587aa6bf7/collection/7477414-ced4e4a6-e74c-4b8f-ab4c-ab543671d6de?action=share&source=collection_link&creator=7477414"
+	},
+	"item": [
+		{
+			"name": "User",
+			"item": [
+				{
+					"name": "Login",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"username\":\"jean\",\n    \"password\":\"123\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{localhost}}/v1/api/user/login",
+							"host": [
+								"{{localhost}}"
+							],
+							"path": [
+								"v1",
+								"api",
+								"user",
+								"login"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Register",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": " {\n        \"name\":\"Name test\",\n        \"username\": \"test\",\n        \"email\": \"test@example.com\",\n        \"password\": \"123456\",\n        \"role\": \"teacher\",\n        \"status\": \"active\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{localhost}}/v1/api/user/register",
+							"host": [
+								"{{localhost}}"
+							],
+							"path": [
+								"v1",
+								"api",
+								"user",
+								"register"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get One",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "",
+								"value": "",
+								"type": "text",
+								"disabled": true
+							}
+						],
+						"url": {
+							"raw": "{{localhost}}/v1/api/user/get-one/2",
+							"host": [
+								"{{localhost}}"
+							],
+							"path": [
+								"v1",
+								"api",
+								"user",
+								"get-one",
+								"2"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get All",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{localhost}}/v1/api/user/get-all?page=1&limit=10",
+							"host": [
+								"{{localhost}}"
+							],
+							"path": [
+								"v1",
+								"api",
+								"user",
+								"get-all"
+							],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "10"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Delete",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{localhost}}/v1/api/user/delete/7",
+							"host": [
+								"{{localhost}}"
+							],
+							"path": [
+								"v1",
+								"api",
+								"user",
+								"delete",
+								"7"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update",
+					"request": {
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": " {\n        \"name\":\"Name test update\",\n        \"username\": \"test\",\n        \"email\": \"test@example.com\",\n        \"password\": \"123456\",\n        \"role\": \"professor\",\n        \"status\": \"active\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{localhost}}/v1/api/user/update/1",
+							"host": [
+								"{{localhost}}"
+							],
+							"path": [
+								"v1",
+								"api",
+								"user",
+								"update",
+								"1"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Student",
+			"item": [
+				{
+					"name": "Get All",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{localhost}}/v1/api/student/get-all?page=1&limit=10",
+							"host": [
+								"{{localhost}}"
+							],
+							"path": [
+								"v1",
+								"api",
+								"student",
+								"get-all"
+							],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "10"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get One",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{localhost}}/v1/api/student/get-one/2",
+							"host": [
+								"{{localhost}}"
+							],
+							"path": [
+								"v1",
+								"api",
+								"student",
+								"get-one",
+								"2"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Create",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Juan Andres\",\n  \"username\": \"juan\",\n  \"email\": \"janedoe@example.com\",\n  \"password\": \"juan\",\n  \"cedula\": \"9876543210\",// valor unico\n  \"lastName\": \"Doe\",\n  \"courseId\": 1,\n  \"level\": \"Undergraduate\",\n  \"status\": \"active\",\n  \"bookGiven\": true,\n  \"pendingPayments\": false,\n  \"emergency_contact_name\": \"John Doe\",\n  \"emergency_contact_phone\": \"555-4321\",\n  \"emergency_contact_relationship\": \"Father\"\n}\n",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{localhost}}/v1/api/student/create",
+							"host": [
+								"{{localhost}}"
+							],
+							"path": [
+								"v1",
+								"api",
+								"student",
+								"create"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update",
+					"request": {
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"Bob Green\",\n    \"cedula\": \"1234567890\",\n    \"lastName\": \"White\",\n    \"courseId\": 1,\n    \"level\": \"Intermediate\",\n    \"profession\": \"Data Scientist\",\n    \"bookGiven\": true,\n    \"observations\": \"Needs additional support with data visualization.\",\n    \"status\": \"active\",\n    \"pendingPayments\": false\n}\n",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{localhost}}/v1/api/student/update/16",
+							"host": [
+								"{{localhost}}"
+							],
+							"path": [
+								"v1",
+								"api",
+								"student",
+								"update",
+								"16"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Delete",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{localhost}}/v1/api/student/delete/12",
+							"host": [
+								"{{localhost}}"
+							],
+							"path": [
+								"v1",
+								"api",
+								"student",
+								"delete",
+								"12"
+							],
+							"query": [
+								{
+									"key": "",
+									"value": "",
+									"disabled": true
+								},
+								{
+									"key": "",
+									"value": "",
+									"disabled": true
+								}
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Professor",
+			"item": [
+				{
+					"name": "Get All",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{localhost}}/v1/api/professor/get-all?page=1&limit=10",
+							"host": [
+								"{{localhost}}"
+							],
+							"path": [
+								"v1",
+								"api",
+								"professor",
+								"get-all"
+							],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "10"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get One",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{localhost}}/v1/api/professor/get-one/1",
+							"host": [
+								"{{localhost}}"
+							],
+							"path": [
+								"v1",
+								"api",
+								"professor",
+								"get-one",
+								"1"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get with course",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{localhost}}/v1/api/professor/1/courses",
+							"host": [
+								"{{localhost}}"
+							],
+							"path": [
+								"v1",
+								"api",
+								"professor",
+								"1",
+								"courses"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Create",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Jean Test\",\n  \"username\": \"jean\",\n  \"email\": \"johndoe@example.com\",\n  \"password\": \"123!\",\n  \"status\": \"active\",\n  \"cedula\": \"1234567890\",//Valor unico (no se puede repetir)\n  \"hourly_rate\": 50.00,\n  \"phone\": \"555-1234\"\n}\n",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{localhost}}/v1/api/professor/create",
+							"host": [
+								"{{localhost}}"
+							],
+							"path": [
+								"v1",
+								"api",
+								"professor",
+								"create"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update",
+					"request": {
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Jean Test\",\n  \"username\": \"jean\",\n  \"email\": \"johndoe@example.com\",\n  \"password\": \"123\",\n  \"role\": \"professor\",\n  \"status\": \"active\",\n  \"cedula\": \"1234567890\",//Valor unico (no se puede repetir)\n  \"hourly_rate\": 50.00,\n  \"phone\": \"555-1234\"\n}\n",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{localhost}}/v1/api/professor/update/4",
+							"host": [
+								"{{localhost}}"
+							],
+							"path": [
+								"v1",
+								"api",
+								"professor",
+								"update",
+								"4"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Delete",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{localhost}}/v1/api/professor/delete/5",
+							"host": [
+								"{{localhost}}"
+							],
+							"path": [
+								"v1",
+								"api",
+								"professor",
+								"delete",
+								"5"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Payment",
+			"item": [
+				{
+					"name": "Get by UserId",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{localhost}}/v1/api/payment/get-by-user/13",
+							"host": [
+								"{{localhost}}"
+							],
+							"path": [
+								"v1",
+								"api",
+								"payment",
+								"get-by-user",
+								"13"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Create",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"studentId\": 15,\n    \"paymentDate\": \"2024-08-25\",\n    \"paymentMethod\": \"Credit Card\",\n    \"totalPayment\": 150.00,\n    \"hoursCharged\": 3.5\n}\n",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{localhost}}/v1/api/payment/create",
+							"host": [
+								"{{localhost}}"
+							],
+							"path": [
+								"v1",
+								"api",
+								"payment",
+								"create"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update",
+					"request": {
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"studentId\": 13,\n    \"paymentDate\": \"2024-08-25\",\n    \"paymentMethod\": \"Credit Card\",\n    \"totalPayment\": 100.00,\n    \"hoursCharged\": 3.5\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{localhost}}/v1/api/payment/update/10",
+							"host": [
+								"{{localhost}}"
+							],
+							"path": [
+								"v1",
+								"api",
+								"payment",
+								"update",
+								"10"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Course",
+			"item": [
+				{
+					"name": "Get All",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{localhost}}/v1/api/course/get-all?page=1&limit=10",
+							"host": [
+								"{{localhost}}"
+							],
+							"path": [
+								"v1",
+								"api",
+								"course",
+								"get-all"
+							],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "10"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get One",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{localhost}}/v1/api/course/get-one/1",
+							"host": [
+								"{{localhost}}"
+							],
+							"path": [
+								"v1",
+								"api",
+								"course",
+								"get-one",
+								"1"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get 0ne With students",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{localhost}}/v1/api/course/get-students/1",
+							"host": [
+								"{{localhost}}"
+							],
+							"path": [
+								"v1",
+								"api",
+								"course",
+								"get-students",
+								"1"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get All Courses With Professors",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{localhost}}/v1/api/course/get-all-with-professors",
+							"host": [
+								"{{localhost}}"
+							],
+							"path": [
+								"v1",
+								"api",
+								"course",
+								"get-all-with-professors"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Create",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"course_name\": \"Introduction to Programming\",\n  \"course_number\": \"CS101\",\n  \"start_date\": \"2024-10-01\",\n  \"end_date\": \"2024-12-15\",\n  \"comment\": \"This course covers the basics of programming.\",\n  \"status\": \"active\",\n  \"course_type\": \"online\",\n  \"hourly_rate\": 50.00,\n  \"professor_id\": 2\n}\n",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{localhost}}/v1/api/course/create",
+							"host": [
+								"{{localhost}}"
+							],
+							"path": [
+								"v1",
+								"api",
+								"course",
+								"create"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Attendance",
+			"item": [
+				{
+					"name": "Attendance By Course",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{localhost}}/v1/api/attendance/get-by-course/1",
+							"host": [
+								"{{localhost}}"
+							],
+							"path": [
+								"v1",
+								"api",
+								"attendance",
+								"get-by-course",
+								"1"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Create",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"course_id\": 1,\n  \"student_id\": 3,\n  \"attendance_date\": \"2024-10-09\",\n  \"status\": \"Present\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{localhost}}/v1/api/attendance/create",
+							"host": [
+								"{{localhost}}"
+							],
+							"path": [
+								"v1",
+								"api",
+								"attendance",
+								"create"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"packages": {},
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"packages": {},
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "localhost",
+			"value": "http://localhost:3000",
+			"type": "string"
+		}
+	]
+}
