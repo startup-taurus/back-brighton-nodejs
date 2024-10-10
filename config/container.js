@@ -14,6 +14,7 @@ const {
   ProfessorService,
   PaymentService,
   CourseService,
+  AttendanceService
 } = require("../services");
 
 //Controllers
@@ -23,6 +24,7 @@ const {
   ProfessorController,
   PaymentController,
   CourseController,
+  AttendanceController
 } = require("../controllers");
 
 //Startup
@@ -35,6 +37,7 @@ const {
   ProfessorRoutes,
   PaymentRoutes,
   CourseRoutes,
+  AttendanceRoutes
 } = require("../routes/api/index");
 
 //Models
@@ -70,6 +73,7 @@ container
     ProfessorService: asClass(ProfessorService).singleton(),
     PaymentService: asClass(PaymentService).singleton(),
     CourseService: asClass(CourseService).singleton(),
+    AttendanceService: asClass(AttendanceService).singleton(),
   })
   .register({
     //Configuración de los controladores
@@ -86,6 +90,9 @@ container
     CourseController: asClass(
       CourseController.bind(CourseController)
     ).singleton(),
+    AttendanceController: asClass(
+      AttendanceController.bind(AttendanceController)
+    ).singleton(),
   })
   .register({
     //Configuración de rutas
@@ -94,6 +101,7 @@ container
     ProfessorRoutes: asFunction(ProfessorRoutes).singleton(),
     PaymentRoutes: asFunction(PaymentRoutes).singleton(),
     CourseRoutes: asFunction(CourseRoutes).singleton(),
+    AttendanceRoutes: asFunction(AttendanceRoutes).singleton(),
   })
   .register({
     //Configuración de las asociaciones

@@ -4,4 +4,5 @@ module.exports = {
   ProfessorService: require("./professor.service"),
   PaymentService: require("./payment.service"),
   CourseService: require("./course.service"),
+  AttendanceService: require("./attendance.service"),
 };

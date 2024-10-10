@@ -1,7 +1,7 @@
 const catchServiceAsync = require("../utils/catch-service-async");
 const BaseService = require("./base.service");
 const AppError = require("../utils/app-error");
-const { validateParameters } = require("../utils/utils");
+const { validateParameters, scheduleStringToDates } = require("../utils/utils");
 
 let _user = null;
 let _course = null;
@@ -98,6 +98,7 @@ module.exports = class ProfessorService extends BaseService {
       course_name: course.course_name,
       course_number: course.course_number,
       student_count: course.students.length,
+      schedule: course.schedule ? scheduleStringToDates(course.schedule) : null,
     }));
 
     const totalCourses = professor.courses.length;

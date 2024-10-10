@@ -11,4 +11,25 @@ module.exports = {
       }
     }
   },
+
+  scheduleStringToDates(scheduleString) {
+    const daysMap = {
+      Mon: "Monday",
+      Tue: "Tuesday",
+      Wed: "Wednesday",
+      Thu: "Thursday",
+      Fri: "Friday",
+      Sat: "Saturday",
+      Sun: "Sunday",
+    };
+    const [daysPart, timePart] = scheduleString.split(" ");
+    const [startTime, endTime] = timePart.split("-");
+
+    const days = daysPart.split("-").map((day) => daysMap[day]);
+    return days.map((day) => ({
+      day,
+      startTime,
+      endTime,
+    }));
+  },
 };

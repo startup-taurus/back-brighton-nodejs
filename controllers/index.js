@@ -4,4 +4,5 @@ module.exports = {
   ProfessorController: require("./professor.controller"),
   PaymentController: require("./payment.controller"),
   CourseController: require("./course.controller"),
+  AttendanceController: require("./attendance.controller"),
 };

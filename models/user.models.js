@@ -31,6 +31,9 @@ module.exports = class UserModel {
           type: DataTypes.ENUM('professor', 'student', 'admin_staff', 'financial'),
           allowNull: false,
         },
+        image:{
+          type: DataTypes.STRING,
+        },
         status: {
           type: DataTypes.STRING,
           defaultValue: "active",

@@ -9,7 +9,14 @@ const { StudentRoutes, ProfessorRoutes } = require("./api");
 // const { SWAGGER_PATH } = require("../config");
 //const swaggerDocument = require(SWAGGER_PATH);
 
-module.exports = function ({ UserRoutes, StudentRoutes, ProfessorRoutes, PaymentRoutes, CourseRoutes }) {
+module.exports = function ({
+  UserRoutes,
+  StudentRoutes,
+  ProfessorRoutes,
+  PaymentRoutes,
+  CourseRoutes,
+  AttendanceRoutes,
+}) {
   const router = express.Router();
   const apiRouter = express.Router();
 
@@ -24,6 +31,7 @@ module.exports = function ({ UserRoutes, StudentRoutes, ProfessorRoutes, Payment
   apiRouter.use("/professor", ProfessorRoutes);
   apiRouter.use("/payment", PaymentRoutes);
   apiRouter.use("/course", CourseRoutes);
+  apiRouter.use("/attendance", AttendanceRoutes);
 
   router.use("/v1/api", apiRouter);
   router.use("/", (req, res) => {
