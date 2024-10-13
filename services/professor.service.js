@@ -95,11 +95,14 @@ module.exports = class ProfessorService extends BaseService {
     }
 
     const coursesWithStudentCount = professor.courses.map((course) => ({
+      course_id: course.id,
       course_name: course.course_name,
       course_number: course.course_number,
       student_count: course.students.length,
       schedule: course.schedule ? scheduleStringToDates(course.schedule) : null,
     }));
+
+    console.log(coursesWithStudentCount);
 
     const totalCourses = professor.courses.length;
 

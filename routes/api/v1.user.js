@@ -8,5 +8,7 @@ module.exports = function ({ UserController }) {
   router.post("/register", UserController.createUser);
   router.put("/update/:id", UserController.updateUser);
   router.delete("/delete/:id", UserController.deleteUser);
+  router.get("/me", UserController.getMe, UserController.getUser);
+
   return router;
 };

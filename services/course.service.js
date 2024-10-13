@@ -46,6 +46,17 @@ module.exports = class CourseService extends BaseService {
     const course = await _course.findByPk(courseId, {
       include: [
         {
+          model: _professor,
+          as: "professor",
+          include: [
+            {
+              model: _user,
+              as: "user",
+              attributes: ["id", "name"],
+            },
+          ],
+        },
+        {
           model: _student,
           as: "students",
           include: [
@@ -76,38 +87,41 @@ module.exports = class CourseService extends BaseService {
         course_number: course.course_number,
         total_students: course.students.length,
         students: studentList,
+        professor: { ...course.professor.user.dataValues },
       },
     };
   });
 
-  getAllCoursesWithProfessors = catchServiceAsync(async (page = 1, limit = 10) => {
-    const courses = await _course.findAll({
-      include: [
-        {
-          model: _professor,
-          as: 'professor',
-          include: [
-            {
-              model: _user, 
-              as: 'user',
-              attributes: ['name'], 
-            },
-          ],
+  getAllCoursesWithProfessors = catchServiceAsync(
+    async (page = 1, limit = 10) => {
+      const courses = await _course.findAll({
+        include: [
+          {
+            model: _professor,
+            as: "professor",
+            include: [
+              {
+                model: _user,
+                as: "user",
+                attributes: ["name"],
+              },
+            ],
+          },
+        ],
+      });
+
+      if (!courses || courses.length === 0) {
+        throw new AppError("No courses found", 404);
+      }
+
+      return {
+        data: {
+          result: courses,
+          totalCount: courses.length,
         },
-      ],
-    });
-  
-    if (!courses || courses.length === 0) {
-      throw new AppError("No courses found", 404);
+      };
     }
-  
-    return {
-      data: {
-        result: courses,
-        totalCount: courses.length,
-      },
-    };
-  });
+  );
 
   createCourse = catchServiceAsync(async (body) => {
     const {
