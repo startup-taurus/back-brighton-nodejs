@@ -1,7 +1,7 @@
 const catchServiceAsync = require("../utils/catch-service-async");
 const BaseService = require("./base.service");
 const AppError = require("../utils/app-error");
-const { validateParameters } = require("../utils/utils");
+const { validateParameters, scheduleStringToDates } = require("../utils/utils");
 let _user = null;
 let _course = null;
 let _professor = null;
@@ -35,11 +35,18 @@ module.exports = class CourseService extends BaseService {
   });
 
   getCourse = catchServiceAsync(async (id) => {
-    const course = await _course.findByPk(id);
+    const course = await _course.findByPk(id, { raw: true });
     if (!course) {
       throw new AppError("Course not found", 404);
     }
-    return { data: course };
+    return {
+      data: {
+        ...course,
+        schedule: course.schedule
+          ? scheduleStringToDates(course.schedule)
+          : null,
+      },
+    };
   });
 
   getCourseWithStudents = catchServiceAsync(async (courseId) => {

@@ -52,13 +52,28 @@ module.exports = class AttendanceService extends BaseService {
 
     validateParameters({ course_id, student_id, attendance_date, status });
 
-    const attendance = await _attendance.create({
-      course_id,
-      student_id,
-      attendance_date,
-      status,
+    const attendance = await _attendance.findOne({
+      where: {
+        course_id,
+        student_id,
+        attendance_date,
+      },
     });
+    let currentAttendance;
 
-    return { data: attendance };
+    if (!attendance) {
+      currentAttendance = await _attendance.create({
+        course_id,
+        student_id,
+        attendance_date,
+        status,
+      });
+    } else {
+      currentAttendance = await attendance.update({
+        status,
+      });
+    }
+
+    return { data: currentAttendance };
   });
 };
