@@ -1,6 +1,8 @@
 const BaseService = require("./base.service");
 const catchServiceAsync = require("../utils/catch-service-async");
 const { validateParameters } = require("../utils/utils");
+const { Op, fn, col, Sequelize } = require("sequelize");
+const moment = require("moment");
 let _user = null;
 let _course = null;
 let _student = null;
@@ -38,7 +40,7 @@ module.exports = class AttendanceService extends BaseService {
     const formattedRecords = attendanceRecords.map((attendance) => ({
       id: attendance.id,
       course_id: attendance.course_id,
-      student_id: attendance.student_id,
+      student_id: attendance.student.id,
       student: attendance.student.user.name,
       status: attendance.status,
       attendance_date: attendance.attendance_date,
@@ -59,6 +61,7 @@ module.exports = class AttendanceService extends BaseService {
         attendance_date,
       },
     });
+
     let currentAttendance;
 
     if (!attendance) {

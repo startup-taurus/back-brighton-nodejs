@@ -102,8 +102,6 @@ module.exports = class ProfessorService extends BaseService {
       schedule: course.schedule ? scheduleStringToDates(course.schedule) : null,
     }));
 
-    console.log(coursesWithStudentCount);
-
     const totalCourses = professor.courses.length;
 
     const totalStudents = professor.courses.reduce(

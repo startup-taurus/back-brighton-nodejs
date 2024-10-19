@@ -83,7 +83,7 @@ module.exports = class CourseService extends BaseService {
     }
 
     const studentList = course.students.map((student) => ({
-      id: student.user.id,
+      id: student.id,
       name: student.user.name,
       status: student.user.status,
     }));

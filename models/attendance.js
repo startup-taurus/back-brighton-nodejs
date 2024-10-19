@@ -28,7 +28,7 @@ module.exports = class AttendanceModel {
           allowNull: false,
         },
         attendance_date: {
-          type: DataTypes.DATE,
+          type: DataTypes.DATEONLY,
           allowNull: false,
         },
         status: {
