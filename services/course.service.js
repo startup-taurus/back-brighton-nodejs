@@ -1,6 +1,7 @@
 const catchServiceAsync = require("../utils/catch-service-async");
 const BaseService = require("./base.service");
 const AppError = require("../utils/app-error");
+const { Op } = require("sequelize");
 const { validateParameters, scheduleStringToDates } = require("../utils/utils");
 let _user = null;
 let _course = null;
@@ -126,6 +127,47 @@ module.exports = class CourseService extends BaseService {
           result: courses,
           totalCount: courses.length,
         },
+      };
+    }
+  );
+
+  getActiveCourses = catchServiceAsync(
+    async (page = 1, limit = 10, search = "") => {
+      let limitNumber = parseInt(limit);
+      let pageNumber = parseInt(page);
+      const offset = (pageNumber - 1) * limitNumber;
+      const today = new Date();
+
+      const courses = await _course.findAll({
+        where: {
+          status: "active",
+          end_date: {
+            [Op.gt]: today,
+          },
+          ...(search && {
+            course_name: {
+              [Op.like]: `%${search}%`,
+            },
+          }),
+        },
+        include: [
+          {
+            model: _professor,
+            as: "professor",
+            include: [
+              {
+                model: _user,
+                as: "user",
+                attributes: ["name"],
+              },
+            ],
+          },
+        ],
+        limit: limitNumber,
+        offset,
+      });
+      return {
+        data: courses,
       };
     }
   );

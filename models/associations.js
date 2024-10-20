@@ -5,6 +5,7 @@ let _professor = null;
 let _attendance = null;
 let _grades = null;
 let _user = null;
+let _payment = null;
 module.exports = class AuditModel {
   constructor({
     User,
@@ -14,6 +15,7 @@ module.exports = class AuditModel {
     Professor,
     Attendance,
     Grades,
+    Payment,
   }) {
     _student = Student.Student;
     _course = Course.Course;
@@ -22,6 +24,7 @@ module.exports = class AuditModel {
     _attendance = Attendance.Attendance;
     _grades = Grades.Grades;
     _user = User.User;
+    _payment = Payment.Payment;
     this.defineModel();
   }
 
@@ -90,6 +93,37 @@ module.exports = class AuditModel {
     });
     _student.hasMany(_grades, {
       foreignKey: "student_id",
+    });
+
+    // Relación de uno a uno entre estudiante y pago
+    _student.hasMany(_payment, {
+      foreignKey: "student_id",
+      as: "payment",
+    });
+    _payment.belongsTo(_student, {
+      foreignKey: "student_id",
+      as: "student",
+    });
+
+    // Relación de muchos a muchos entre estudiantes y cursos
+    _student.belongsToMany(_course, {
+      through: {
+        model: "course_student",
+        timestamps: false,
+      },
+      foreignKey: "student_id",
+      otherKey: "course_id",
+      as: "course",
+    });
+
+    _course.belongsToMany(_student, {
+      through: {
+        model: "course_student",
+        timestamps: false,
+      },
+      foreignKey: "course_id",
+      otherKey: "student_id",
+      as: "student",
     });
   }
 };

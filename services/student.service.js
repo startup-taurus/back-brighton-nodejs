@@ -2,18 +2,21 @@ const catchServiceAsync = require("../utils/catch-service-async");
 const BaseService = require("./base.service");
 const AppError = require("../utils/app-error");
 const { validateParameters } = require("../utils/utils");
+const { or } = require("sequelize");
 let _user = null;
 let _student = null;
 let _course = null;
+let _payment = null;
 let _courseStudent = null;
 let _userService = null;
 
 module.exports = class StudentService extends BaseService {
-  constructor({ User, Student, Course, CourseStudent, UserService }) {
+  constructor({ User, Student, Course, Payment, CourseStudent, UserService }) {
     super(Student);
     _user = User.User;
     _student = Student.Student;
     _course = Course.Course;
+    _payment = Payment.Payment;
     _courseStudent = CourseStudent.CourseStudent;
     _userService = UserService;
   }
@@ -29,9 +32,21 @@ module.exports = class StudentService extends BaseService {
         {
           model: _user,
           as: "user",
-          attributes: ["id", "name", "email"],
+          attributes: ["id", "name", "email", "status", "username", "password"],
+        },
+        {
+          model: _payment,
+          as: "payment",
+          attributes: ["payment_date", "total_payment", "payment_method"],
+        },
+        {
+          model: _course,
+          as: "course",
+          through: { attributes: [] },
+          attributes: ["id", "course_name", "course_number"],
         },
       ],
+      order: [["id", "DESC"]],
     });
 
     return {
@@ -46,11 +61,30 @@ module.exports = class StudentService extends BaseService {
           emergency_contact_phone: student.emergency_contact_phone,
           emergency_contact_relationship:
             student.emergency_contact_relationship,
+          pending_payments: student.pending_payments,
+          profession: student.profession,
+          book_given: student.book_given,
           user: {
             id: student.user.id,
             name: student.user.name,
             email: student.user.email,
+            status: student.user.status,
+            username: student.user.username,
           },
+          course: Array.isArray(student.course)
+            ? student.course.map((course) => ({
+                id: course.id,
+                course_name: course.course_name,
+                course_number: course.course_number,
+              }))
+            : [],
+          payments: Array.isArray(student.payment)
+            ? student.payment.map((payment) => ({
+                payment_date: payment.payment_date,
+                total_payment: payment.total_payment,
+                payment_method: payment.payment_method,
+              }))
+            : [],
         })),
         totalCount: data.count,
       },
@@ -99,7 +133,7 @@ module.exports = class StudentService extends BaseService {
       email,
       password,
       cedula,
-      lastName,
+      profession,
       courseId,
       level,
       status,
@@ -116,7 +150,6 @@ module.exports = class StudentService extends BaseService {
       email,
       password,
       cedula,
-      lastName,
       courseId,
       level,
       status,
@@ -129,7 +162,7 @@ module.exports = class StudentService extends BaseService {
     const student = await _student.create({
       user_id: user.id,
       cedula,
-      last_name: lastName,
+      profession,
       level,
       status,
       book_given: bookGiven,

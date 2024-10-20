@@ -9,6 +9,7 @@ module.exports = function ({ CourseController }) {
     "/get-all-with-professors",
     CourseController.getAllCoursesWithProfessors
   );
+  router.get("/get-active", CourseController.getActiveCourses);
   router.post("/create", CourseController.createCourse);
   router.put("/update/:id", CourseController.updateCourse);
   return router;
