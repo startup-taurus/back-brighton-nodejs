@@ -95,6 +95,7 @@ module.exports = class ProfessorService extends BaseService {
       course_name: course.course_name,
       course_number: course.course_number,
       student_count: course.students.length,
+      classSchedule: course.schedule,
       schedule: course.schedule ? scheduleStringToDates(course.schedule) : null,
     }));
 
