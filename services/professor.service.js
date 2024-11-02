@@ -30,7 +30,7 @@ module.exports = class ProfessorService extends BaseService {
         {
           model: _user,
           as: "user",
-          attributes: ["id", "name", "email"],
+          attributes: ["id", "name", "email", "username", "last_login"],
         },
       ],
     });
@@ -44,11 +44,7 @@ module.exports = class ProfessorService extends BaseService {
           email: professor.email,
           phone: professor.phone,
           hourly_rate: professor.hourly_rate,
-          user: {
-            id: professor.user.id,
-            name: professor.user.name,
-            email: professor.user.email,
-          },
+          user: professor.user,
         })),
         totalCount: data.count,
       },
@@ -118,6 +114,39 @@ module.exports = class ProfessorService extends BaseService {
       },
     };
   });
+
+  getActiveProfessors = catchServiceAsync(
+    async (page = 1, limit = 10, search = "") => {
+      let limitNumber = parseInt(limit);
+      let pageNumber = parseInt(page);
+      const offset = (pageNumber - 1) * limitNumber;
+      const today = new Date();
+
+      const professors = await _professor.findAll({
+        where: {
+          status: "active",
+          ...(search && {
+            course_name: {
+              [Op.like]: `%${search}%`,
+            },
+          }),
+        },
+        include: [
+          {
+            model: _user,
+            as: "user",
+            attributes: ["id", "name", "email"],
+          },
+        ],
+        limit: limitNumber,
+        offset,
+      });
+
+      return {
+        data: professors,
+      };
+    }
+  );
 
   createProfessor = catchServiceAsync(async (body) => {
     body.role = "professor";
