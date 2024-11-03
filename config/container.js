@@ -51,6 +51,7 @@ const {
   CourseStudent,
   Attendance,
   Grades,
+  HolidaysModel
 } = require("../models");
 
 const { protect } = require("../middleware/authMiddleware");
@@ -117,6 +118,7 @@ container
     CourseStudent: asClass(CourseStudent).singleton(),
     Attendance: asClass(Attendance).singleton(),
     Grades: asClass(Grades).singleton(),
+    HolidaysModel: asClass(HolidaysModel).singleton(),
   })
   .register({
     //middlewares

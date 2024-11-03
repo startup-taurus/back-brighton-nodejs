@@ -30,7 +30,7 @@ module.exports = class ProfessorService extends BaseService {
         {
           model: _user,
           as: "user",
-          attributes: ["id", "name", "email", "username", "last_login"],
+          attributes: ["id", "name", "email", "role", "username", "last_login"],
         },
       ],
     });
@@ -217,6 +217,13 @@ module.exports = class ProfessorService extends BaseService {
     });
 
     return { data: updatedProfessor };
+  });
+
+  updateProfessorStatus = catchServiceAsync(async (id, body) => {
+    const { status } = body;
+    validateParameters({ id, status });
+    const professor = await _professor.update({ status }, { where: { id } });
+    return { data: professor };
   });
 
   deleteProfessor = catchServiceAsync(async (id) => {

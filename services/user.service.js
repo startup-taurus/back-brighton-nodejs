@@ -52,6 +52,7 @@ module.exports = class UserService extends BaseService {
       limit: limitNumber,
       offset: limitNumber * (pageNumber - 1),
       attributes: { exclude: ["password"] },
+      order: [["id", "DESC"]],
     });
 
     return {
@@ -83,12 +84,23 @@ module.exports = class UserService extends BaseService {
 
   updateUser = catchServiceAsync(async (id, body) => {
     const { name, username, email, password, role, status } = body;
-    validateParameters({ name, username, email, password, role, status });
-    const hashedPassword = await _authUtils.hashPassword(password);
-    const user = await _user.update(
-      { name, username, email, password: hashedPassword, role, status },
-      { where: { id } }
-    );
+    validateParameters({ name, username, email, role, status });
+
+    const updateData = { name, username, email, role, status };
+
+    if (password) {
+      const hashedPassword = await _authUtils.hashPassword(password);
+      updateData.password = hashedPassword;
+    }
+
+    const user = await _user.update(updateData, { where: { id } });
+    return { data: user };
+  });
+
+  updateUserStatus = catchServiceAsync(async (id, body) => {
+    const { status } = body;
+    validateParameters({ id, status });
+    const user = await _user.update({ status }, { where: { id } });
     return { data: user };
   });
 

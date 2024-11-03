@@ -8,6 +8,7 @@ module.exports = function ({ ProfessorController }) {
   router.get("/get-active", ProfessorController.getActiveProfessors);
   router.post("/create", ProfessorController.createProfessor);
   router.put("/update/:id", ProfessorController.updateProfessor);
+  router.put("/update-status/:id", ProfessorController.updateProfessorStatus);
   router.delete("/delete/:id", ProfessorController.deleteProfessor);
   return router;
 };

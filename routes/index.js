@@ -3,7 +3,6 @@ const cors = require("cors");
 const morgan = require("morgan");
 
 const { ErrorMiddleware } = require("../middleware");
-const { StudentRoutes, ProfessorRoutes } = require("./api");
 // const swaggerUI = require("swagger-ui-express");
 //const authMiddleware = require("../middlewares/auth.middleware");
 // const { SWAGGER_PATH } = require("../config");

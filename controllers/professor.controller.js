@@ -45,6 +45,13 @@ module.exports = class ProfessorController extends BaseController {
     return appResponse(res, result);
   });
 
+  updateProfessorStatus = catchControllerAsync(async (req, res) => {
+    const body = req.body;
+    const { id } = req.params;
+    const result = await _professorService.updateProfessorStatus(id, body);
+    return appResponse(res, result);
+  });
+
   deleteProfessor = catchControllerAsync(async (req, res) => {
     const { id } = req.params;
     const result = await _professorService.deleteProfessor(id);

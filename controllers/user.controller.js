@@ -14,6 +14,12 @@ module.exports = class UserController extends BaseController {
     return appResponse(res, result);
   });
 
+  getMe = catchControllerAsync(async (req, res, next) => {
+    const user = req.user;
+    req.query.id = user.id;
+    next();
+  });
+
   getAllUsers = catchControllerAsync(async (req, res) => {
     const { page, limit } = req.query;
     const result = await _userService.getAllUsers(page, limit);
@@ -39,21 +45,21 @@ module.exports = class UserController extends BaseController {
     return appResponse(res, result);
   });
 
+  updateUserStatus = catchControllerAsync(async (req, res) => {
+    const body = req.body;
+    const { id } = req.params;
+    const result = await _userService.updateUserStatus(id, body);
+    return appResponse(res, result);
+  });
+
   deleteUser = catchControllerAsync(async (req, res) => {
     const { id } = req.params;
     const result = await _userService.deleteUser(id);
     return appResponse(res, result);
   });
 
-  getMe = catchControllerAsync(async (req, res, next) => {
-    const user = req.user;
-    req.query.id = user.id;
-    next();
-  });
-
   getFullUser = catchControllerAsync(async (req, res) => {
     const { id } = req.query;
-
     const result = await _userService.getUser(id);
     return appResponse(res, result);
   });
