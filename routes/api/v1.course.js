@@ -12,5 +12,6 @@ module.exports = function ({ CourseController }) {
   router.get("/get-active", CourseController.getActiveCourses);
   router.post("/create", CourseController.createCourse);
   router.put("/update/:id", CourseController.updateCourse);
+  router.put("/update-status/:id", CourseController.updateCourseStatus);
   return router;
 };

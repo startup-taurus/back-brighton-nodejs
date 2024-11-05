@@ -6,6 +6,7 @@ module.exports = function ({ StudentController }) {
   router.get("/get-one/:id", StudentController.getStudent);
   router.post("/create", StudentController.createStudent);
   router.put("/update/:id", StudentController.updateStudent);
+  router.put("/update-status/:id", StudentController.updateStudentStatus);
   router.delete("/delete/:id", StudentController.deleteStudent);
   return router;
 };

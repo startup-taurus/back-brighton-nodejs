@@ -5,4 +5,5 @@ module.exports = {
   PaymentService: require("./payment.service"),
   CourseService: require("./course.service"),
   AttendanceService: require("./attendance.service"),
+  HolidaysService: require("./holidays.service"),
 };

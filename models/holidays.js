@@ -32,6 +32,10 @@ module.exports = class HolidaysModel {
           type: DataTypes.ENUM("national", "regional", "local"),
           defaultValue: "national",
         },
+        status: {
+          type: DataTypes.ENUM("active", "inactive"),
+          defaultValue: "active",
+        },
         created_at: {
           type: DataTypes.DATE,
           defaultValue: DataTypes.NOW,

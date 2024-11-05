@@ -5,4 +5,5 @@ module.exports = {
   PaymentRoutes: require("./v1.payment"),
   CourseRoutes: require("./v1.course"),
   AttendanceRoutes: require("./v1.attendance"),
+  HolidaysRoutes: require("./v1.holidays"),
 };

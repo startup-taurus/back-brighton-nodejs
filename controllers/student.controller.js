@@ -32,6 +32,13 @@ module.exports = class StudentController extends BaseController {
     return appResponse(res, result);
   });
 
+  updateStudentStatus = catchControllerAsync(async (req, res) => {
+    const { body } = req;
+    const { id } = req.params;
+    const result = await _studentService.updateStudentStatus(id, body);
+    return appResponse(res, result);
+  });
+
   deleteStudent = catchControllerAsync(async (req, res) => {
     const { id } = req.params;
     const result = await _studentService.deleteStudent(id);

@@ -14,7 +14,8 @@ const {
   ProfessorService,
   PaymentService,
   CourseService,
-  AttendanceService
+  AttendanceService,
+  HolidaysService
 } = require("../services");
 
 //Controllers
@@ -24,7 +25,8 @@ const {
   ProfessorController,
   PaymentController,
   CourseController,
-  AttendanceController
+  AttendanceController,
+  HolidaysController
 } = require("../controllers");
 
 //Startup
@@ -37,7 +39,8 @@ const {
   ProfessorRoutes,
   PaymentRoutes,
   CourseRoutes,
-  AttendanceRoutes
+  AttendanceRoutes,
+  HolidaysRoutes
 } = require("../routes/api/index");
 
 //Models
@@ -51,7 +54,7 @@ const {
   CourseStudent,
   Attendance,
   Grades,
-  HolidaysModel
+  Holidays
 } = require("../models");
 
 const { protect } = require("../middleware/authMiddleware");
@@ -75,6 +78,7 @@ container
     PaymentService: asClass(PaymentService).singleton(),
     CourseService: asClass(CourseService).singleton(),
     AttendanceService: asClass(AttendanceService).singleton(),
+    HolidaysService: asClass(HolidaysService).singleton(),
   })
   .register({
     //Configuración de los controladores
@@ -94,6 +98,9 @@ container
     AttendanceController: asClass(
       AttendanceController.bind(AttendanceController)
     ).singleton(),
+    HolidaysController: asClass(
+      HolidaysController.bind(HolidaysController)
+    ).singleton(),
   })
   .register({
     //Configuración de rutas
@@ -103,6 +110,7 @@ container
     PaymentRoutes: asFunction(PaymentRoutes).singleton(),
     CourseRoutes: asFunction(CourseRoutes).singleton(),
     AttendanceRoutes: asFunction(AttendanceRoutes).singleton(),
+    HolidaysRoutes: asFunction(HolidaysRoutes).singleton(),
   })
   .register({
     //Configuración de las asociaciones
@@ -118,7 +126,7 @@ container
     CourseStudent: asClass(CourseStudent).singleton(),
     Attendance: asClass(Attendance).singleton(),
     Grades: asClass(Grades).singleton(),
-    HolidaysModel: asClass(HolidaysModel).singleton(),
+    Holidays: asClass(Holidays).singleton(),
   })
   .register({
     //middlewares

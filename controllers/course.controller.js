@@ -53,4 +53,11 @@ module.exports = class CourseController extends BaseController {
     const result = await _courseService.updateCourse(id, body);
     return appResponse(res, result);
   });
+
+  updateCourseStatus = catchControllerAsync(async (req, res) => {
+    const body = req.body;
+    const { id } = req.params;
+    const result = await _courseService.updateCourseStatus(id, body);
+    return appResponse(res, result);
+  });
 };

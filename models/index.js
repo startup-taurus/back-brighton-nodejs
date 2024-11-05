@@ -1,5 +1,3 @@
-const HolidaysModel = require("./holidays");
-
 module.exports = {
   User: require("./user.models"),
   Student: require("./student.models"),
@@ -10,5 +8,5 @@ module.exports = {
   Attendance: require("./attendance"),
   Grades: require("./grades"),
   Association: require("./associations"),
-  HolidaysModel: require("./holidays"),
+  Holidays: require("./holidays"),
 };

@@ -206,4 +206,11 @@ module.exports = class CourseService extends BaseService {
     const course = await _course.update(body, { where: { id } });
     return { data: course };
   });
+
+  updateCourseStatus = catchServiceAsync(async (id, body) => {
+    const { status } = body;
+    validateParameters({ id, status });
+    const course = await _course.update({ status }, { where: { id } });
+    return { data: course };
+  });
 };

@@ -236,6 +236,13 @@ module.exports = class StudentService extends BaseService {
     return { data: updatedStudent };
   });
 
+  updateStudentStatus = catchServiceAsync(async (id, body) => {
+    const { status } = body;
+    validateParameters({ id, status });
+    const student = await _student.update({ status }, { where: { id } });
+    return { data: student };
+  });
+
   deleteStudent = catchServiceAsync(async (id) => {
     const student = await _student.findByPk(id);
 

@@ -15,6 +15,7 @@ module.exports = function ({
   PaymentRoutes,
   CourseRoutes,
   AttendanceRoutes,
+  HolidaysRoutes
 }) {
   const router = express.Router();
   const apiRouter = express.Router();
@@ -31,6 +32,7 @@ module.exports = function ({
   apiRouter.use("/payment", PaymentRoutes);
   apiRouter.use("/course", CourseRoutes);
   apiRouter.use("/attendance", AttendanceRoutes);
+  apiRouter.use("/holidays", HolidaysRoutes);
 
   router.use("/v1/api", apiRouter);
   router.use("/", (req, res) => {
