@@ -64,6 +64,7 @@ module.exports = class StudentService extends BaseService {
           pending_payments: student.pending_payments,
           profession: student.profession,
           book_given: student.book_given,
+          promotion: student.promotion,
           user: {
             id: student.user.id,
             name: student.user.name,
@@ -182,13 +183,12 @@ module.exports = class StudentService extends BaseService {
   });
 
   updateStudent = catchServiceAsync(async (id, body) => {
+    body.role = "student";
     const {
-      name,
-      username,
-      email,
       cedula,
       level,
       status,
+      promotion,
       bookGiven,
       pendingPayments,
       emergency_contact_name,
@@ -202,12 +202,7 @@ module.exports = class StudentService extends BaseService {
       throw new AppError("Student not found", 404);
     }
 
-    await _userService.updateUser(student.user_id, {
-      name,
-      username,
-      email,
-      status,
-    });
+    await _userService.updateUser(student.user_id, body);
 
     await _student.update(
       {
@@ -219,6 +214,7 @@ module.exports = class StudentService extends BaseService {
         emergency_contact_name,
         emergency_contact_phone,
         emergency_contact_relationship,
+        promotion
       },
       { where: { id } }
     );

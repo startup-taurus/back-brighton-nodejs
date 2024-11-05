@@ -42,7 +42,7 @@ module.exports = class CourseModel {
         },
         hourly_rate: {
           type: DataTypes.DECIMAL(10, 2),
-          allowNull: false,
+          allowNull: true,
         },
         schedule: {
           type: DataTypes.TEXT,

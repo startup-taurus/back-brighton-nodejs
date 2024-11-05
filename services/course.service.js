@@ -102,6 +102,8 @@ module.exports = class CourseService extends BaseService {
 
   getAllCoursesWithProfessors = catchServiceAsync(
     async (page = 1, limit = 10) => {
+      let limitNumber = parseInt(limit);
+      let pageNumber = parseInt(page);
       const courses = await _course.findAll({
         include: [
           {
@@ -116,6 +118,8 @@ module.exports = class CourseService extends BaseService {
             ],
           },
         ],
+        limit: limitNumber,
+        offset: limitNumber * (pageNumber - 1),
       });
 
       if (!courses || courses.length === 0) {

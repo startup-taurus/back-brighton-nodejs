@@ -42,6 +42,10 @@ module.exports = class StudentModel {
           type: DataTypes.STRING,
           allowNull: false,
         },
+        promotion: {
+          type: DataTypes.STRING,
+          allowNull: false,
+        },
         pending_payments: {
           type: DataTypes.BOOLEAN,
           defaultValue: false,
