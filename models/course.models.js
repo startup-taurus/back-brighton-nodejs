@@ -3,8 +3,9 @@ let _sequelize = null;
 let _professor = null;
 
 module.exports = class CourseModel {
-  constructor({ Sequelize }) {
+  constructor({ Sequelize, Professor }) {
     _sequelize = Sequelize;
+    _professor = Professor;
     this.defineModel();
   }
 
@@ -51,7 +52,7 @@ module.exports = class CourseModel {
         professor_id: {
           type: DataTypes.INTEGER,
           references: {
-            model: _professor,
+            model: "professor",
             key: "id",
           },
           allowNull: false,

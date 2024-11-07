@@ -207,6 +207,13 @@ module.exports = class CourseService extends BaseService {
   });
 
   updateCourse = catchServiceAsync(async (id, body) => {
+    delete body.professor;
+    if (body.professor_id) {
+      const professor = await _professor.findByPk(body.professor_id);
+      if (!professor) {
+        throw new AppError("Professor not found", 404);
+      }
+    }
     const course = await _course.update(body, { where: { id } });
     return { data: course };
   });

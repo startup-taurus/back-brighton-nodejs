@@ -1,6 +1,7 @@
 const express = require("express");
 const cors = require("cors");
 const morgan = require("morgan");
+const path = require("path");
 
 const { ErrorMiddleware } = require("../middleware");
 // const swaggerUI = require("swagger-ui-express");
@@ -15,7 +16,7 @@ module.exports = function ({
   PaymentRoutes,
   CourseRoutes,
   AttendanceRoutes,
-  HolidaysRoutes
+  HolidaysRoutes,
 }) {
   const router = express.Router();
   const apiRouter = express.Router();
@@ -34,6 +35,7 @@ module.exports = function ({
   apiRouter.use("/attendance", AttendanceRoutes);
   apiRouter.use("/holidays", HolidaysRoutes);
 
+  apiRouter.use("/images", express.static(path.join(__dirname, "../uploads")));
   router.use("/v1/api", apiRouter);
   router.use("/", (req, res) => {
     res.send("v.0.1.0.3");

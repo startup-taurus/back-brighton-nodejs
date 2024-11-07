@@ -30,7 +30,15 @@ module.exports = class ProfessorService extends BaseService {
         {
           model: _user,
           as: "user",
-          attributes: ["id", "name", "email", "role", "username", "last_login"],
+          attributes: [
+            "id",
+            "name",
+            "email",
+            "role",
+            "username",
+            "image",
+            "last_login",
+          ],
         },
       ],
     });
