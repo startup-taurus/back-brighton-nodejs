@@ -6,4 +6,5 @@ module.exports = {
   CourseRoutes: require("./v1.course"),
   AttendanceRoutes: require("./v1.attendance"),
   HolidaysRoutes: require("./v1.holidays"),
+  SyllabusRoutes: require("./v1.syllabus"),
 };

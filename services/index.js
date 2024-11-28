@@ -6,4 +6,5 @@ module.exports = {
   CourseService: require("./course.service"),
   AttendanceService: require("./attendance.service"),
   HolidaysService: require("./holidays.service"),
+  SyllabusService: require("./syllabus.service"),
 };

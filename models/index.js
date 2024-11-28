@@ -9,4 +9,7 @@ module.exports = {
   Grades: require("./grades"),
   Association: require("./associations"),
   Holidays: require("./holidays"),
+  Syllabus: require("./syllabus"),
+  SyllabusItems: require("./syllabusItems"),
+  GradePercentages: require("./gradePercentages"),
 };

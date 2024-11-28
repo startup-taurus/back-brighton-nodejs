@@ -6,4 +6,5 @@ module.exports = {
   CourseController: require("./course.controller"),
   AttendanceController: require("./attendance.controller"),
   HolidaysController: require("./holidays.controller"),
+  SyllabusController: require("./syllabus.controller"),
 };

@@ -187,6 +187,7 @@ module.exports = class CourseService extends BaseService {
       course_type,
       hourly_rate,
       professor_id,
+      syllabus_id,
     } = body;
 
     validateParameters({
@@ -199,9 +200,11 @@ module.exports = class CourseService extends BaseService {
       course_type,
       hourly_rate,
       professor_id,
+      syllabus_id,
     });
 
     body.professor_id = parseInt(professor_id);
+    body.syllabus_id = parseInt(syllabus_id);
     const course = await _course.create(body);
     return { data: course };
   });
