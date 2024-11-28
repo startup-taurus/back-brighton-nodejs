@@ -1,6 +1,6 @@
-const BaseService = require("./base.service");
-const catchServiceAsync = require("../utils/catch-service-async");
-const { validateParameters } = require("../utils/utils");
+const BaseService = require('./base.service');
+const catchServiceAsync = require('../utils/catch-service-async');
+const { validateParameters } = require('../utils/utils');
 let _holidays = null;
 
 module.exports = class HolidaysService extends BaseService {
@@ -15,7 +15,7 @@ module.exports = class HolidaysService extends BaseService {
     const data = await _holidays.findAndCountAll({
       limit: limitNumber,
       offset: limitNumber * (pageNumber - 1),
-      order: [["id", "DESC"]],
+      order: [['id', 'DESC']],
     });
 
     return {
@@ -26,10 +26,21 @@ module.exports = class HolidaysService extends BaseService {
     };
   });
 
+  getAllActiveHolidays = catchServiceAsync(async () => {
+    const data = await _holidays.findAll({
+      status: 'active',
+      order: [['holiday_date', 'ASC']],
+    });
+
+    return {
+      data,
+    };
+  });
+
   getHoliday = catchServiceAsync(async (id) => {
     const holiday = await _holidays.findByPk(id, { raw: true });
     if (!holiday) {
-      throw new AppError("Holiday not found", 404);
+      throw new AppError('Holiday not found', 404);
     }
     return {
       data: holiday,
