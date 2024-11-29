@@ -6,6 +6,7 @@ let _attendance = null;
 let _grades = null;
 let _user = null;
 let _payment = null;
+let _cancelledLesson = null;
 module.exports = class AuditModel {
   constructor({
     User,
@@ -16,6 +17,7 @@ module.exports = class AuditModel {
     Attendance,
     Grades,
     Payment,
+    CancelledLesson,
   }) {
     _student = Student.Student;
     _course = Course.Course;
@@ -25,105 +27,116 @@ module.exports = class AuditModel {
     _grades = Grades.Grades;
     _user = User.User;
     _payment = Payment.Payment;
+    _cancelledLesson = CancelledLesson.CancelledLesson;
     this.defineModel();
   }
 
   defineModel() {
     // Relación entre curso y profesor
     _course.belongsTo(_professor, {
-      foreignKey: "professor_id",
-      as: "professor",
+      foreignKey: 'professor_id',
+      as: 'professor',
     });
 
     _professor.hasMany(_course, {
-      foreignKey: "professor_id",
-      as: "courses",
+      foreignKey: 'professor_id',
+      as: 'courses',
     });
 
     _professor.belongsTo(_user, {
-      foreignKey: "user_id",
-      as: "user",
+      foreignKey: 'user_id',
+      as: 'user',
     });
 
     // Relación de muchos a muchos entre cursos y estudiantes a través de course_student
     _course.belongsToMany(_student, {
       through: _courseStudent,
-      foreignKey: "course_id",
-      as: "students",
+      foreignKey: 'course_id',
+      as: 'students',
     });
 
     _student.belongsToMany(_course, {
       through: _courseStudent,
-      foreignKey: "student_id",
-      as: "courses",
+      foreignKey: 'student_id',
+      as: 'courses',
     });
 
     _student.belongsTo(_user, {
-      foreignKey: "user_id",
-      as: "user",
+      foreignKey: 'user_id',
+      as: 'user',
     });
 
     // Relación de uno a muchos entre curso y asistencia
     _attendance.belongsTo(_course, {
-      foreignKey: "course_id",
+      foreignKey: 'course_id',
     });
     _course.hasMany(_attendance, {
-      foreignKey: "course_id",
+      foreignKey: 'course_id',
     });
 
     // Relación de uno a muchos entre estudiante y asistencia
     _attendance.belongsTo(_student, {
-      foreignKey: "student_id",
+      foreignKey: 'student_id',
     });
     _student.hasMany(_attendance, {
-      foreignKey: "student_id",
+      foreignKey: 'student_id',
     });
 
     // Relación de uno a muchos entre curso y notas (grades)
     _grades.belongsTo(_course, {
-      foreignKey: "course_id",
+      foreignKey: 'course_id',
     });
     _course.hasMany(_grades, {
-      foreignKey: "course_id",
+      foreignKey: 'course_id',
     });
 
     // Relación de uno a muchos entre estudiante y notas (grades)
     _grades.belongsTo(_student, {
-      foreignKey: "student_id",
+      foreignKey: 'student_id',
     });
     _student.hasMany(_grades, {
-      foreignKey: "student_id",
+      foreignKey: 'student_id',
     });
 
     // Relación de uno a uno entre estudiante y pago
     _student.hasMany(_payment, {
-      foreignKey: "student_id",
-      as: "payment",
+      foreignKey: 'student_id',
+      as: 'payment',
     });
     _payment.belongsTo(_student, {
-      foreignKey: "student_id",
-      as: "student",
+      foreignKey: 'student_id',
+      as: 'student',
     });
 
     // Relación de muchos a muchos entre estudiantes y cursos
     _student.belongsToMany(_course, {
       through: {
-        model: "course_student",
+        model: 'course_student',
         timestamps: false,
       },
-      foreignKey: "student_id",
-      otherKey: "course_id",
-      as: "course",
+      foreignKey: 'student_id',
+      otherKey: 'course_id',
+      as: 'course',
     });
 
     _course.belongsToMany(_student, {
       through: {
-        model: "course_student",
+        model: 'course_student',
         timestamps: false,
       },
-      foreignKey: "course_id",
-      otherKey: "student_id",
-      as: "student",
+      foreignKey: 'course_id',
+      otherKey: 'student_id',
+      as: 'student',
+    });
+
+    // Relación de muchos a muchos entre cancelledLesson y cursos
+    _course.hasMany(_cancelledLesson, {
+      foreignKey: 'course_id',
+      as: 'course',
+    });
+    _cancelledLesson.belongsTo(_course, {
+      foreignKey: 'course_id',
+      as: 'course',
     });
   }
 };
