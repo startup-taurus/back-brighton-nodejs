@@ -7,6 +7,9 @@ let _grades = null;
 let _user = null;
 let _payment = null;
 let _cancelledLesson = null;
+let _syllabus = null;
+let _syllabusItems = null;
+let _gradePercentages = null;
 module.exports = class AuditModel {
   constructor({
     User,
@@ -18,6 +21,9 @@ module.exports = class AuditModel {
     Grades,
     Payment,
     CancelledLesson,
+    Syllabus,
+    SyllabusItems,
+    GradePercentages,
   }) {
     _student = Student.Student;
     _course = Course.Course;
@@ -28,6 +34,9 @@ module.exports = class AuditModel {
     _user = User.User;
     _payment = Payment.Payment;
     _cancelledLesson = CancelledLesson.CancelledLesson;
+    _syllabus = Syllabus.Syllabus;
+    _syllabusItems = SyllabusItems.SyllabusItems;
+    _gradePercentages = GradePercentages.GradePercentages;
     this.defineModel();
   }
 
@@ -137,6 +146,33 @@ module.exports = class AuditModel {
     _cancelledLesson.belongsTo(_course, {
       foreignKey: 'course_id',
       as: 'course',
+    });
+
+    _syllabus.hasMany(_syllabusItems, {
+      foreignKey: 'syllabus_id',
+      as: 'items',
+    });
+    _syllabusItems.belongsTo(_syllabus, {
+      foreignKey: 'syllabus_id',
+      as: 'syllabus',
+    });
+
+    _syllabus.hasOne(_gradePercentages, {
+      foreignKey: 'syllabus_id',
+      as: 'percentages',
+    });
+    _gradePercentages.belongsTo(_syllabus, {
+      foreignKey: 'syllabus_id',
+      as: 'syllabus',
+    });
+
+    _syllabus.hasMany(_course, {
+      foreignKey: 'syllabus_id',
+      as: 'courses',
+    });
+    _course.belongsTo(_syllabus, {
+      foreignKey: 'syllabus_id',
+      as: 'syllabus',
     });
   }
 };

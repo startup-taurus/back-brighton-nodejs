@@ -17,6 +17,7 @@ const {
   AttendanceService,
   HolidaysService,
   CancelledLessonService,
+  SyllabusService,
 } = require('../services');
 
 //Controllers
@@ -29,6 +30,7 @@ const {
   AttendanceController,
   HolidaysController,
   CancelledLessonController,
+  SyllabusController,
 } = require('../controllers');
 
 //Startup
@@ -44,6 +46,7 @@ const {
   AttendanceRoutes,
   HolidaysRoutes,
   CancelledLessonRoutes,
+  SyllabusRoutes,
 } = require('../routes/api/index');
 
 //Models
@@ -59,6 +62,9 @@ const {
   Grades,
   Holidays,
   CancelledLesson,
+  Syllabus,
+  SyllabusItems,
+  GradePercentages,
 } = require('../models');
 
 const { protect } = require('../middleware/authMiddleware');
@@ -84,6 +90,7 @@ container
     AttendanceService: asClass(AttendanceService).singleton(),
     HolidaysService: asClass(HolidaysService).singleton(),
     CancelledLessonService: asClass(CancelledLessonService).singleton(),
+    SyllabusService: asClass(SyllabusService).singleton(),
   })
   .register({
     //Configuración de los controladores
@@ -107,6 +114,9 @@ container
       HolidaysController.bind(HolidaysController)
     ).singleton(),
     CancelledLessonController: asClass(CancelledLessonController).singleton(),
+    SyllabusController: asClass(
+      SyllabusController.bind(SyllabusController)
+    ).singleton(),
   })
   .register({
     //Configuración de rutas
@@ -118,6 +128,7 @@ container
     AttendanceRoutes: asFunction(AttendanceRoutes).singleton(),
     HolidaysRoutes: asFunction(HolidaysRoutes).singleton(),
     CancelledLessonRoutes: asFunction(CancelledLessonRoutes).singleton(),
+    SyllabusRoutes: asFunction(SyllabusRoutes).singleton(),
   })
   .register({
     //Configuración de las asociaciones
@@ -135,6 +146,9 @@ container
     Grades: asClass(Grades).singleton(),
     Holidays: asClass(Holidays).singleton(),
     CancelledLesson: asClass(CancelledLesson).singleton(),
+    Syllabus: asClass(Syllabus).singleton(),
+    SyllabusItems: asClass(SyllabusItems).singleton(),
+    GradePercentages: asClass(GradePercentages).singleton(),
   })
   .register({
     //middlewares

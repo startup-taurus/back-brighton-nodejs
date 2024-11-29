@@ -57,6 +57,14 @@ module.exports = class CourseModel {
           },
           allowNull: false,
         },
+        syllabus_id: {
+          type: DataTypes.INTEGER,
+          references: {
+            model: "syllabus",
+            key: "id",
+          },
+          allowNull: true,
+        },
       },
       {
         tableName: "course",
