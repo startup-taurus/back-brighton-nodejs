@@ -1,7 +1,7 @@
-const catchServiceAsync = require('../utils/catch-service-async');
-const BaseService = require('./base.service');
-const AppError = require('../utils/app-error');
-const { validateParameters } = require('../utils/utils');
+const catchServiceAsync = require("../utils/catch-service-async");
+const BaseService = require("./base.service");
+const AppError = require("../utils/app-error");
+const { validateParameters } = require("../utils/utils");
 let _user = null;
 let _authUtils = null;
 module.exports = class UserService extends BaseService {
@@ -16,12 +16,12 @@ module.exports = class UserService extends BaseService {
 
     const user = await _user.findOne({ where: { username: username } });
     if (!user) {
-      throw new AppError('User not found', 404);
+      throw new AppError("User not found", 404);
     }
 
     if (user.failed_attempts >= 5) {
       throw new AppError(
-        'Account is locked due to too many failed login attempts',
+        "Account is locked due to too many failed login attempts",
         403
       );
     }
@@ -34,7 +34,7 @@ module.exports = class UserService extends BaseService {
 
     if (!isPasswordValid) {
       await user.update({ failed_attempts: user.failed_attempts + 1 });
-      throw new AppError('Password incorrect', 400);
+      throw new AppError("Password incorrect", 400);
     }
 
     await user.update({
@@ -51,8 +51,8 @@ module.exports = class UserService extends BaseService {
     const data = await _user.findAndCountAll({
       limit: limitNumber,
       offset: limitNumber * (pageNumber - 1),
-      attributes: { exclude: ['password'] },
-      order: [['id', 'DESC']],
+      attributes: { exclude: ["password"] },
+      order: [["id", "DESC"]],
     });
 
     return {
@@ -66,14 +66,14 @@ module.exports = class UserService extends BaseService {
   getUser = catchServiceAsync(async (id) => {
     const user = await _user.findByPk(id);
     if (!user) {
-      throw new AppError('User not found', 404);
+      throw new AppError("User not found", 404);
     }
     return { data: user };
   });
 
   createUser = catchServiceAsync(async (body) => {
     const { name, username, email, password, role, status } = body;
-    validateParameters({ name, username, email, password, role, status });
+    validateParameters({ name, role, status });
 
     const hashedPassword = await _authUtils.hashPassword(body.password);
     body.password = hashedPassword;
