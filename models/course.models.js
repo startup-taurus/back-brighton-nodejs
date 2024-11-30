@@ -41,6 +41,10 @@ module.exports = class CourseModel {
           type: DataTypes.STRING,
           allowNull: false,
         },
+        classroom: {
+          type: DataTypes.STRING,
+          allowNull: true,
+        },
         hourly_rate: {
           type: DataTypes.DECIMAL(10, 2),
           allowNull: true,

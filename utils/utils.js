@@ -32,4 +32,18 @@ module.exports = {
       endTime,
     }));
   },
+
+  generateCredentials(name, cedula) {
+    const normalizedName = name
+      .trim()
+      .toLowerCase()
+      .split(" ")
+      .map((word) => word.charAt(0))
+      .join("");
+
+    const username = `${normalizedName}${cedula.slice(-4)}`;
+    const randomString = Math.random().toString(36).slice(-8);
+    const password = `${cedula.slice(0, 3)}${randomString}!`;
+    return { username, password };
+  },
 };

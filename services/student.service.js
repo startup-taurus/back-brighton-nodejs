@@ -1,7 +1,7 @@
 const catchServiceAsync = require("../utils/catch-service-async");
 const BaseService = require("./base.service");
 const AppError = require("../utils/app-error");
-const { validateParameters } = require("../utils/utils");
+const { validateParameters, generateCredentials } = require("../utils/utils");
 const { or } = require("sequelize");
 let _user = null;
 let _student = null;
@@ -130,9 +130,6 @@ module.exports = class StudentService extends BaseService {
     body.role = "student";
     const {
       name,
-      username,
-      email,
-      password,
       cedula,
       profession,
       courseId,
@@ -143,18 +140,18 @@ module.exports = class StudentService extends BaseService {
       emergency_contact_name,
       emergency_contact_phone,
       emergency_contact_relationship,
+      promotion,
     } = body;
 
     validateParameters({
       name,
-      username,
-      email,
-      password,
       cedula,
-      courseId,
-      level,
       status,
     });
+
+    const { username, password } = generateCredentials(name, cedula);
+    body.username = username;
+    body.password = password;
 
     const userResponse = await _userService.createUser(body);
 
@@ -171,13 +168,16 @@ module.exports = class StudentService extends BaseService {
       emergency_contact_name,
       emergency_contact_phone,
       emergency_contact_relationship,
+      promotion,
     });
 
-    await _courseStudent.create({
-      course_id: parseInt(courseId),
-      student_id: student.id,
-      enrollment_date: new Date(),
-    });
+    if (courseId) {
+      await _courseStudent.create({
+        course_id: parseInt(courseId),
+        student_id: student.id,
+        enrollment_date: new Date(),
+      });
+    }
 
     return { data: student };
   });
@@ -214,7 +214,7 @@ module.exports = class StudentService extends BaseService {
         emergency_contact_name,
         emergency_contact_phone,
         emergency_contact_relationship,
-        promotion
+        promotion,
       },
       { where: { id } }
     );
