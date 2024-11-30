@@ -6,7 +6,7 @@ module.exports = function ({ CancelledLessonController }) {
   router.patch('/update', CancelledLessonController.update);
 
   router.get(
-    '/get-all-by-course',
+    '/get-all-by-course/:courseId',
     CancelledLessonController.getCancelledLessonsByCourse
   );
   return router;
