@@ -1,5 +1,5 @@
-const AppError = require("../utils/app-error");
-const catchServiceAsync = require("../utils/catch-service-async");
+const AppError = require('../utils/app-error');
+const catchServiceAsync = require('../utils/catch-service-async');
 module.exports = class BaseService {
   constructor(model) {
     this.model = model;
@@ -7,11 +7,11 @@ module.exports = class BaseService {
 
   getOne = catchServiceAsync(async (id) => {
     if (!id) {
-      throw new AppError("Id must be sent", 400);
+      throw new AppError('Id must be sent', 400);
     }
     const currentEntity = await this.model.findById(id);
     if (!currentEntity) {
-      throw new AppError("Entity does not found", 404);
+      throw new AppError('Entity does not found', 404);
     }
     return currentEntity;
   });
@@ -30,20 +30,22 @@ module.exports = class BaseService {
   update = catchServiceAsync(async (id, entity) => {
     try {
       if (!id) {
-        throw new AppError("Id must be sent", 400);
+        throw new AppError('Id must be sent', 400);
       }
-      return await this.model.findByIdAndUpdate(id, entity, {
-        new: true,
-      });;
+      return await this.model.update(entity, { where: { id } });
     } catch (e) {
-      throw new AppError("Id must be sent", 400);
+      throw new AppError('Something is wrong, contact to support!', 400);
     }
   });
 
   delete = catchServiceAsync(async (id) => {
-    if (!id) {
-      throw new AppError("Id must be sent", 400);
+    try {
+      if (!id) {
+        throw new AppError('Id must be sent', 400);
+      }
+      return await this.model.destroy({ where: { id } });
+    } catch (e) {
+      console.log(e);
     }
-    return await this.model.findByIdAndDelete(id);
   });
 };

@@ -1,4 +1,4 @@
-const catchControllerAsync = require("../utils/catch-controller-async");
+const catchControllerAsync = require('../utils/catch-controller-async');
 
 module.exports = class BaseController {
   constructor(service) {
@@ -32,7 +32,7 @@ module.exports = class BaseController {
 
   delete = catchControllerAsync(async (req, res) => {
     const { id } = req.params;
-    const result = await this.service.delete(id);
-    res.send(result);
+    await this.service.delete(id);
+    res.sendStatus(200);
   });
 };
