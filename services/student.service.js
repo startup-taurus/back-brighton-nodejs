@@ -1,8 +1,8 @@
-const catchServiceAsync = require("../utils/catch-service-async");
-const BaseService = require("./base.service");
-const AppError = require("../utils/app-error");
-const { validateParameters, generateCredentials } = require("../utils/utils");
-const { or } = require("sequelize");
+const catchServiceAsync = require('../utils/catch-service-async');
+const BaseService = require('./base.service');
+const AppError = require('../utils/app-error');
+const { validateParameters, generateCredentials } = require('../utils/utils');
+const { or } = require('sequelize');
 let _user = null;
 let _student = null;
 let _course = null;
@@ -21,32 +21,40 @@ module.exports = class StudentService extends BaseService {
     _userService = UserService;
   }
 
-  getAllStudents = catchServiceAsync(async (page = 1, limit = 10) => {
-    let limitNumber = parseInt(limit);
-    let pageNumber = parseInt(page);
+  getAllStudents = catchServiceAsync(async (query) => {
+    const { page = 10, limit = 1 } = query;
+
+    let limitNumber = Number(limit);
+    let pageNumber = Number(page);
 
     const data = await _student.findAndCountAll({
       limit: limitNumber,
       offset: limitNumber * (pageNumber - 1),
+      where: {
+        ...(query.status && { status: query.status }),
+        ...(query.promotion && { promotion: query.promotion }),
+        ...(query.level && { level: query.level }),
+      },
       include: [
         {
           model: _user,
-          as: "user",
-          attributes: ["id", "name", "email", "status", "username", "password"],
+          as: 'user',
+          attributes: ['id', 'name', 'email', 'status', 'username', 'password'],
         },
         {
           model: _payment,
-          as: "payment",
-          attributes: ["payment_date", "total_payment", "payment_method"],
+          as: 'payment',
+          attributes: ['payment_date', 'total_payment', 'payment_method'],
         },
         {
           model: _course,
-          as: "course",
+          where: { ...(query.course && { id: query.course }) },
+          as: 'course',
           through: { attributes: [] },
-          attributes: ["id", "course_name", "course_number"],
+          attributes: ['id', 'course_name', 'course_number'],
         },
       ],
-      order: [["id", "DESC"]],
+      order: [['id', 'DESC']],
     });
 
     return {
@@ -97,14 +105,14 @@ module.exports = class StudentService extends BaseService {
       include: [
         {
           model: _user,
-          as: "user",
-          attributes: ["id", "name", "email"],
+          as: 'user',
+          attributes: ['id', 'name', 'email'],
         },
       ],
     });
 
     if (!student) {
-      throw new AppError("Student not found", 404);
+      throw new AppError('Student not found', 404);
     }
 
     return {
@@ -127,7 +135,7 @@ module.exports = class StudentService extends BaseService {
   });
 
   createStudent = catchServiceAsync(async (body) => {
-    body.role = "student";
+    body.role = 'student';
     const {
       name,
       cedula,
@@ -183,7 +191,7 @@ module.exports = class StudentService extends BaseService {
   });
 
   updateStudent = catchServiceAsync(async (id, body) => {
-    body.role = "student";
+    body.role = 'student';
     const {
       cedula,
       level,
@@ -199,7 +207,7 @@ module.exports = class StudentService extends BaseService {
     const student = await _student.findByPk(id);
 
     if (!student) {
-      throw new AppError("Student not found", 404);
+      throw new AppError('Student not found', 404);
     }
 
     await _userService.updateUser(student.user_id, body);
@@ -223,8 +231,8 @@ module.exports = class StudentService extends BaseService {
       include: [
         {
           model: _user,
-          as: "user",
-          attributes: ["name", "username", "email", "status"],
+          as: 'user',
+          attributes: ['name', 'username', 'email', 'status'],
         },
       ],
     });
@@ -243,12 +251,12 @@ module.exports = class StudentService extends BaseService {
     const student = await _student.findByPk(id);
 
     if (!student) {
-      throw new AppError("Student not found", 404);
+      throw new AppError('Student not found', 404);
     }
 
     await _student.destroy({ where: { id } });
     await _user.destroy({ where: { id: student.user_id } });
 
-    return { message: "Student and associated user deleted successfully" };
+    return { message: 'Student and associated user deleted successfully' };
   });
 };

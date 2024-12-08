@@ -1,8 +1,8 @@
-const catchServiceAsync = require("../utils/catch-service-async");
-const BaseService = require("./base.service");
-const AppError = require("../utils/app-error");
-const { Op } = require("sequelize");
-const { validateParameters, scheduleStringToDates } = require("../utils/utils");
+const catchServiceAsync = require('../utils/catch-service-async');
+const BaseService = require('./base.service');
+const AppError = require('../utils/app-error');
+const { Op } = require('sequelize');
+const { validateParameters, scheduleStringToDates } = require('../utils/utils');
 let _user = null;
 let _course = null;
 let _professor = null;
@@ -19,13 +19,18 @@ module.exports = class CourseService extends BaseService {
     _sequelize = Sequelize;
   }
 
-  getAllCourses = catchServiceAsync(async (page = 1, limit = 10) => {
-    let limitNumber = parseInt(limit);
-    let pageNumber = parseInt(page);
-    const result = await _course.findAndCountAll({
-      limit: limitNumber,
-      offset: limitNumber * (pageNumber - 1),
-    });
+  getAllCoursesWithoutFilters = catchServiceAsync(async () => {
+    const result = await _course.findAndCountAll();
+
+    return {
+      data: {
+        result: result.rows,
+      },
+    };
+  });
+
+  getAllCourses = catchServiceAsync(async () => {
+    const result = await _course.findAndCountAll({});
 
     return {
       data: {
@@ -38,7 +43,7 @@ module.exports = class CourseService extends BaseService {
   getCourse = catchServiceAsync(async (id) => {
     const course = await _course.findByPk(id, { raw: true });
     if (!course) {
-      throw new AppError("Course not found", 404);
+      throw new AppError('Course not found', 404);
     }
     return {
       data: {
@@ -55,23 +60,23 @@ module.exports = class CourseService extends BaseService {
       include: [
         {
           model: _professor,
-          as: "professor",
+          as: 'professor',
           include: [
             {
               model: _user,
-              as: "user",
-              attributes: ["id", "name"],
+              as: 'user',
+              attributes: ['id', 'name'],
             },
           ],
         },
         {
           model: _student,
-          as: "students",
+          as: 'students',
           include: [
             {
               model: _user,
-              as: "user",
-              attributes: ["id", "name", "status"],
+              as: 'user',
+              attributes: ['id', 'name', 'status'],
             },
           ],
           through: { attributes: [] },
@@ -80,7 +85,7 @@ module.exports = class CourseService extends BaseService {
     });
 
     if (!course) {
-      throw new AppError("Course not found", 404);
+      throw new AppError('Course not found', 404);
     }
 
     const studentList = course.students.map((student) => ({
@@ -108,12 +113,12 @@ module.exports = class CourseService extends BaseService {
         include: [
           {
             model: _professor,
-            as: "professor",
+            as: 'professor',
             include: [
               {
                 model: _user,
-                as: "user",
-                attributes: ["name"],
+                as: 'user',
+                attributes: ['name'],
               },
             ],
           },
@@ -123,7 +128,7 @@ module.exports = class CourseService extends BaseService {
       });
 
       if (!courses || courses.length === 0) {
-        throw new AppError("No courses found", 404);
+        throw new AppError('No courses found', 404);
       }
 
       return {
@@ -136,7 +141,7 @@ module.exports = class CourseService extends BaseService {
   );
 
   getActiveCourses = catchServiceAsync(
-    async (page = 1, limit = 10, search = "") => {
+    async (page = 1, limit = 10, search = '') => {
       let limitNumber = parseInt(limit);
       let pageNumber = parseInt(page);
       const offset = (pageNumber - 1) * limitNumber;
@@ -144,7 +149,7 @@ module.exports = class CourseService extends BaseService {
 
       const courses = await _course.findAll({
         where: {
-          status: "active",
+          status: 'active',
           end_date: {
             [Op.gt]: today,
           },
@@ -157,12 +162,12 @@ module.exports = class CourseService extends BaseService {
         include: [
           {
             model: _professor,
-            as: "professor",
+            as: 'professor',
             include: [
               {
                 model: _user,
-                as: "user",
-                attributes: ["name"],
+                as: 'user',
+                attributes: ['name'],
               },
             ],
           },
@@ -214,7 +219,7 @@ module.exports = class CourseService extends BaseService {
     if (body.professor_id) {
       const professor = await _professor.findByPk(body.professor_id);
       if (!professor) {
-        throw new AppError("Professor not found", 404);
+        throw new AppError('Professor not found', 404);
       }
     }
     const course = await _course.update(body, { where: { id } });

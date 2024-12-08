@@ -1,6 +1,6 @@
-const catchControllerAsync = require("../utils/catch-controller-async");
-const BaseController = require("./base.controller");
-const { appResponse } = require("../utils/app-response");
+const catchControllerAsync = require('../utils/catch-controller-async');
+const BaseController = require('./base.controller');
+const { appResponse } = require('../utils/app-response');
 let _studentService = null;
 module.exports = class StudentController extends BaseController {
   constructor({ StudentService }) {
@@ -8,8 +8,7 @@ module.exports = class StudentController extends BaseController {
     _studentService = StudentService;
   }
   getAllStudents = catchControllerAsync(async (req, res) => {
-    const { page, limit } = req.query;
-    const result = await _studentService.getAllStudents(page, limit);
+    const result = await _studentService.getAllStudents({ ...req.query });
     return appResponse(res, result);
   });
 
