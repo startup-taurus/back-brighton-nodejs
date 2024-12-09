@@ -21,11 +21,11 @@ module.exports = class StudentService extends BaseService {
     _userService = UserService;
   }
 
-  getAllStudents = catchServiceAsync(async (query) => {
-    const { page = 10, limit = 1 } = query;
+  getAllStudents = async (query) => {
+    const { page = 1, limit = 10 } = query;
 
-    let limitNumber = Number(limit);
-    let pageNumber = Number(page);
+    let limitNumber = parseInt(limit);
+    let pageNumber = parseInt(page);
 
     const data = await _student.findAndCountAll({
       limit: limitNumber,
@@ -98,7 +98,7 @@ module.exports = class StudentService extends BaseService {
         totalCount: data.count,
       },
     };
-  });
+  };
 
   getStudent = catchServiceAsync(async (id) => {
     const student = await _student.findByPk(id, {

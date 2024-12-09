@@ -1,7 +1,8 @@
-const catchServiceAsync = require("../utils/catch-service-async");
-const BaseService = require("./base.service");
-const AppError = require("../utils/app-error");
-const { validateParameters } = require("../utils/utils");
+const catchServiceAsync = require('../utils/catch-service-async');
+const BaseService = require('./base.service');
+const AppError = require('../utils/app-error');
+const { validateParameters } = require('../utils/utils');
+const { Op } = require('sequelize');
 let _user = null;
 let _authUtils = null;
 module.exports = class UserService extends BaseService {
@@ -16,12 +17,12 @@ module.exports = class UserService extends BaseService {
 
     const user = await _user.findOne({ where: { username: username } });
     if (!user) {
-      throw new AppError("User not found", 404);
+      throw new AppError('User not found', 404);
     }
 
     if (user.failed_attempts >= 5) {
       throw new AppError(
-        "Account is locked due to too many failed login attempts",
+        'Account is locked due to too many failed login attempts',
         403
       );
     }
@@ -34,7 +35,7 @@ module.exports = class UserService extends BaseService {
 
     if (!isPasswordValid) {
       await user.update({ failed_attempts: user.failed_attempts + 1 });
-      throw new AppError("Password incorrect", 400);
+      throw new AppError('Password incorrect', 400);
     }
 
     await user.update({
@@ -45,14 +46,25 @@ module.exports = class UserService extends BaseService {
     return { data: user, message: null };
   });
 
-  getAllUsers = catchServiceAsync(async (page = 1, limit = 10) => {
+  getAllUsers = catchServiceAsync(async (query) => {
+    const { page = 1, limit = 10 } = query;
+
     let limitNumber = parseInt(limit);
     let pageNumber = parseInt(page);
+
     const data = await _user.findAndCountAll({
       limit: limitNumber,
+      where: {
+        ...(query.user_type && { role: query.user_type }),
+        ...(query.status && { status: query.status }),
+        ...(query.username && {
+          username: { [Op.like]: `%${query.username}%` },
+        }),
+        ...(query.name && { name: { [Op.like]: `%${query.name}%` } }),
+      },
       offset: limitNumber * (pageNumber - 1),
-      attributes: { exclude: ["password"] },
-      order: [["id", "DESC"]],
+      attributes: { exclude: ['password'] },
+      order: [['id', 'DESC']],
     });
 
     return {
@@ -66,7 +78,7 @@ module.exports = class UserService extends BaseService {
   getUser = catchServiceAsync(async (id) => {
     const user = await _user.findByPk(id);
     if (!user) {
-      throw new AppError("User not found", 404);
+      throw new AppError('User not found', 404);
     }
     return { data: user };
   });

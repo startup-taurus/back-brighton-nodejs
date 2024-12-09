@@ -105,40 +105,50 @@ module.exports = class CourseService extends BaseService {
     };
   });
 
-  getAllCoursesWithProfessors = catchServiceAsync(
-    async (page = 1, limit = 10) => {
-      let limitNumber = parseInt(limit);
-      let pageNumber = parseInt(page);
-      const courses = await _course.findAll({
-        include: [
-          {
-            model: _professor,
-            as: 'professor',
-            include: [
-              {
-                model: _user,
-                as: 'user',
-                attributes: ['name'],
-              },
-            ],
-          },
-        ],
-        limit: limitNumber,
-        offset: limitNumber * (pageNumber - 1),
-      });
+  getAllCoursesWithProfessors = catchServiceAsync(async (query) => {
+    const { page = 1, limit = 10 } = query;
 
-      if (!courses || courses.length === 0) {
-        throw new AppError('No courses found', 404);
-      }
+    console.log(query);
 
-      return {
-        data: {
-          result: courses,
-          totalCount: courses.length,
+    let limitNumber = parseInt(limit);
+    let pageNumber = parseInt(page);
+    const courses = await _course.findAll({
+      where: {
+        ...(query.status && { status: query.status }),
+        ...(query.course_name && {
+          course_name: { [Op.like]: `%${query.course_name}%` },
+        }),
+        ...(query.course_number && {
+          course_number: { [Op.like]: `%${query.course_number}%` },
+        }),
+        ...(query.course_type && {
+          course_type: { [Op.like]: `%${query.course_type}%` },
+        }),
+      },
+      include: [
+        {
+          model: _professor,
+          as: 'professor',
+          include: [
+            {
+              model: _user,
+              as: 'user',
+              attributes: ['name'],
+            },
+          ],
         },
-      };
-    }
-  );
+      ],
+      limit: limitNumber,
+      offset: limitNumber * (pageNumber - 1),
+    });
+
+    return {
+      data: {
+        result: courses,
+        totalCount: courses.length,
+      },
+    };
+  });
 
   getActiveCourses = catchServiceAsync(
     async (page = 1, limit = 10, search = '') => {
