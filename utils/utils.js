@@ -33,6 +33,40 @@ module.exports = {
     }));
   },
 
+  calculateClassDates(startDate, syllabusItems, hourlyRate){
+    const daysMap = {
+      Mon: 1,
+      Tue: 2,
+      Wed: 3,
+      Thu: 4,
+      Fri: 5,
+      Sat: 6,
+      Sun: 0,
+    };
+  
+    const [days, timeRange] = hourlyRate.split(" ");
+    const [startTime, endTime] = timeRange.split("-");
+    const classDays = days.split("-").map((day) => daysMap[day]);
+  
+    const dates = [];
+    let currentDate = new Date(startDate);
+  
+    syllabusItems.forEach(() => {
+      while (!classDays.includes(currentDate.getDay())) {
+        currentDate.setDate(currentDate.getDate() + 1);
+      }
+
+      const classDate = new Date(
+        currentDate.toISOString().split("T")[0] + "T" + startTime
+      );
+  
+      dates.push(classDate);
+      currentDate.setDate(currentDate.getDate() + 1);
+    });
+  
+    return dates;
+  },
+  
   generateCredentials(name, cedula) {
     const normalizedName = name
       .trim()

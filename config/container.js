@@ -1,11 +1,11 @@
 //Configurar nuestro contenedor de injección de depencia
-const { createContainer, asClass, asValue, asFunction } = require('awilix');
-const { Sequelize } = require('sequelize');
+const { createContainer, asClass, asValue, asFunction } = require("awilix");
+const { Sequelize } = require("sequelize");
 //Config
-const config = require('.');
+const config = require(".");
 
 //Routes
-const Routes = require('../routes');
+const Routes = require("../routes");
 
 //Services
 const {
@@ -18,7 +18,7 @@ const {
   HolidaysService,
   CancelledLessonService,
   SyllabusService,
-} = require('../services');
+} = require("../services");
 
 //Controllers
 const {
@@ -31,10 +31,10 @@ const {
   HolidaysController,
   CancelledLessonController,
   SyllabusController,
-} = require('../controllers');
+} = require("../controllers");
 
 //Startup
-const { Database, Server } = require('../startup');
+const { Database, Server } = require("../startup");
 
 //Routes
 const {
@@ -47,7 +47,7 @@ const {
   HolidaysRoutes,
   CancelledLessonRoutes,
   SyllabusRoutes,
-} = require('../routes/api/index');
+} = require("../routes/api/index");
 
 //Models
 const {
@@ -65,10 +65,11 @@ const {
   Syllabus,
   SyllabusItems,
   GradePercentages,
-} = require('../models');
+  CourseSchedule,
+} = require("../models");
 
-const { protect } = require('../middleware/authMiddleware');
-const AuthUtils = require('../utils/auth');
+const { protect } = require("../middleware/authMiddleware");
+const AuthUtils = require("../utils/auth");
 const container = createContainer();
 container
   .register({
@@ -149,6 +150,7 @@ container
     Syllabus: asClass(Syllabus).singleton(),
     SyllabusItems: asClass(SyllabusItems).singleton(),
     GradePercentages: asClass(GradePercentages).singleton(),
+    CourseSchedule: asClass(CourseSchedule).singleton(),
   })
   .register({
     //middlewares

@@ -171,4 +171,17 @@ module.exports = class SyllabusService extends BaseService {
     }
     return { data: [] };
   });
+
+  getIdSyllabus = catchServiceAsync(async (id) => {
+    const syllabus = await _syllabus.findByPk(id, {
+      include: [
+        {
+          model: _syllabusItems,
+          as: "items",
+          attributes: ["id"],
+        },
+      ],
+    });
+    return syllabus;
+  });
 };
