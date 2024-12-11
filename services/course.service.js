@@ -171,18 +171,23 @@ module.exports = class CourseService extends BaseService {
       let limitNumber = parseInt(limit);
       let pageNumber = parseInt(page);
       const offset = (pageNumber - 1) * limitNumber;
-      const today = new Date();
 
       const courses = await _course.findAll({
         where: {
           status: "active",
-          end_date: {
-            [Op.gt]: today,
-          },
           ...(search && {
-            course_name: {
-              [Op.like]: `%${search}%`,
-            },
+            [Op.or]: [
+              {
+                course_name: {
+                  [Op.like]: `%${search}%`,
+                },
+              },
+              {
+                course_number: {
+                  [Op.like]: `%${search}%`,
+                },
+              },
+            ],
           }),
         },
         include: [
@@ -200,7 +205,9 @@ module.exports = class CourseService extends BaseService {
         ],
         limit: limitNumber,
         offset,
+        order: [["id", "DESC"]],
       });
+
       return {
         data: courses,
       };
@@ -267,7 +274,7 @@ module.exports = class CourseService extends BaseService {
       }
 
       const classDates = calculateClassDates(
-        new Date(start_date),
+        start_date,
         syllabus.items,
         schedule
       );

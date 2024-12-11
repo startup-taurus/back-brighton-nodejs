@@ -33,33 +33,35 @@ module.exports = {
     }));
   },
 
-  calculateClassDates(startDate, syllabusItems, hourlyRate){
+ calculateClassDates(startDate, syllabusItems, hourlyRate){
     const daysMap = {
+      Sun: 0,
       Mon: 1,
       Tue: 2,
       Wed: 3,
       Thu: 4,
       Fri: 5,
       Sat: 6,
-      Sun: 0,
     };
   
     const [days, timeRange] = hourlyRate.split(" ");
     const [startTime, endTime] = timeRange.split("-");
+
     const classDays = days.split("-").map((day) => daysMap[day]);
-  
+    const [year, month, day] = startDate.split("-").map((num) => parseInt(num, 10));
+
+    let currentDate = new Date(year, month - 1, day);
     const dates = [];
-    let currentDate = new Date(startDate);
-  
+
     syllabusItems.forEach(() => {
       while (!classDays.includes(currentDate.getDay())) {
         currentDate.setDate(currentDate.getDate() + 1);
       }
-
-      const classDate = new Date(
-        currentDate.toISOString().split("T")[0] + "T" + startTime
-      );
+      const dateStr = currentDate.getFullYear() + "-" +
+                      String(currentDate.getMonth() + 1).padStart(2, '0') + "-" +
+                      String(currentDate.getDate()).padStart(2, '0') + "T" + startTime;
   
+      const classDate = new Date(dateStr);
       dates.push(classDate);
       currentDate.setDate(currentDate.getDate() + 1);
     });
