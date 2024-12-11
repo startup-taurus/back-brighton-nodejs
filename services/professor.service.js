@@ -88,7 +88,8 @@ module.exports = class ProfessorService extends BaseService {
   });
 
   getProfessorCourses = catchServiceAsync(async (professorId) => {
-    const professor = await _professor.findByPk(professorId, {
+    const professor = await _professor.findOne({
+      where: { user_id: professorId },
       include: [
         {
           model: _course,
