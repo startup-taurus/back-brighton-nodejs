@@ -1,8 +1,9 @@
-const BaseService = require("./base.service");
-const catchServiceAsync = require("../utils/catch-service-async");
-const { validateParameters } = require("../utils/utils");
-const { Op, fn, col, Sequelize } = require("sequelize");
-const moment = require("moment");
+const BaseService = require('./base.service');
+const catchServiceAsync = require('../utils/catch-service-async');
+const { validateParameters } = require('../utils/utils');
+const { Op, fn, col, Sequelize } = require('sequelize');
+const moment = require('moment');
+const AppError = require('../utils/app-error');
 let _user = null;
 let _course = null;
 let _student = null;
@@ -22,22 +23,19 @@ module.exports = class AttendanceService extends BaseService {
       include: [
         {
           model: _student,
-          as: "student",
+          as: 'student',
           include: [
             {
               model: _user,
-              as: "user",
-              attributes: ["name"],
+              as: 'user',
+              attributes: ['name'],
             },
           ],
         },
       ],
     });
 
-    if (!attendanceRecords || attendanceRecords.length === 0) {
-      throw new AppError("No attendance records found for this course", 404);
-    }
-    const formattedRecords = attendanceRecords.map((attendance) => ({
+    const formattedRecords = attendanceRecords?.map((attendance) => ({
       id: attendance.id,
       course_id: attendance.course_id,
       student_id: attendance.student.id,
@@ -46,7 +44,7 @@ module.exports = class AttendanceService extends BaseService {
       attendance_date: attendance.attendance_date,
     }));
 
-    return { data: formattedRecords };
+    return { data: formattedRecords ?? [] };
   });
 
   createAttendance = catchServiceAsync(async (body) => {

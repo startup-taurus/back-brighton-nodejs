@@ -1,6 +1,7 @@
-const catchServiceAsync = require("../utils/catch-service-async");
-const BaseService = require("./base.service");
-const { validateParameters } = require("../utils/utils");
+const catchServiceAsync = require('../utils/catch-service-async');
+const BaseService = require('./base.service');
+const { validateParameters } = require('../utils/utils');
+const AppError = require('../utils/app-error');
 let _course = null;
 let _syllabus = null;
 let _syllabusItems = null;
@@ -8,7 +9,7 @@ let _gradePercentages = null;
 
 module.exports = class SyllabusService extends BaseService {
   constructor({ Syllabus, SyllabusItems, GradePercentages, Course }) {
-    super(Syllabus);
+    super(Syllabus.Syllabus);
     _course = Syllabus.Course;
     _syllabus = Syllabus.Syllabus;
     _syllabusItems = SyllabusItems.SyllabusItems;
@@ -23,26 +24,26 @@ module.exports = class SyllabusService extends BaseService {
       include: [
         {
           model: _syllabusItems,
-          as: "items",
-          attributes: ["id", "item_name"],
+          as: 'items',
+          attributes: ['id', 'item_name'],
         },
         {
           model: _gradePercentages,
-          as: "percentages",
+          as: 'percentages',
           attributes: [
-            "assig_percentage",
-            "test_percentage",
-            "exam_percentage",
+            'assig_percentage',
+            'test_percentage',
+            'exam_percentage',
           ],
         },
       ],
-      attributes: ["id", "syllabus_name"],
+      attributes: ['id', 'syllabus_name'],
       limit: limitNumber,
       offset,
     });
 
     if (!syllabus || syllabus.length === 0) {
-      throw new AppError("No syllabus found", 404);
+      throw new AppError('No syllabus found', 404);
     }
 
     return { data: syllabus.rows, totalCount: syllabus.count };
@@ -53,24 +54,24 @@ module.exports = class SyllabusService extends BaseService {
       include: [
         {
           model: _syllabusItems,
-          as: "items",
-          attributes: ["id", "item_name"],
+          as: 'items',
+          attributes: ['id', 'item_name'],
         },
         {
           model: _gradePercentages,
-          as: "percentages",
+          as: 'percentages',
           attributes: [
-            "assig_percentage",
-            "test_percentage",
-            "exam_percentage",
+            'assig_percentage',
+            'test_percentage',
+            'exam_percentage',
           ],
         },
       ],
-      attributes: ["id", "syllabus_name"],
+      attributes: ['id', 'syllabus_name'],
     });
 
     if (!syllabus) {
-      throw new AppError("Syllabus not found", 404);
+      throw new AppError('Syllabus not found', 404);
     }
 
     return { data: syllabus };
@@ -125,17 +126,17 @@ module.exports = class SyllabusService extends BaseService {
       include: [
         {
           model: _syllabusItems,
-          as: "items",
+          as: 'items',
         },
         {
           model: _gradePercentages,
-          as: "percentages",
+          as: 'percentages',
         },
       ],
     });
 
     if (!syllabus) {
-      throw new AppError("Syllabus not found", 404);
+      throw new AppError('Syllabus not found', 404);
     }
 
     await syllabus.update({ syllabus_name });
@@ -177,8 +178,8 @@ module.exports = class SyllabusService extends BaseService {
       include: [
         {
           model: _syllabusItems,
-          as: "items",
-          attributes: ["id"],
+          as: 'items',
+          attributes: ['id'],
         },
       ],
     });
