@@ -1,4 +1,4 @@
-const { DataTypes } = require("sequelize");
+const { DataTypes } = require('sequelize');
 let _sequelize = null;
 
 module.exports = class CourseScheduleModel {
@@ -9,7 +9,7 @@ module.exports = class CourseScheduleModel {
 
   defineModel() {
     this.CourseSchedule = _sequelize.define(
-      "course_schedule",
+      'course_schedule',
       {
         id: {
           type: DataTypes.INTEGER,
@@ -19,16 +19,16 @@ module.exports = class CourseScheduleModel {
         course_id: {
           type: DataTypes.INTEGER,
           references: {
-            model: "course",
-            key: "id",
+            model: 'course',
+            key: 'id',
           },
           allowNull: false,
         },
         syllabus_item_id: {
           type: DataTypes.INTEGER,
           references: {
-            model: "syllabus_items",
-            key: "id",
+            model: 'syllabus_items',
+            key: 'id',
           },
           allowNull: false,
         },
@@ -36,9 +36,13 @@ module.exports = class CourseScheduleModel {
           type: DataTypes.DATE,
           allowNull: false,
         },
+        lesson_taught: {
+          type: DataTypes.TEXT,
+          allowNull: true,
+        },
       },
       {
-        tableName: "course_schedule",
+        tableName: 'course_schedule',
         timestamps: false,
       }
     );
