@@ -46,7 +46,7 @@ module.exports = function ({
   });
   //router.use("/api-docs", swaggerUI.serve, swaggerUI.setup(swaggerDocument));
   // router.use(NotFoundMiddleware);
-  router.use(ErrorMiddleware);
+  // router.use(ErrorMiddleware);
 
   return router;
 };

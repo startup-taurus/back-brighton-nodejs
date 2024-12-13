@@ -8,55 +8,44 @@ let _user = null;
 let _course = null;
 let _student = null;
 let _attendance = null;
+let _courseSchedule = null;
 module.exports = class AttendanceService extends BaseService {
-  constructor({ Attendance, User, Professor, Course, Student, UserService }) {
+  constructor({ Attendance, User, CourseSchedule, Course, Student }) {
     super(Attendance);
     _user = User.User;
     _course = Course.Course;
     _student = Student.Student;
     _attendance = Attendance.Attendance;
+    _courseSchedule = CourseSchedule.CourseSchedule;
   }
 
   getAttendanceByCourse = catchServiceAsync(async (courseId) => {
     const attendanceRecords = await _attendance.findAll({
-      where: { course_id: courseId },
       include: [
         {
-          model: _student,
-          as: 'student',
-          include: [
-            {
-              model: _user,
-              as: 'user',
-              attributes: ['name'],
-            },
-          ],
+          model: _courseSchedule,
+          as: 'course_schedule',
+          where: { course_id: courseId },
         },
       ],
     });
 
-    const formattedRecords = attendanceRecords?.map((attendance) => ({
-      id: attendance.id,
-      course_id: attendance.course_id,
-      student_id: attendance.student.id,
-      student: attendance.student.user.name,
-      status: attendance.status,
-      attendance_date: attendance.attendance_date,
-    }));
-
-    return { data: formattedRecords ?? [] };
+    return { data: attendanceRecords ?? [] };
   });
 
   createAttendance = catchServiceAsync(async (body) => {
-    const { course_id, student_id, attendance_date, status } = body;
+    const { course_schedule_id, student_id, status } = body;
 
-    validateParameters({ course_id, student_id, attendance_date, status });
+    validateParameters({
+      course_schedule_id,
+      student_id,
+      status,
+    });
 
     const attendance = await _attendance.findOne({
       where: {
-        course_id,
+        course_schedule_id,
         student_id,
-        attendance_date,
       },
     });
 
@@ -64,9 +53,8 @@ module.exports = class AttendanceService extends BaseService {
 
     if (!attendance) {
       currentAttendance = await _attendance.create({
-        course_id,
+        course_schedule_id,
         student_id,
-        attendance_date,
         status,
       });
     } else {

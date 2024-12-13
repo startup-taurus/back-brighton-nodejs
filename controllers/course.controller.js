@@ -30,6 +30,12 @@ module.exports = class CourseController extends BaseController {
     return appResponse(res, result);
   });
 
+  getCourseScheduleDates = catchControllerAsync(async (req, res) => {
+    const { id } = req.params;
+    const result = await _courseService.getCourseScheduleDates(id);
+    return appResponse(res, result);
+  });
+
   getAllCoursesWithProfessors = catchControllerAsync(async (req, res) => {
     const { page, limit } = req.query;
     const result = await _courseService.getAllCoursesWithProfessors({

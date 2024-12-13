@@ -10,6 +10,7 @@ let _cancelledLesson = null;
 let _syllabus = null;
 let _syllabusItems = null;
 let _gradePercentages = null;
+let _courseSchedule = null;
 module.exports = class AuditModel {
   constructor({
     User,
@@ -24,6 +25,7 @@ module.exports = class AuditModel {
     Syllabus,
     SyllabusItems,
     GradePercentages,
+    CourseSchedule,
   }) {
     _student = Student.Student;
     _course = Course.Course;
@@ -37,6 +39,7 @@ module.exports = class AuditModel {
     _syllabus = Syllabus.Syllabus;
     _syllabusItems = SyllabusItems.SyllabusItems;
     _gradePercentages = GradePercentages.GradePercentages;
+    _courseSchedule = CourseSchedule.CourseSchedule;
     this.defineModel();
   }
 
@@ -75,12 +78,11 @@ module.exports = class AuditModel {
       as: 'user',
     });
 
-    // Relación de uno a muchos entre curso y asistencia
-    _attendance.belongsTo(_course, {
-      foreignKey: 'course_id',
+    _attendance.belongsTo(_courseSchedule, {
+      foreignKey: 'course_schedule_id',
     });
-    _course.hasMany(_attendance, {
-      foreignKey: 'course_id',
+    _courseSchedule.hasMany(_attendance, {
+      foreignKey: 'course_schedule_id',
     });
 
     // Relación de uno a muchos entre estudiante y asistencia
@@ -173,6 +175,15 @@ module.exports = class AuditModel {
     _course.belongsTo(_syllabus, {
       foreignKey: 'syllabus_id',
       as: 'syllabus',
+    });
+
+    _syllabusItems.hasMany(_courseSchedule, {
+      foreignKey: 'syllabus_item_id',
+      as: 'course_schedule',
+    });
+    _courseSchedule.belongsTo(_syllabusItems, {
+      foreignKey: 'syllabus_item_id',
+      as: 'syllabusItem',
     });
   }
 };

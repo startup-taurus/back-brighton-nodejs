@@ -1,4 +1,4 @@
-const { DataTypes } = require("sequelize");
+const { DataTypes } = require('sequelize');
 let _sequelize = null;
 
 module.exports = class AttendanceModel {
@@ -9,35 +9,31 @@ module.exports = class AttendanceModel {
 
   defineModel() {
     this.Attendance = _sequelize.define(
-      "attendance",
+      'attendance',
       {
-        course_id: {
+        course_schedule_id: {
           type: DataTypes.INTEGER,
           references: {
-            model: "course",
-            key: "id",
+            model: 'course_schedule',
+            key: 'id',
           },
           allowNull: false,
         },
         student_id: {
           type: DataTypes.INTEGER,
           references: {
-            model: "student",
-            key: "id",
+            model: 'student',
+            key: 'id',
           },
           allowNull: false,
         },
-        attendance_date: {
-          type: DataTypes.DATEONLY,
-          allowNull: false,
-        },
         status: {
-          type: DataTypes.ENUM("Present", "Absent", "Excused"),
+          type: DataTypes.ENUM('present', 'absent', 'late', 'recovered'),
           allowNull: false,
         },
       },
       {
-        tableName: "attendance",
+        tableName: 'attendance',
         timestamps: false,
       }
     );

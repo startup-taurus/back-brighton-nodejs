@@ -13,6 +13,7 @@ let _professor = null;
 let _student = null;
 let _sequelize = null;
 let _syllabusService = null;
+let _syllabusItems = null;
 let _courseSchedule = null;
 
 module.exports = class CourseService extends BaseService {
@@ -24,12 +25,14 @@ module.exports = class CourseService extends BaseService {
     User,
     CourseSchedule,
     SyllabusService,
+    SyllabusItems,
   }) {
     super(Course);
     _user = User.User;
     _course = Course.Course;
     _professor = Professor.Professor;
     _student = Student.Student;
+    _syllabusItems = SyllabusItems.SyllabusItems;
     _syllabusService = SyllabusService;
     _courseSchedule = CourseSchedule.CourseSchedule;
     _sequelize = Sequelize;
@@ -213,6 +216,22 @@ module.exports = class CourseService extends BaseService {
       };
     }
   );
+
+  getCourseScheduleDates = catchServiceAsync(async (courseId) => {
+    const response = await _courseSchedule.findAll({
+      where: { course_id: courseId },
+      order: [['scheduled_date', 'ASC']],
+      include: [
+        {
+          model: _syllabusItems,
+          as: 'syllabusItem',
+          attributes: ['item_name'],
+        },
+      ],
+    });
+
+    return { data: response };
+  });
 
   createCourse = catchServiceAsync(async (body) => {
     const {

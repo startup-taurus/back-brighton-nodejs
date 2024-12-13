@@ -6,6 +6,10 @@ module.exports = function ({ CourseController }) {
   router.get('/get-one/:id', CourseController.getCourse);
   router.get('/get-students/:id', CourseController.getCourseWithStudents);
   router.get(
+    '/get-syllabus-by-course/:id',
+    CourseController.getCourseScheduleDates
+  );
+  router.get(
     '/get-all-with-professors',
     CourseController.getAllCoursesWithProfessors
   );
