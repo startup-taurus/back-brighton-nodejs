@@ -33,7 +33,7 @@ module.exports = class CourseScheduleModel {
           allowNull: false,
         },
         scheduled_date: {
-          type: DataTypes.DATE,
+          type: DataTypes.DATEONLY,
           allowNull: false,
         },
         lesson_taught: {

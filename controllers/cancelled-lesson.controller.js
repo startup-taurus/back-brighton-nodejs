@@ -8,6 +8,12 @@ module.exports = class CancelledLessonController extends BaseController {
     _cancelledLessonService = CancelledLessonService;
   }
 
+  create = catchControllerAsync(async (req, res) => {
+    const { body } = req;
+    const result = await _cancelledLessonService.create(body);
+    return appResponse(res, result);
+  });
+
   getCancelledLessonsByCourse = catchControllerAsync(async (req, res) => {
     const { courseId } = req.params;
 

@@ -17,7 +17,7 @@ module.exports = class HolidaysModel {
           primaryKey: true,
         },
         cancel_date: {
-          type: DataTypes.DATE,
+          type: DataTypes.DATEONLY,
           allowNull: false,
         },
         cancel_reason: {

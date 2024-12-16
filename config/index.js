@@ -1,5 +1,5 @@
-if (process.env.NODE_ENV !== "production") {
-  require("dotenv").config();
+if (process.env.NODE_ENV !== 'production') {
+  require('dotenv').config();
 }
 
 module.exports = {
@@ -11,8 +11,9 @@ module.exports = {
     password: process.env.DB_PASSWORD,
     database: process.env.DB_NAME,
     host: process.env.DB_HOST,
-    dialect: "mysql",
+    dialect: 'mysql',
     logging: false,
+    timezone: '+00:00',
   },
   // SWAGGER_PATH: __dirname.concat("/swagger/swaggerDEV.json"),
 };

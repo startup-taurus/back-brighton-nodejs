@@ -41,12 +41,10 @@ module.exports = function ({
 
   apiRouter.use('/images', express.static(path.join(__dirname, '../uploads')));
   router.use('/v1/api', apiRouter);
-  router.use('/', (req, res) => {
-    res.send('v.0.1.0.3');
-  });
+
   //router.use("/api-docs", swaggerUI.serve, swaggerUI.setup(swaggerDocument));
   // router.use(NotFoundMiddleware);
-  // router.use(ErrorMiddleware);
+  router.use(ErrorMiddleware);
 
   return router;
 };
