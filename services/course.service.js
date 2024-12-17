@@ -217,22 +217,6 @@ module.exports = class CourseService extends BaseService {
     }
   );
 
-  getCourseScheduleDates = catchServiceAsync(async (courseId) => {
-    const response = await _courseSchedule.findAll({
-      where: { course_id: courseId },
-      order: [['scheduled_date', 'ASC']],
-      include: [
-        {
-          model: _syllabusItems,
-          as: 'syllabusItem',
-          attributes: ['item_name'],
-        },
-      ],
-    });
-
-    return { data: response };
-  });
-
   createCourse = catchServiceAsync(async (body) => {
     const {
       course_name,

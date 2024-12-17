@@ -8,4 +8,5 @@ module.exports = {
   HolidaysRoutes: require('./v1.holidays'),
   SyllabusRoutes: require('./v1.syllabus'),
   CancelledLessonRoutes: require('./v1.cancelled-lesson'),
+  CourseScheduleRoutes: require('./v1.course-schedule'),
 };

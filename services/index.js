@@ -8,4 +8,5 @@ module.exports = {
   HolidaysService: require('./holidays.service'),
   SyllabusService: require('./syllabus.service'),
   CancelledLessonService: require('./cancelled-lesson.service'),
+  CourseScheduleService: require('./course-schedule.service'),
 };

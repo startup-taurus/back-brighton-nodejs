@@ -1,11 +1,11 @@
 //Configurar nuestro contenedor de injección de depencia
-const { createContainer, asClass, asValue, asFunction } = require("awilix");
-const { Sequelize } = require("sequelize");
+const { createContainer, asClass, asValue, asFunction } = require('awilix');
+const { Sequelize } = require('sequelize');
 //Config
-const config = require(".");
+const config = require('.');
 
 //Routes
-const Routes = require("../routes");
+const Routes = require('../routes');
 
 //Services
 const {
@@ -18,7 +18,8 @@ const {
   HolidaysService,
   CancelledLessonService,
   SyllabusService,
-} = require("../services");
+  CourseScheduleService,
+} = require('../services');
 
 //Controllers
 const {
@@ -31,10 +32,11 @@ const {
   HolidaysController,
   CancelledLessonController,
   SyllabusController,
-} = require("../controllers");
+  CourseScheduleController,
+} = require('../controllers');
 
 //Startup
-const { Database, Server } = require("../startup");
+const { Database, Server } = require('../startup');
 
 //Routes
 const {
@@ -47,7 +49,8 @@ const {
   HolidaysRoutes,
   CancelledLessonRoutes,
   SyllabusRoutes,
-} = require("../routes/api/index");
+  CourseScheduleRoutes,
+} = require('../routes/api/index');
 
 //Models
 const {
@@ -66,10 +69,10 @@ const {
   SyllabusItems,
   GradePercentages,
   CourseSchedule,
-} = require("../models");
+} = require('../models');
 
-const { protect } = require("../middleware/authMiddleware");
-const AuthUtils = require("../utils/auth");
+const { protect } = require('../middleware/authMiddleware');
+const AuthUtils = require('../utils/auth');
 const container = createContainer();
 container
   .register({
@@ -92,6 +95,7 @@ container
     HolidaysService: asClass(HolidaysService).singleton(),
     CancelledLessonService: asClass(CancelledLessonService).singleton(),
     SyllabusService: asClass(SyllabusService).singleton(),
+    CourseScheduleService: asClass(CourseScheduleService).singleton(),
   })
   .register({
     //Configuración de los controladores
@@ -118,6 +122,7 @@ container
     SyllabusController: asClass(
       SyllabusController.bind(SyllabusController)
     ).singleton(),
+    CourseScheduleController: asClass(CourseScheduleController).singleton(),
   })
   .register({
     //Configuración de rutas
@@ -130,6 +135,7 @@ container
     HolidaysRoutes: asFunction(HolidaysRoutes).singleton(),
     CancelledLessonRoutes: asFunction(CancelledLessonRoutes).singleton(),
     SyllabusRoutes: asFunction(SyllabusRoutes).singleton(),
+    CourseScheduleRoutes: asFunction(CourseScheduleRoutes).singleton(),
   })
   .register({
     //Configuración de las asociaciones
