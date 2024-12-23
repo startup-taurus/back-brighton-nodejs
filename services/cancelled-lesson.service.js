@@ -4,16 +4,18 @@ const AppError = require('../utils/app-error');
 
 let _cancelledLeasson = null;
 let _courseSchedule = null;
+let _courseScheduleService = null;
 
 module.exports = class CancelledLessonService extends BaseService {
-  constructor({ CancelledLesson, CourseSchedule }) {
+  constructor({ CancelledLesson, CourseSchedule, CourseScheduleService }) {
     super(CancelledLesson.CancelledLesson);
     _cancelledLeasson = CancelledLesson.CancelledLesson;
     _courseSchedule = CourseSchedule.CourseSchedule;
+    _courseScheduleService = CourseScheduleService;
   }
 
-  create = catchServiceAsync(async (body) => {
-    const dayOfClass = await _courseSchedule.findOne({
+  valideIfDayOfClassExist = catchServiceAsync(async (body) => {
+    const dayOfClass = await _courseSchedule.count({
       where: {
         course_id: body.course_id,
         scheduled_date: body.cancel_date,
@@ -21,11 +23,13 @@ module.exports = class CancelledLessonService extends BaseService {
       raw: true,
     });
 
-    if (!dayOfClass) {
+    if (dayOfClass === 0) {
       throw new AppError("You don't have classes this day", 404);
     }
+  });
 
-    const cancelledLesson = await _cancelledLeasson.findOne({
+  validateIfLessonIsAlreadyCancelled = catchServiceAsync(async (body) => {
+    const cancelledLesson = await _cancelledLeasson.count({
       where: {
         course_id: Number(body.course_id),
         cancel_date: body.cancel_date,
@@ -33,11 +37,17 @@ module.exports = class CancelledLessonService extends BaseService {
       raw: true,
     });
 
-    if (cancelledLesson) {
+    if (cancelledLesson > 0) {
       throw new AppError('The class has already been cancelled', 400);
     }
+  });
+
+  create = catchServiceAsync(async (body) => {
+    await this.valideIfDayOfClassExist(body);
+    await this.validateIfLessonIsAlreadyCancelled(body);
 
     await _cancelledLeasson.create(body);
+    await _courseScheduleService.updateScheduleDaysOfClasess(body);
 
     return {
       data: {},
@@ -56,5 +66,16 @@ module.exports = class CancelledLessonService extends BaseService {
     return {
       data: cancelledLessons,
     };
+  });
+
+  delete = catchServiceAsync(async (id) => {
+    try {
+      if (!id) {
+        throw new AppError('Id must be sent', 400);
+      }
+      return await this.model.destroy({ where: { id } });
+    } catch (e) {
+      console.log(e);
+    }
   });
 };
