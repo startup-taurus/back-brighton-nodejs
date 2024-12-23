@@ -69,13 +69,9 @@ module.exports = class CancelledLessonService extends BaseService {
   });
 
   delete = catchServiceAsync(async (id) => {
-    try {
-      if (!id) {
-        throw new AppError('Id must be sent', 400);
-      }
-      return await this.model.destroy({ where: { id } });
-    } catch (e) {
-      console.log(e);
+    if (!id) {
+      throw new AppError('Id must be sent', 400);
     }
+    return await _cancelledLeasson.destroy({ where: { id } });
   });
 };
