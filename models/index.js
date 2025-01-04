@@ -14,4 +14,8 @@ module.exports = {
   GradePercentages: require('./grade-percentages'),
   CancelledLesson: require('./cancelled-lesson.models'),
   CourseSchedule: require('./course-schedule.model'),
+  CourseGrading: require('./course-grading.model'),
+  GradingItem: require('./grading-item.model'),
+  GradingCategory: require('./grading-category.model'),
+  StudentGrades: require('./student-grades.model'),
 };

@@ -14,6 +14,8 @@ let _student = null;
 let _sequelize = null;
 let _syllabusService = null;
 let _syllabusItems = null;
+let _gradingItem = null;
+let _courseGrading = null;
 let _courseSchedule = null;
 
 module.exports = class CourseService extends BaseService {
@@ -26,6 +28,8 @@ module.exports = class CourseService extends BaseService {
     CourseSchedule,
     SyllabusService,
     SyllabusItems,
+    CourseGrading,
+    GradingItem,
   }) {
     super(Course);
     _user = User.User;
@@ -35,6 +39,8 @@ module.exports = class CourseService extends BaseService {
     _syllabusItems = SyllabusItems.SyllabusItems;
     _syllabusService = SyllabusService;
     _courseSchedule = CourseSchedule.CourseSchedule;
+    _courseGrading = CourseGrading.CourseGrading;
+    _gradingItem = GradingItem.GradingItem;
     _sequelize = Sequelize;
   }
 
@@ -126,8 +132,6 @@ module.exports = class CourseService extends BaseService {
 
   getAllCoursesWithProfessors = catchServiceAsync(async (query) => {
     const { page = 1, limit = 10 } = query;
-
-    console.log(query);
 
     let limitNumber = parseInt(limit);
     let pageNumber = parseInt(page);
@@ -246,6 +250,23 @@ module.exports = class CourseService extends BaseService {
 
     await this.createCourseSchedule(start_date, schedule, syllabus_id, course);
 
+    const gradingItems = await _gradingItem.findAll({
+      where: { syllabus_id },
+      attributes: ["id"],
+    });
+  
+    if (!gradingItems || gradingItems.length === 0) {
+      throw new AppError("No grading items found for the specified syllabus", 404);
+    }
+
+    const courseGradingData = gradingItems.map((item) => ({
+      course_id: course.id,
+      grading_item_id: item.id,
+      weight: 0, 
+    }));
+  
+    await _courseGrading.bulkCreate(courseGradingData);
+
     return { data: course };
   });
 
@@ -257,6 +278,30 @@ module.exports = class CourseService extends BaseService {
         throw new AppError('Professor not found', 404);
       }
     }
+    if (body.syllabus_id) {
+    
+      await _courseGrading.destroy({ where: { course_id: id } });
+
+      const gradingItems = await _gradingItem.findAll({
+        where: { syllabus_id: body.syllabus_id },
+        attributes: ["id"],
+      });
+  
+      if (!gradingItems || gradingItems.length === 0) {
+        throw new AppError(
+          "No grading items found for the specified syllabus",
+          404
+        );
+      }
+      const courseGradingData = gradingItems.map((item) => ({
+        course_id: id,
+        grading_item_id: item.id,
+        weight: 0, 
+      }));
+  
+      await _courseGrading.bulkCreate(courseGradingData);
+    }
+
     const course = await _course.update(body, { where: { id } });
     return { data: course };
   });

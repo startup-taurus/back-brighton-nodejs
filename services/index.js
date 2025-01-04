@@ -9,4 +9,5 @@ module.exports = {
   SyllabusService: require('./syllabus.service'),
   CancelledLessonService: require('./cancelled-lesson.service'),
   CourseScheduleService: require('./course-schedule.service'),
+  CourseGradingService: require('./course-grading.service'),
 };

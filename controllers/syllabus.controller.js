@@ -26,7 +26,6 @@ module.exports = class SyllabusController extends BaseController {
   });
 
   createSyllabus = catchControllerAsync(async (req, res) => {
-    console.log(req.body);
     const result = await _syllabusService.createSyllabus(req.body);
     return appResponse(res, result);
   });
