@@ -28,23 +28,29 @@ module.exports = class CancelledLessonService extends BaseService {
     }
   });
 
-  validateIfLessonIsAlreadyCancelled = catchServiceAsync(async (body) => {
-    const cancelledLesson = await _cancelledLeasson.count({
-      where: {
-        course_id: Number(body.course_id),
-        cancel_date: body.cancel_date,
-      },
-      raw: true,
-    });
+  validateIfCancelledLessonExist = catchServiceAsync(
+    async (body, isCancelation = true) => {
+      const cancelledLesson = await _cancelledLeasson.count({
+        where: {
+          course_id: Number(body.course_id),
+          cancel_date: body.cancel_date,
+        },
+        raw: true,
+      });
 
-    if (cancelledLesson > 0) {
-      throw new AppError('The class has already been cancelled', 400);
+      if (cancelledLesson > 0 && isCancelation) {
+        throw new AppError('The class has already been cancelled', 400);
+      }
+
+      if (cancelledLesson === 0 && !isCancelation) {
+        throw new AppError("Cancelled lesson doesn't exist", 400);
+      }
     }
-  });
+  );
 
   create = catchServiceAsync(async (body) => {
     await this.valideIfDayOfClassExist(body);
-    await this.validateIfLessonIsAlreadyCancelled(body);
+    await this.validateIfCancelledLessonExist(body);
 
     await _cancelledLeasson.create(body);
     await _courseScheduleService.updateScheduleDaysOfClasess(body);
@@ -68,10 +74,13 @@ module.exports = class CancelledLessonService extends BaseService {
     };
   });
 
-  delete = catchServiceAsync(async (id) => {
-    if (!id) {
+  delete = catchServiceAsync(async (body) => {
+    if (!body.id) {
       throw new AppError('Id must be sent', 400);
     }
-    return await _cancelledLeasson.destroy({ where: { id } });
+    await this.validateIfCancelledLessonExist(body, false);
+
+    await _courseScheduleService.deleteScheduleDaysOfClasess(body);
+    return await _cancelledLeasson.destroy({ where: { id: body.id } });
   });
 };

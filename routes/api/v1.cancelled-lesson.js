@@ -7,7 +7,7 @@ module.exports = function ({ CancelledLessonController }) {
     CancelledLessonController.getCancelledLessonsByCourse
   );
   router.post('/create', CancelledLessonController.create);
-  router.post('/delete/:id', CancelledLessonController.delete);
+  router.post('/delete', CancelledLessonController.delete);
   router.patch('/update/:id', CancelledLessonController.update);
 
   return router;

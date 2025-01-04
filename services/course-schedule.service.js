@@ -1,8 +1,6 @@
+const { isWithinInterval, isBefore } = require('date-fns');
 const catchServiceAsync = require('../utils/catch-service-async');
-const {
-  scheduleStringToDates,
-  calculateClassDates,
-} = require('../utils/utils');
+const { calculateClassDates } = require('../utils/utils');
 const BaseService = require('./base.service');
 
 let _courseSchedule = null;
@@ -57,7 +55,7 @@ module.exports = class CourseScheduleService extends BaseService {
     const newClassDate = classDates[1].toISOString().split('T')[0];
     let currentScheduleIndex = 0;
 
-    const schheduledDatesToUpdate = scheduledDates.map((scheduledDate) => {
+    const scheduledDatesToUpdate = scheduledDates.map((scheduledDate) => {
       if (scheduledDate.scheduled_date === cancelledDate.cancel_date) {
         currentScheduleIndex++;
       }
@@ -70,7 +68,53 @@ module.exports = class CourseScheduleService extends BaseService {
       return currentScheduleDate;
     });
 
-    await _courseSchedule.bulkCreate(schheduledDatesToUpdate, {
+    await _courseSchedule.bulkCreate(scheduledDatesToUpdate, {
+      updateOnDuplicate: ['scheduled_date'],
+    });
+  });
+
+  deleteScheduleDaysOfClasess = catchServiceAsync(async (cancelledDate) => {
+    let scheduledDates = await _courseSchedule.findAll({
+      where: { course_id: cancelledDate.course_id },
+      order: [['scheduled_date', 'ASC']],
+      raw: true,
+    });
+
+    let isUpdated = false;
+
+    const scheduledDatesToUpdate = scheduledDates.map(
+      (scheduledDate, index) => {
+        const qurrentDate = scheduledDates[index].scheduled_date;
+        const nextDate = scheduledDates[index + 1]
+          ? scheduledDates[index + 1].scheduled_date
+          : null;
+
+        if (
+          !isUpdated &&
+          isBefore(
+            new Date(cancelledDate.cancel_date),
+            new Date(scheduledDate.scheduled_date)
+          )
+        ) {
+          isUpdated = true;
+          return {
+            ...scheduledDate,
+            scheduled_date: cancelledDate.cancel_date,
+          };
+        }
+
+        if (isUpdated) {
+          return {
+            ...scheduledDate,
+            scheduled_date: scheduledDates[index - 1].scheduled_date,
+          };
+        }
+
+        return scheduledDate;
+      }
+    );
+
+    await _courseSchedule.bulkCreate(scheduledDatesToUpdate, {
       updateOnDuplicate: ['scheduled_date'],
     });
   });

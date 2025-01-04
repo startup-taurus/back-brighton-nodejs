@@ -22,4 +22,10 @@ module.exports = class CancelledLessonController extends BaseController {
     );
     return appResponse(res, result);
   });
+
+  delete = catchControllerAsync(async (req, res) => {
+    const body = req.body;
+    await _cancelledLessonService.delete(body);
+    return appResponse(res, {});
+  });
 };
