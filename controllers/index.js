@@ -16,4 +16,5 @@ module.exports = {
   HolidaysController: require('./holidays.controller'),
   SyllabusController: require('./syllabus.controller'),
   CourseScheduleController: require('./course-schedule.controller'),
+  CourseGradingController: require('./course-grading.controller'),
 };

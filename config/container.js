@@ -19,6 +19,7 @@ const {
   CancelledLessonService,
   SyllabusService,
   CourseScheduleService,
+  CourseGradingService,
 } = require('../services');
 
 //Controllers
@@ -33,6 +34,7 @@ const {
   CancelledLessonController,
   SyllabusController,
   CourseScheduleController,
+  CourseGradingController
 } = require('../controllers');
 
 //Startup
@@ -69,6 +71,10 @@ const {
   SyllabusItems,
   GradePercentages,
   CourseSchedule,
+  CourseGrading,
+  GradingItem,
+  GradingCategory,
+  StudentGrades,
 } = require('../models');
 
 const { protect } = require('../middleware/authMiddleware');
@@ -96,7 +102,9 @@ container
     CancelledLessonService: asClass(CancelledLessonService).singleton(),
     SyllabusService: asClass(SyllabusService).singleton(),
     CourseScheduleService: asClass(CourseScheduleService).singleton(),
+    CourseGradingService: asClass(CourseGradingService).singleton(),
   })
+
   .register({
     //Configuración de los controladores
     UserController: asClass(UserController.bind(UserController)).singleton(),
@@ -123,6 +131,7 @@ container
       SyllabusController.bind(SyllabusController)
     ).singleton(),
     CourseScheduleController: asClass(CourseScheduleController).singleton(),
+    CourseGradingController: asClass(CourseGradingController).singleton(),
   })
   .register({
     //Configuración de rutas
@@ -157,6 +166,10 @@ container
     SyllabusItems: asClass(SyllabusItems).singleton(),
     GradePercentages: asClass(GradePercentages).singleton(),
     CourseSchedule: asClass(CourseSchedule).singleton(),
+    CourseGrading: asClass(CourseGrading).singleton(),
+    GradingItem: asClass(GradingItem).singleton(),
+    GradingCategory: asClass(GradingCategory).singleton(),
+    StudentGrades: asClass(StudentGrades).singleton(),
   })
   .register({
     //middlewares
