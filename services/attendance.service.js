@@ -89,13 +89,17 @@ module.exports = class AttendanceService extends BaseService {
         status,
       });
     } else {
-      currentAttendance = await _attendance.update({
-        where: {
-          course_schedule_id,
-          student_id,
+      currentAttendance = await _attendance.update(
+        {
+          status,
         },
-        status,
-      });
+        {
+          where: {
+            course_schedule_id,
+            student_id,
+          },
+        }
+      );
     }
 
     return { data: currentAttendance };
