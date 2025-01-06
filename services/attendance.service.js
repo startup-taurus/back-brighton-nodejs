@@ -33,8 +33,6 @@ module.exports = class AttendanceService extends BaseService {
 
   getAttendanceByCourseAndStudent = catchServiceAsync(
     async (courseId, studentId) => {
-      console.log('Here');
-
       const attendanceRecords = await _attendance.findAll({
         where: { student_id: studentId },
         include: [
@@ -92,6 +90,10 @@ module.exports = class AttendanceService extends BaseService {
       });
     } else {
       currentAttendance = await _attendance.update({
+        where: {
+          course_schedule_id,
+          student_id,
+        },
         status,
       });
     }
