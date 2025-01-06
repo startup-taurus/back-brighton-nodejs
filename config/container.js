@@ -20,6 +20,7 @@ const {
   SyllabusService,
   CourseScheduleService,
   CourseGradingService,
+  StudentGradesService,
 } = require('../services');
 
 //Controllers
@@ -34,7 +35,8 @@ const {
   CancelledLessonController,
   SyllabusController,
   CourseScheduleController,
-  CourseGradingController
+  CourseGradingController,
+  StudentGradesController,
 } = require('../controllers');
 
 //Startup
@@ -52,6 +54,7 @@ const {
   CancelledLessonRoutes,
   SyllabusRoutes,
   CourseScheduleRoutes,
+  StudentGradesRoutes,
 } = require('../routes/api/index');
 
 //Models
@@ -103,6 +106,7 @@ container
     SyllabusService: asClass(SyllabusService).singleton(),
     CourseScheduleService: asClass(CourseScheduleService).singleton(),
     CourseGradingService: asClass(CourseGradingService).singleton(),
+    StudentGradesService: asClass(StudentGradesService).singleton(),
   })
 
   .register({
@@ -132,6 +136,7 @@ container
     ).singleton(),
     CourseScheduleController: asClass(CourseScheduleController).singleton(),
     CourseGradingController: asClass(CourseGradingController).singleton(),
+    StudentGradesController: asClass(StudentGradesController).singleton(),
   })
   .register({
     //Configuración de rutas
@@ -145,6 +150,7 @@ container
     CancelledLessonRoutes: asFunction(CancelledLessonRoutes).singleton(),
     SyllabusRoutes: asFunction(SyllabusRoutes).singleton(),
     CourseScheduleRoutes: asFunction(CourseScheduleRoutes).singleton(),
+    StudentGradesRoutes: asFunction(StudentGradesRoutes).singleton(),
   })
   .register({
     //Configuración de las asociaciones

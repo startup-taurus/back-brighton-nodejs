@@ -20,6 +20,7 @@ module.exports = function ({
   CancelledLessonRoutes,
   SyllabusRoutes,
   CourseScheduleRoutes,
+  StudentGradesRoutes,
 }) {
   const router = express.Router();
   const apiRouter = express.Router();
@@ -40,6 +41,7 @@ module.exports = function ({
   apiRouter.use('/syllabus', SyllabusRoutes);
   apiRouter.use('/cancelled-lesson', CancelledLessonRoutes);
   apiRouter.use('/course-schedule', CourseScheduleRoutes);
+  apiRouter.use('/student-grades', StudentGradesRoutes);
 
   apiRouter.use('/images', express.static(path.join(__dirname, '../uploads')));
   router.use('/v1/api', apiRouter);

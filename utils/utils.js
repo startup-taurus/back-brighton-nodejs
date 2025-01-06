@@ -1,4 +1,4 @@
-const AppError = require("./app-error");
+const AppError = require('./app-error');
 
 module.exports = {
   validateParameters(params, customMessage) {
@@ -14,18 +14,18 @@ module.exports = {
 
   scheduleStringToDates(scheduleString) {
     const daysMap = {
-      Mon: "Monday",
-      Tue: "Tuesday",
-      Wed: "Wednesday",
-      Thu: "Thursday",
-      Fri: "Friday",
-      Sat: "Saturday",
-      Sun: "Sunday",
+      Mon: 'Monday',
+      Tue: 'Tuesday',
+      Wed: 'Wednesday',
+      Thu: 'Thursday',
+      Fri: 'Friday',
+      Sat: 'Saturday',
+      Sun: 'Sunday',
     };
-    const [daysPart, timePart] = scheduleString.split(" ");
-    const [startTime, endTime] = timePart.split("-");
+    const [daysPart, timePart] = scheduleString.split(' ');
+    const [startTime, endTime] = timePart.split('-');
 
-    const days = daysPart.split("-").map((day) => daysMap[day]);
+    const days = daysPart.split('-').map((day) => daysMap[day]);
     return days.map((day) => ({
       day,
       startTime,
@@ -33,7 +33,7 @@ module.exports = {
     }));
   },
 
- calculateClassDates(startDate, syllabusItems, hourlyRate){
+  calculateClassDates(startDate, syllabusItems, hourlyRate) {
     const daysMap = {
       Sun: 0,
       Mon: 1,
@@ -43,12 +43,14 @@ module.exports = {
       Fri: 5,
       Sat: 6,
     };
-  
-    const [days, timeRange] = hourlyRate.split(" ");
-    const [startTime, endTime] = timeRange.split("-");
 
-    const classDays = days.split("-").map((day) => daysMap[day]);
-    const [year, month, day] = startDate.split("-").map((num) => parseInt(num, 10));
+    const [days, timeRange] = hourlyRate.split(' ');
+    const [startTime, endTime] = timeRange.split('-');
+
+    const classDays = days.split('-').map((day) => daysMap[day]);
+    const [year, month, day] = startDate
+      .split('-')
+      .map((num) => parseInt(num, 10));
 
     let currentDate = new Date(year, month - 1, day);
     const dates = [];
@@ -57,29 +59,45 @@ module.exports = {
       while (!classDays.includes(currentDate.getDay())) {
         currentDate.setDate(currentDate.getDate() + 1);
       }
-      const dateStr = currentDate.getFullYear() + "-" +
-                      String(currentDate.getMonth() + 1).padStart(2, '0') + "-" +
-                      String(currentDate.getDate()).padStart(2, '0') + "T" + startTime;
-  
+      const dateStr =
+        currentDate.getFullYear() +
+        '-' +
+        String(currentDate.getMonth() + 1).padStart(2, '0') +
+        '-' +
+        String(currentDate.getDate()).padStart(2, '0') +
+        'T' +
+        startTime;
+
       const classDate = new Date(dateStr);
       dates.push(classDate);
       currentDate.setDate(currentDate.getDate() + 1);
     });
-  
+
     return dates;
   },
-  
+
   generateCredentials(name, cedula) {
     const normalizedName = name
       .trim()
       .toLowerCase()
-      .split(" ")
+      .split(' ')
       .map((word) => word.charAt(0))
-      .join("");
+      .join('');
 
     const username = `${normalizedName}${cedula.slice(-4)}`;
     const randomString = Math.random().toString(36).slice(-8);
     const password = `${cedula.slice(0, 3)}${randomString}!`;
     return { username, password };
+  },
+
+  countAttendance(attendances = []) {
+    const attendanceTotal = attendances.reduce((acc, attendance) => {
+      if (attendance.status === 'present' || attendance.status === 'recovery')
+        return acc++;
+      if (attendance.status === 'late') return acc + 0.5;
+      return acc;
+    }, 0);
+
+    return attendanceTotal;
   },
 };

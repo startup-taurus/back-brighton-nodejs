@@ -1,11 +1,13 @@
-const catchServiceAsync = require("../utils/catch-service-async");
-const BaseService = require("./base.service");
+const catchServiceAsync = require('../utils/catch-service-async');
+const { validateParameters } = require('../utils/utils');
+const BaseService = require('./base.service');
 
 let _courseGrading = null;
 let _gradingItem = null;
 let _gradingCategory = null;
 let _syllabusItems = null;
 let _course = null;
+let _gradePercentages = null;
 
 module.exports = class CourseGradingService extends BaseService {
   constructor({
@@ -14,6 +16,7 @@ module.exports = class CourseGradingService extends BaseService {
     GradingItem,
     GradingCategory,
     Course,
+    GradePercentages,
   }) {
     super();
     _syllabusItems = SyllabusItems.SyllabusItems;
@@ -21,6 +24,7 @@ module.exports = class CourseGradingService extends BaseService {
     _gradingItem = GradingItem.GradingItem;
     _gradingCategory = GradingCategory.GradingCategory;
     _course = Course.Course;
+    _gradePercentages = GradePercentages.GradePercentages;
   }
 
   getGradingItemsByCourse = catchServiceAsync(async (courseId) => {
@@ -28,29 +32,29 @@ module.exports = class CourseGradingService extends BaseService {
       include: [
         {
           model: _courseGrading,
-          as: "grading_items", // Alias corregido para coincidir con la asociación
-          attributes: ["id", "weight"],
+          as: 'grading_items', // Alias corregido para coincidir con la asociación
+          attributes: ['id', 'weight'],
           include: [
             {
               model: _gradingItem,
-              as: "grading_item",
-              attributes: ["id", "name"],
+              as: 'grading_item',
+              attributes: ['id', 'name'],
               include: [
                 {
                   model: _gradingCategory,
-                  as: "category", // Alias definido en la asociación
-                  attributes: ["name"],
+                  as: 'category', // Alias definido en la asociación
+                  attributes: ['name'],
                 },
               ],
             },
           ],
         },
       ],
-      attributes: ["id", "course_name"],
+      attributes: ['id', 'course_name'],
     });
 
     if (!course) {
-      throw new AppError("Course not found", 404);
+      throw new AppError('Course not found', 404);
     }
 
     const response = course.grading_items.map((definition) => ({
@@ -61,5 +65,19 @@ module.exports = class CourseGradingService extends BaseService {
     }));
 
     return { data: response };
+  });
+
+  getGradingPercentageBySyllabus = catchServiceAsync(async (syllabusId) => {
+    validateParameters({
+      syllabusId,
+    });
+
+    const response = await _gradePercentages.findOne({
+      where: { syllabus_id: syllabusId },
+    });
+
+    return {
+      data: response,
+    };
   });
 };

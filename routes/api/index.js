@@ -9,4 +9,5 @@ module.exports = {
   SyllabusRoutes: require('./v1.syllabus'),
   CancelledLessonRoutes: require('./v1.cancelled-lesson'),
   CourseScheduleRoutes: require('./v1.course-schedule'),
+  StudentGradesRoutes: require('./v1.student-grades'),
 };

@@ -252,19 +252,22 @@ module.exports = class CourseService extends BaseService {
 
     const gradingItems = await _gradingItem.findAll({
       where: { syllabus_id },
-      attributes: ["id"],
+      attributes: ['id'],
     });
-  
+
     if (!gradingItems || gradingItems.length === 0) {
-      throw new AppError("No grading items found for the specified syllabus", 404);
+      throw new AppError(
+        'No grading items found for the specified syllabus',
+        404
+      );
     }
 
     const courseGradingData = gradingItems.map((item) => ({
       course_id: course.id,
       grading_item_id: item.id,
-      weight: 0, 
+      weight: 0,
     }));
-  
+
     await _courseGrading.bulkCreate(courseGradingData);
 
     return { data: course };
@@ -279,26 +282,25 @@ module.exports = class CourseService extends BaseService {
       }
     }
     if (body.syllabus_id) {
-    
       await _courseGrading.destroy({ where: { course_id: id } });
 
       const gradingItems = await _gradingItem.findAll({
         where: { syllabus_id: body.syllabus_id },
-        attributes: ["id"],
+        attributes: ['id'],
       });
-  
+
       if (!gradingItems || gradingItems.length === 0) {
         throw new AppError(
-          "No grading items found for the specified syllabus",
+          'No grading items found for the specified syllabus',
           404
         );
       }
       const courseGradingData = gradingItems.map((item) => ({
         course_id: id,
         grading_item_id: item.id,
-        weight: 0, 
+        weight: 0,
       }));
-  
+
       await _courseGrading.bulkCreate(courseGradingData);
     }
 

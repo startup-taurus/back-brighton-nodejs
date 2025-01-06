@@ -10,4 +10,5 @@ module.exports = {
   CancelledLessonService: require('./cancelled-lesson.service'),
   CourseScheduleService: require('./course-schedule.service'),
   CourseGradingService: require('./course-grading.service'),
+  StudentGradesService: require('./student-grades.service'),
 };
