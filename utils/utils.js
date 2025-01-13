@@ -1,4 +1,15 @@
-const AppError = require('./app-error');
+const AppError = require("./app-error");
+
+function isHoliday(dateToCheck, holidays = []) {
+  return holidays.some((holiday) => {
+    const holidayDate = new Date(holiday.holiday_date);
+    return (
+      holidayDate.getFullYear() === dateToCheck.getFullYear() &&
+      holidayDate.getMonth() === dateToCheck.getMonth() &&
+      holidayDate.getDate() === dateToCheck.getDate()
+    );
+  });
+}
 
 module.exports = {
   validateParameters(params, customMessage) {
@@ -14,18 +25,18 @@ module.exports = {
 
   scheduleStringToDates(scheduleString) {
     const daysMap = {
-      Mon: 'Monday',
-      Tue: 'Tuesday',
-      Wed: 'Wednesday',
-      Thu: 'Thursday',
-      Fri: 'Friday',
-      Sat: 'Saturday',
-      Sun: 'Sunday',
+      Mon: "Monday",
+      Tue: "Tuesday",
+      Wed: "Wednesday",
+      Thu: "Thursday",
+      Fri: "Friday",
+      Sat: "Saturday",
+      Sun: "Sunday",
     };
-    const [daysPart, timePart] = scheduleString.split(' ');
-    const [startTime, endTime] = timePart.split('-');
+    const [daysPart, timePart] = scheduleString.split(" ");
+    const [startTime, endTime] = timePart.split("-");
 
-    const days = daysPart.split('-').map((day) => daysMap[day]);
+    const days = daysPart.split("-").map((day) => daysMap[day]);
     return days.map((day) => ({
       day,
       startTime,
@@ -33,7 +44,7 @@ module.exports = {
     }));
   },
 
-  calculateClassDates(startDate, syllabusItems, hourlyRate) {
+  calculateClassDates(startDate, syllabusItems, hourlyRate, holidays) {
     const daysMap = {
       Sun: 0,
       Mon: 1,
@@ -44,28 +55,32 @@ module.exports = {
       Sat: 6,
     };
 
-    const [days, timeRange] = hourlyRate.split(' ');
-    const [startTime, endTime] = timeRange.split('-');
+    const [days, timeRange] = hourlyRate.split(" ");
+    const [startTime] = timeRange.split("-");
 
-    const classDays = days.split('-').map((day) => daysMap[day]);
+    const classDays = days.split("-").map((day) => daysMap[day]);
+
     const [year, month, day] = startDate
-      .split('-')
+      .split("-")
       .map((num) => parseInt(num, 10));
 
     let currentDate = new Date(year, month - 1, day);
     const dates = [];
 
     syllabusItems.forEach(() => {
-      while (!classDays.includes(currentDate.getDay())) {
+      while (
+        !classDays.includes(currentDate.getDay()) ||
+        isHoliday(currentDate, holidays)
+      ) {
         currentDate.setDate(currentDate.getDate() + 1);
       }
       const dateStr =
         currentDate.getFullYear() +
-        '-' +
-        String(currentDate.getMonth() + 1).padStart(2, '0') +
-        '-' +
-        String(currentDate.getDate()).padStart(2, '0') +
-        'T' +
+        "-" +
+        String(currentDate.getMonth() + 1).padStart(2, "0") +
+        "-" +
+        String(currentDate.getDate()).padStart(2, "0") +
+        "T" +
         startTime;
 
       const classDate = new Date(dateStr);
@@ -80,9 +95,9 @@ module.exports = {
     const normalizedName = name
       .trim()
       .toLowerCase()
-      .split(' ')
+      .split(" ")
       .map((word) => word.charAt(0))
-      .join('');
+      .join("");
 
     const username = `${normalizedName}${cedula.slice(-4)}`;
     const randomString = Math.random().toString(36).slice(-8);
@@ -92,9 +107,9 @@ module.exports = {
 
   countAttendance(attendances = []) {
     const attendanceTotal = attendances.reduce((acc, attendance) => {
-      if (attendance.status === 'present' || attendance.status === 'recovery')
+      if (attendance.status === "present" || attendance.status === "recovery")
         return acc++;
-      if (attendance.status === 'late') return acc + 0.5;
+      if (attendance.status === "late") return acc + 0.5;
       return acc;
     }, 0);
 

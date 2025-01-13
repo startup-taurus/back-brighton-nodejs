@@ -62,4 +62,9 @@ module.exports = class UserController extends BaseController {
     const result = await _userService.getUser(id);
     return appResponse(res, result);
   });
+
+  getDashboardData = catchControllerAsync(async (req, res) => {
+    const result = await _userService.getDashboardData();
+    return appResponse(res, result);
+  });
 };

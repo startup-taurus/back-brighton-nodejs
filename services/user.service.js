@@ -1,14 +1,17 @@
-const catchServiceAsync = require('../utils/catch-service-async');
-const BaseService = require('./base.service');
-const AppError = require('../utils/app-error');
-const { validateParameters } = require('../utils/utils');
-const { Op } = require('sequelize');
+const catchServiceAsync = require("../utils/catch-service-async");
+const BaseService = require("./base.service");
+const AppError = require("../utils/app-error");
+const { validateParameters } = require("../utils/utils");
+const { Op } = require("sequelize");
 let _user = null;
+let _course = null;
 let _authUtils = null;
+
 module.exports = class UserService extends BaseService {
-  constructor({ User, AuthUtils }) {
+  constructor({ User, Course, AuthUtils }) {
     super(User);
     _user = User.User;
+    _course = Course.Course;
     _authUtils = AuthUtils;
   }
 
@@ -17,12 +20,12 @@ module.exports = class UserService extends BaseService {
 
     const user = await _user.findOne({ where: { username: username } });
     if (!user) {
-      throw new AppError('User not found', 404);
+      throw new AppError("User not found", 404);
     }
 
     if (user.failed_attempts >= 5) {
       throw new AppError(
-        'Account is locked due to too many failed login attempts',
+        "Account is locked due to too many failed login attempts",
         403
       );
     }
@@ -35,7 +38,7 @@ module.exports = class UserService extends BaseService {
 
     if (!isPasswordValid) {
       await user.update({ failed_attempts: user.failed_attempts + 1 });
-      throw new AppError('Password incorrect', 400);
+      throw new AppError("Password incorrect", 400);
     }
 
     await user.update({
@@ -63,8 +66,8 @@ module.exports = class UserService extends BaseService {
         ...(query.name && { name: { [Op.like]: `%${query.name}%` } }),
       },
       offset: limitNumber * (pageNumber - 1),
-      attributes: { exclude: ['password'] },
-      order: [['id', 'DESC']],
+      attributes: { exclude: ["password"] },
+      order: [["id", "DESC"]],
     });
 
     return {
@@ -78,7 +81,7 @@ module.exports = class UserService extends BaseService {
   getUser = catchServiceAsync(async (id) => {
     const user = await _user.findByPk(id);
     if (!user) {
-      throw new AppError('User not found', 404);
+      throw new AppError("User not found", 404);
     }
     return { data: user };
   });
@@ -119,5 +122,32 @@ module.exports = class UserService extends BaseService {
   deleteUser = catchServiceAsync(async (id) => {
     const user = await _user.destroy({ where: { id } });
     return { data: user };
+  });
+
+  getDashboardData = catchServiceAsync(async () => {
+    const professors = await _user.count({ where: { role: "professor" } });
+    const students = await _user.count({ where: { role: "student" } });
+    const courses = await _course.count();
+    const schoolCardData = [
+      {
+        header: "Total Teachers",
+        amount: professors,
+        amountClass: "secondary",
+        imageName: "icon-2.svg",
+      },
+      {
+        header: "Total Students",
+        amount: students,
+        amountClass: "success",
+        imageName: "icon4.svg",
+      },
+      {
+        header: "Total Courses",
+        amount: courses,
+        amountClass: "warning",
+        imageName: "icon-3.svg",
+      },
+    ];
+    return { data: schoolCardData };
   });
 };
