@@ -113,6 +113,6 @@ module.exports = {
       return acc;
     }, 0);
 
-    return attendanceTotal;
+    return Math.floor(attendanceTotal);
   },
 };
