@@ -1,4 +1,4 @@
-const { DataTypes } = require("sequelize");
+const { DataTypes } = require('sequelize');
 let _sequelize = null;
 
 module.exports = class CourseGradingModel {
@@ -9,7 +9,7 @@ module.exports = class CourseGradingModel {
 
   defineModel() {
     this.CourseGrading = _sequelize.define(
-      "course_grading",
+      'course_grading',
       {
         id: {
           type: DataTypes.INTEGER,
@@ -19,26 +19,27 @@ module.exports = class CourseGradingModel {
         course_id: {
           type: DataTypes.INTEGER,
           references: {
-            model: "course",
-            key: "id",
+            model: 'course',
+            key: 'id',
           },
           allowNull: false,
         },
         grading_item_id: {
           type: DataTypes.INTEGER,
           references: {
-            model: "grading_items",
-            key: "id",
+            model: 'grading_items',
+            key: 'id',
           },
           allowNull: false,
         },
         weight: {
           type: DataTypes.DECIMAL(5, 2),
           allowNull: false,
+          default: 0,
         },
       },
       {
-        tableName: "course_grading",
+        tableName: 'course_grading',
         timestamps: false,
       }
     );

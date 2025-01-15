@@ -7,6 +7,14 @@ module.exports = function ({ SyllabusController }) {
   router.get('/get-one/:id', SyllabusController.getSyllabusById);
   router.get('/get-syllabus/:id', SyllabusController.getIdSyllabus);
   router.post('/create', SyllabusController.createSyllabus);
+  router.post(
+    '/create-assignment-item',
+    SyllabusController.createAssignmentGradingItem
+  );
+  router.put(
+    '/update-assignment-item',
+    SyllabusController.updateAssignmentGradingItem
+  );
   router.put('/update/:id', SyllabusController.updateSyllabus);
   // router.delete("/delete/:id", SyllabusController.deleteSyllabus);
   return router;

@@ -1,12 +1,14 @@
-const catchServiceAsync = require("../utils/catch-service-async");
-const BaseService = require("./base.service");
-const { validateParameters } = require("../utils/utils");
-const AppError = require("../utils/app-error");
+const catchServiceAsync = require('../utils/catch-service-async');
+const BaseService = require('./base.service');
+const { validateParameters } = require('../utils/utils');
+const AppError = require('../utils/app-error');
 let _course = null;
 let _syllabus = null;
 let _gradingItem = null;
 let _syllabusItems = null;
 let _gradePercentages = null;
+let _courseGrading = null;
+let _sequelize = null;
 
 module.exports = class SyllabusService extends BaseService {
   constructor({
@@ -15,6 +17,8 @@ module.exports = class SyllabusService extends BaseService {
     GradePercentages,
     GradingItem,
     Course,
+    CourseGrading,
+    Sequelize,
   }) {
     super(Syllabus.Syllabus);
     _course = Syllabus.Course;
@@ -22,6 +26,8 @@ module.exports = class SyllabusService extends BaseService {
     _gradingItem = GradingItem.GradingItem;
     _syllabusItems = SyllabusItems.SyllabusItems;
     _gradePercentages = GradePercentages.GradePercentages;
+    _courseGrading = CourseGrading.CourseGrading;
+    _sequelize = Sequelize;
   }
 
   getAllSyllabus = catchServiceAsync(async (page = 1, limit = 10) => {
@@ -33,31 +39,31 @@ module.exports = class SyllabusService extends BaseService {
       include: [
         {
           model: _syllabusItems,
-          as: "items",
-          attributes: ["id", "item_name"],
+          as: 'items',
+          attributes: ['id', 'item_name'],
         },
         {
           model: _gradePercentages,
-          as: "percentages",
+          as: 'percentages',
           attributes: [
-            "assig_percentage",
-            "test_percentage",
-            "exam_percentage",
+            'assig_percentage',
+            'test_percentage',
+            'exam_percentage',
           ],
         },
         {
           model: _gradingItem,
-          as: "grading_items",
-          attributes: ["id", "name", "category_id"],
+          as: 'grading_items',
+          attributes: ['id', 'name', 'category_id'],
         },
       ],
-      attributes: ["id", "syllabus_name"],
+      attributes: ['id', 'syllabus_name'],
       limit: limitNumber,
       offset,
     });
 
     if (!syllabus || syllabus.rows.length === 0) {
-      throw new AppError("No syllabus found", 404);
+      throw new AppError('No syllabus found', 404);
     }
     const data = syllabus.rows.map((syllabus) => {
       const gradingItems = syllabus.grading_items || [];
@@ -91,24 +97,24 @@ module.exports = class SyllabusService extends BaseService {
       include: [
         {
           model: _syllabusItems,
-          as: "items",
-          attributes: ["id", "item_name"],
+          as: 'items',
+          attributes: ['id', 'item_name'],
         },
         {
           model: _gradePercentages,
-          as: "percentages",
+          as: 'percentages',
           attributes: [
-            "assig_percentage",
-            "test_percentage",
-            "exam_percentage",
+            'assig_percentage',
+            'test_percentage',
+            'exam_percentage',
           ],
         },
       ],
-      attributes: ["id", "syllabus_name"],
+      attributes: ['id', 'syllabus_name'],
     });
 
     if (!syllabus) {
-      throw new AppError("Syllabus not found", 404);
+      throw new AppError('Syllabus not found', 404);
     }
 
     return { data: syllabus };
@@ -186,23 +192,23 @@ module.exports = class SyllabusService extends BaseService {
       include: [
         {
           model: _syllabusItems,
-          as: "items",
+          as: 'items',
         },
         {
           model: _gradePercentages,
-          as: "percentages",
+          as: 'percentages',
         },
       ],
     });
 
     if (!syllabus) {
-      throw new AppError("Syllabus not found", 404);
+      throw new AppError('Syllabus not found', 404);
     }
 
     await syllabus.update({ syllabus_name });
 
     //TODO: verificar que no se guarda correctamente
-    
+
     // if (items && items.length > 0) {
     //   await _syllabusItems.destroy({ where: { syllabus_id: id } });
     //   const syllabusItems = items.map((item) => ({
@@ -265,11 +271,60 @@ module.exports = class SyllabusService extends BaseService {
       include: [
         {
           model: _syllabusItems,
-          as: "items",
-          attributes: ["id"],
+          as: 'items',
+          attributes: ['id'],
         },
       ],
     });
     return syllabus;
+  });
+
+  createAssignmentGradingItem = catchServiceAsync(async (body) => {
+    const { syllabus_id, course_id } = body;
+
+    validateParameters({ syllabus_id });
+
+    const transaction = await _sequelize.transaction();
+    try {
+      const response = await _gradingItem.create(
+        {
+          category_id: 1,
+          syllabus_id,
+          name: 'Item',
+        },
+        { transaction }
+      );
+
+      await _courseGrading.create(
+        {
+          grading_item_id: response.id,
+          course_id,
+          weight: 0,
+        },
+        { transaction }
+      );
+
+      await transaction.commit();
+
+      return { data: response };
+    } catch (e) {
+      await transaction.rollback();
+      throw new AppError('Error creating the field', 400);
+    }
+  });
+
+  updateAssignmentGradingItem = catchServiceAsync(async (body) => {
+    const { name, id } = body;
+
+    validateParameters({ id });
+
+    const response = await _gradingItem.update(
+      {
+        name,
+      },
+      { where: { id } }
+    );
+
+    return { data: response };
   });
 };

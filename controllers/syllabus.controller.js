@@ -30,6 +30,16 @@ module.exports = class SyllabusController extends BaseController {
     return appResponse(res, result);
   });
 
+  createAssignmentGradingItem = catchControllerAsync(async (req, res) => {
+    const result = await _syllabusService.createAssignmentGradingItem(req.body);
+    return appResponse(res, result);
+  });
+
+  updateAssignmentGradingItem = catchControllerAsync(async (req, res) => {
+    const result = await _syllabusService.updateAssignmentGradingItem(req.body);
+    return appResponse(res, result);
+  });
+
   updateSyllabus = catchControllerAsync(async (req, res) => {
     const { id } = req.params;
     const result = await _syllabusService.updateSyllabus(id, req.body);

@@ -40,6 +40,7 @@ module.exports = class AttendanceService extends BaseService {
             model: _courseSchedule,
             as: 'course_schedule',
             where: { course_id: courseId },
+            order: [['scheduled_date', 'ASC']],
           },
         ],
         raw: true,
@@ -89,17 +90,10 @@ module.exports = class AttendanceService extends BaseService {
         status,
       });
     } else {
-      currentAttendance = await _attendance.update(
-        {
-          status,
-        },
-        {
-          where: {
-            course_schedule_id,
-            student_id,
-          },
-        }
-      );
+      currentAttendance = await attendance.update({
+        status,
+      });
+      console.log(currentAttendance);
     }
 
     return { data: currentAttendance };

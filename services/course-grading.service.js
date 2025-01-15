@@ -1,3 +1,4 @@
+const AppError = require('../utils/app-error');
 const catchServiceAsync = require('../utils/catch-service-async');
 const { validateParameters } = require('../utils/utils');
 const BaseService = require('./base.service');
