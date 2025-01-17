@@ -249,6 +249,8 @@ module.exports = class CourseService extends BaseService {
 
     body.professor_id = parseInt(professor_id);
     body.syllabus_id = parseInt(syllabus_id);
+    console.log(body);
+    
     const course = await _course.create(body);
 
     await this.createCourseSchedule(start_date, schedule, syllabus_id, course);
