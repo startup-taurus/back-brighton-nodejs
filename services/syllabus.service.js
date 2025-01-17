@@ -1,7 +1,7 @@
-const catchServiceAsync = require('../utils/catch-service-async');
-const BaseService = require('./base.service');
-const { validateParameters } = require('../utils/utils');
-const AppError = require('../utils/app-error');
+const catchServiceAsync = require("../utils/catch-service-async");
+const BaseService = require("./base.service");
+const { validateParameters } = require("../utils/utils");
+const AppError = require("../utils/app-error");
 let _course = null;
 let _syllabus = null;
 let _gradingItem = null;
@@ -9,6 +9,7 @@ let _syllabusItems = null;
 let _gradePercentages = null;
 let _courseGrading = null;
 let _sequelize = null;
+let _percentages = null;
 
 module.exports = class SyllabusService extends BaseService {
   constructor({
@@ -18,6 +19,7 @@ module.exports = class SyllabusService extends BaseService {
     GradingItem,
     Course,
     CourseGrading,
+    Percentages,
     Sequelize,
   }) {
     super(Syllabus.Syllabus);
@@ -27,6 +29,7 @@ module.exports = class SyllabusService extends BaseService {
     _syllabusItems = SyllabusItems.SyllabusItems;
     _gradePercentages = GradePercentages.GradePercentages;
     _courseGrading = CourseGrading.CourseGrading;
+    _percentages = Percentages.Percentages;
     _sequelize = Sequelize;
   }
 
@@ -39,31 +42,36 @@ module.exports = class SyllabusService extends BaseService {
       include: [
         {
           model: _syllabusItems,
-          as: 'items',
-          attributes: ['id', 'item_name'],
+          as: "items",
+          attributes: ["id", "item_name"],
         },
         {
           model: _gradePercentages,
-          as: 'percentages',
+          as: "percentages",
           attributes: [
-            'assig_percentage',
-            'test_percentage',
-            'exam_percentage',
+            "assig_percentage",
+            "test_percentage",
+            "exam_percentage",
           ],
         },
         {
           model: _gradingItem,
-          as: 'grading_items',
-          attributes: ['id', 'name', 'category_id'],
+          as: "grading_items",
+          attributes: ["id", "name", "category_id"],
+        },
+        {
+          model: _percentages,
+          as: "percentages_syllabus",
+          attributes: ["name", "min", "max"],
         },
       ],
-      attributes: ['id', 'syllabus_name'],
+      attributes: ["id", "syllabus_name"],
       limit: limitNumber,
       offset,
     });
 
     if (!syllabus || syllabus.rows.length === 0) {
-      throw new AppError('No syllabus found', 404);
+      throw new AppError("No syllabus found", 404);
     }
     const data = syllabus.rows.map((syllabus) => {
       const gradingItems = syllabus.grading_items || [];
@@ -86,6 +94,7 @@ module.exports = class SyllabusService extends BaseService {
         assignments,
         progress_tests: progressTests,
         movers_exam: moversExam,
+        percentages_syllabus: syllabus.percentages_syllabus,
       };
     });
 
@@ -97,24 +106,24 @@ module.exports = class SyllabusService extends BaseService {
       include: [
         {
           model: _syllabusItems,
-          as: 'items',
-          attributes: ['id', 'item_name'],
+          as: "items",
+          attributes: ["id", "item_name"],
         },
         {
           model: _gradePercentages,
-          as: 'percentages',
+          as: "percentages",
           attributes: [
-            'assig_percentage',
-            'test_percentage',
-            'exam_percentage',
+            "assig_percentage",
+            "test_percentage",
+            "exam_percentage",
           ],
         },
       ],
-      attributes: ['id', 'syllabus_name'],
+      attributes: ["id", "syllabus_name"],
     });
 
     if (!syllabus) {
-      throw new AppError('Syllabus not found', 404);
+      throw new AppError("Syllabus not found", 404);
     }
 
     return { data: syllabus };
@@ -130,6 +139,7 @@ module.exports = class SyllabusService extends BaseService {
       assignments,
       progress_tests,
       movers_exam,
+      percentages,
     } = body;
 
     validateParameters({
@@ -137,6 +147,7 @@ module.exports = class SyllabusService extends BaseService {
       assig_percentage,
       test_percentage,
       exam_percentage,
+      percentages,
     });
 
     const syllabus = await _syllabus.create({ syllabus_name });
@@ -173,6 +184,18 @@ module.exports = class SyllabusService extends BaseService {
     if (gradingItems.length > 0) {
       await _gradingItem.bulkCreate(gradingItems);
     }
+
+    if (percentages && percentages.length > 0) {
+      const percentagesToCreate = percentages.map(({ name, min, max }) => ({
+        name,
+        min,
+        max,
+        syllabus_id: syllabus.id,
+      }));
+
+      await _percentages.bulkCreate(percentagesToCreate);
+    }
+
     return { data: syllabus };
   });
 
@@ -186,23 +209,24 @@ module.exports = class SyllabusService extends BaseService {
       assignments,
       progress_tests,
       movers_exam,
+      percentages,
     } = body;
 
     const syllabus = await _syllabus.findByPk(id, {
       include: [
         {
           model: _syllabusItems,
-          as: 'items',
+          as: "items",
         },
         {
           model: _gradePercentages,
-          as: 'percentages',
+          as: "percentages",
         },
       ],
     });
 
     if (!syllabus) {
-      throw new AppError('Syllabus not found', 404);
+      throw new AppError("Syllabus not found", 404);
     }
 
     await syllabus.update({ syllabus_name });
@@ -263,6 +287,21 @@ module.exports = class SyllabusService extends BaseService {
       await _gradingItem.bulkCreate(gradingItems);
     }
 
+    if (percentages && Array.isArray(percentages)) {
+      await _percentages.destroy({ where: { syllabus_id: id } });
+
+      const newPercentages = percentages.map(({ name, min, max }) => ({
+        name,
+        min,
+        max,
+        syllabus_id: id,
+      }));
+
+      if (newPercentages.length > 0) {
+        await _percentages.bulkCreate(newPercentages);
+      }
+    }
+
     return { data: syllabus };
   });
 
@@ -271,8 +310,8 @@ module.exports = class SyllabusService extends BaseService {
       include: [
         {
           model: _syllabusItems,
-          as: 'items',
-          attributes: ['id'],
+          as: "items",
+          attributes: ["id"],
         },
       ],
     });
@@ -290,7 +329,7 @@ module.exports = class SyllabusService extends BaseService {
         {
           category_id: 1,
           syllabus_id,
-          name: 'Item',
+          name: "Item",
         },
         { transaction }
       );
@@ -309,7 +348,7 @@ module.exports = class SyllabusService extends BaseService {
       return { data: response };
     } catch (e) {
       await transaction.rollback();
-      throw new AppError('Error creating the field', 400);
+      throw new AppError("Error creating the field", 400);
     }
   });
 

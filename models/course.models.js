@@ -41,6 +41,10 @@ module.exports = class CourseModel {
           type: DataTypes.STRING,
           allowNull: false,
         },
+        age_group: {
+          type: DataTypes.STRING,
+          allowNull: true,
+        },
         classroom: {
           type: DataTypes.STRING,
           allowNull: true,

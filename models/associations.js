@@ -15,6 +15,7 @@ let _gradingCategory = null;
 let _courseGrading = null;
 let _gradingItem = null;
 let _studentGrades = null;
+let _percentages = null;
 
 module.exports = class AuditModel {
   constructor({
@@ -35,6 +36,7 @@ module.exports = class AuditModel {
     GradingItem,
     GradingCategory,
     StudentGrades,
+    Percentages,
   }) {
     _student = Student.Student;
     _course = Course.Course;
@@ -53,6 +55,7 @@ module.exports = class AuditModel {
     _courseGrading = CourseGrading.CourseGrading;
     _gradingItem = GradingItem.GradingItem;
     _studentGrades = StudentGrades.StudentGrades;
+    _percentages = Percentages.Percentages;
     this.defineModel();
   }
 
@@ -256,6 +259,18 @@ module.exports = class AuditModel {
     _studentGrades.belongsTo(_student, {
       foreignKey: "student_id",
       as: "student",
+    });
+
+    // SyllabusModel (o donde defines tu modelo syllabus)
+    _syllabus.hasMany(_percentages, {
+      foreignKey: "syllabus_id",
+      as: "percentages_syllabus",
+    });
+
+    // PercentagesModel
+    _percentages.belongsTo(_syllabus, {
+      foreignKey: "syllabus_id",
+      as: "syllabus",
     });
   }
 };

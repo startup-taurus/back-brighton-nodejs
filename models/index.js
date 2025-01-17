@@ -18,4 +18,5 @@ module.exports = {
   GradingItem: require('./grading-item.model'),
   GradingCategory: require('./grading-category.model'),
   StudentGrades: require('./student-grades.model'),
+  Percentages: require('./percentages.model'),
 };

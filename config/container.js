@@ -78,6 +78,7 @@ const {
   GradingItem,
   GradingCategory,
   StudentGrades,
+  Percentages,
 } = require('../models');
 
 const { protect } = require('../middleware/authMiddleware');
@@ -176,6 +177,7 @@ container
     GradingItem: asClass(GradingItem).singleton(),
     GradingCategory: asClass(GradingCategory).singleton(),
     StudentGrades: asClass(StudentGrades).singleton(),
+    Percentages: asClass(Percentages).singleton(),
   })
   .register({
     //middlewares
