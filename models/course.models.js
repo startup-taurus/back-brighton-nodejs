@@ -25,10 +25,6 @@ module.exports = class CourseModel {
           type: DataTypes.DATE,
           allowNull: false,
         },
-        end_date: {
-          type: DataTypes.DATE,
-          allowNull: false,
-        },
         comment: {
           type: DataTypes.TEXT,
           allowNull: true,
