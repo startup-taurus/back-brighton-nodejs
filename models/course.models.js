@@ -28,6 +28,7 @@ module.exports = class CourseModel {
         comment: {
           type: DataTypes.TEXT,
           allowNull: true,
+          defaultValue: null,
         },
         status: {
           type: DataTypes.STRING,
@@ -48,6 +49,7 @@ module.exports = class CourseModel {
         hourly_rate: {
           type: DataTypes.DECIMAL(10, 2),
           allowNull: true,
+          defaultValue: null,
         },
         schedule: {
           type: DataTypes.TEXT,
