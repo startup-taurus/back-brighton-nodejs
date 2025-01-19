@@ -6,6 +6,10 @@ module.exports = function ({ SyllabusController }) {
   router.get('/get-all', SyllabusController.getAllSyllabus);
   router.get('/get-one/:id', SyllabusController.getSyllabusById);
   router.get('/get-syllabus/:id', SyllabusController.getIdSyllabus);
+  router.get(
+    '/get-percentages-by-syllabus/:id',
+    SyllabusController.getFinalPercentageBySyllabusId
+  );
   router.post('/create', SyllabusController.createSyllabus);
   router.post(
     '/create-assignment-item',

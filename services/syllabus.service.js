@@ -1,7 +1,7 @@
-const catchServiceAsync = require("../utils/catch-service-async");
-const BaseService = require("./base.service");
-const { validateParameters } = require("../utils/utils");
-const AppError = require("../utils/app-error");
+const catchServiceAsync = require('../utils/catch-service-async');
+const BaseService = require('./base.service');
+const { validateParameters } = require('../utils/utils');
+const AppError = require('../utils/app-error');
 let _course = null;
 let _syllabus = null;
 let _gradingItem = null;
@@ -42,36 +42,36 @@ module.exports = class SyllabusService extends BaseService {
       include: [
         {
           model: _syllabusItems,
-          as: "items",
-          attributes: ["id", "item_name"],
+          as: 'items',
+          attributes: ['id', 'item_name'],
         },
         {
           model: _gradePercentages,
-          as: "percentages",
+          as: 'percentages',
           attributes: [
-            "assig_percentage",
-            "test_percentage",
-            "exam_percentage",
+            'assig_percentage',
+            'test_percentage',
+            'exam_percentage',
           ],
         },
         {
           model: _gradingItem,
-          as: "grading_items",
-          attributes: ["id", "name", "category_id"],
+          as: 'grading_items',
+          attributes: ['id', 'name', 'category_id'],
         },
         {
           model: _percentages,
-          as: "percentages_syllabus",
-          attributes: ["name", "min", "max"],
+          as: 'percentages_syllabus',
+          attributes: ['name', 'min', 'max'],
         },
       ],
-      attributes: ["id", "syllabus_name"],
+      attributes: ['id', 'syllabus_name'],
       limit: limitNumber,
       offset,
     });
 
     if (!syllabus || syllabus.rows.length === 0) {
-      throw new AppError("No syllabus found", 404);
+      throw new AppError('No syllabus found', 404);
     }
     const data = syllabus.rows.map((syllabus) => {
       const gradingItems = syllabus.grading_items || [];
@@ -106,24 +106,24 @@ module.exports = class SyllabusService extends BaseService {
       include: [
         {
           model: _syllabusItems,
-          as: "items",
-          attributes: ["id", "item_name"],
+          as: 'items',
+          attributes: ['id', 'item_name'],
         },
         {
           model: _gradePercentages,
-          as: "percentages",
+          as: 'percentages',
           attributes: [
-            "assig_percentage",
-            "test_percentage",
-            "exam_percentage",
+            'assig_percentage',
+            'test_percentage',
+            'exam_percentage',
           ],
         },
       ],
-      attributes: ["id", "syllabus_name"],
+      attributes: ['id', 'syllabus_name'],
     });
 
     if (!syllabus) {
-      throw new AppError("Syllabus not found", 404);
+      throw new AppError('Syllabus not found', 404);
     }
 
     return { data: syllabus };
@@ -216,17 +216,17 @@ module.exports = class SyllabusService extends BaseService {
       include: [
         {
           model: _syllabusItems,
-          as: "items",
+          as: 'items',
         },
         {
           model: _gradePercentages,
-          as: "percentages",
+          as: 'percentages',
         },
       ],
     });
 
     if (!syllabus) {
-      throw new AppError("Syllabus not found", 404);
+      throw new AppError('Syllabus not found', 404);
     }
 
     await syllabus.update({ syllabus_name });
@@ -310,8 +310,8 @@ module.exports = class SyllabusService extends BaseService {
       include: [
         {
           model: _syllabusItems,
-          as: "items",
-          attributes: ["id"],
+          as: 'items',
+          attributes: ['id'],
         },
       ],
     });
@@ -329,7 +329,7 @@ module.exports = class SyllabusService extends BaseService {
         {
           category_id: 1,
           syllabus_id,
-          name: "Item",
+          name: 'Item',
         },
         { transaction }
       );
@@ -348,7 +348,7 @@ module.exports = class SyllabusService extends BaseService {
       return { data: response };
     } catch (e) {
       await transaction.rollback();
-      throw new AppError("Error creating the field", 400);
+      throw new AppError('Error creating the field', 400);
     }
   });
 
@@ -363,6 +363,14 @@ module.exports = class SyllabusService extends BaseService {
       },
       { where: { id } }
     );
+
+    return { data: response };
+  });
+
+  getFinalPercentageBySyllabusId = catchServiceAsync(async (syllabus_id) => {
+    validateParameters({ 'Sylllabus id': syllabus_id });
+
+    const response = await _percentages.findAll({ where: { syllabus_id } });
 
     return { data: response };
   });

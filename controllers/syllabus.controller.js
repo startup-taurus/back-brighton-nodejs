@@ -45,4 +45,10 @@ module.exports = class SyllabusController extends BaseController {
     const result = await _syllabusService.updateSyllabus(id, req.body);
     return appResponse(res, result);
   });
+
+  getFinalPercentageBySyllabusId = catchControllerAsync(async (req, res) => {
+    const { id } = req.params;
+    const result = await _syllabusService.getFinalPercentageBySyllabusId(id);
+    return appResponse(res, result);
+  });
 };
