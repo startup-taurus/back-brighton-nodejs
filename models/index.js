@@ -19,4 +19,5 @@ module.exports = {
   GradingCategory: require('./grading-category.model'),
   StudentGrades: require('./student-grades.model'),
   Percentages: require('./percentages.model'),
+  RegisteredStudent: require('./registered-student.model'),
 };

@@ -21,6 +21,7 @@ const {
   CourseScheduleService,
   CourseGradingService,
   StudentGradesService,
+  RegisteredStudentService,
 } = require('../services');
 
 //Controllers
@@ -37,6 +38,7 @@ const {
   CourseScheduleController,
   CourseGradingController,
   StudentGradesController,
+  RegisteredStudentController,
 } = require('../controllers');
 
 //Startup
@@ -55,6 +57,7 @@ const {
   SyllabusRoutes,
   CourseScheduleRoutes,
   StudentGradesRoutes,
+  RegisteredStudentRoutes,
 } = require('../routes/api/index');
 
 //Models
@@ -79,6 +82,7 @@ const {
   GradingCategory,
   StudentGrades,
   Percentages,
+  RegisteredStudent,
 } = require('../models');
 
 const { protect } = require('../middleware/authMiddleware');
@@ -108,6 +112,7 @@ container
     CourseScheduleService: asClass(CourseScheduleService).singleton(),
     CourseGradingService: asClass(CourseGradingService).singleton(),
     StudentGradesService: asClass(StudentGradesService).singleton(),
+    RegisteredStudentService: asClass(RegisteredStudentService).singleton(),
   })
 
   .register({
@@ -138,6 +143,9 @@ container
     CourseScheduleController: asClass(CourseScheduleController).singleton(),
     CourseGradingController: asClass(CourseGradingController).singleton(),
     StudentGradesController: asClass(StudentGradesController).singleton(),
+    RegisteredStudentController: asClass(
+      RegisteredStudentController
+    ).singleton(),
   })
   .register({
     //Configuración de rutas
@@ -152,6 +160,7 @@ container
     SyllabusRoutes: asFunction(SyllabusRoutes).singleton(),
     CourseScheduleRoutes: asFunction(CourseScheduleRoutes).singleton(),
     StudentGradesRoutes: asFunction(StudentGradesRoutes).singleton(),
+    RegisteredStudentRoutes: asFunction(RegisteredStudentRoutes).singleton(),
   })
   .register({
     //Configuración de las asociaciones
@@ -178,6 +187,7 @@ container
     GradingCategory: asClass(GradingCategory).singleton(),
     StudentGrades: asClass(StudentGrades).singleton(),
     Percentages: asClass(Percentages).singleton(),
+    RegisteredStudent: asClass(RegisteredStudent).singleton(),
   })
   .register({
     //middlewares

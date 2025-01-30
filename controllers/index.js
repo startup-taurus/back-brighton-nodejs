@@ -18,4 +18,5 @@ module.exports = {
   CourseScheduleController: require('./course-schedule.controller'),
   CourseGradingController: require('./course-grading.controller'),
   StudentGradesController: require('./student-grades.controller'),
+  RegisteredStudentController: require('./registered-student.controller'),
 };

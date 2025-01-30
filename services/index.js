@@ -11,4 +11,5 @@ module.exports = {
   CourseScheduleService: require('./course-schedule.service'),
   CourseGradingService: require('./course-grading.service'),
   StudentGradesService: require('./student-grades.service'),
+  RegisteredStudentService: require('./registered-student.service'),
 };
