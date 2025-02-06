@@ -155,6 +155,7 @@ module.exports = class StudentService extends BaseService {
       name,
       cedula,
       status,
+      course: courseId,
     });
 
     const { username, password } = generateCredentials(name, cedula);
