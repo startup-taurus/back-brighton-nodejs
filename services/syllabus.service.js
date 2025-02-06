@@ -200,111 +200,137 @@ module.exports = class SyllabusService extends BaseService {
   });
 
   updateSyllabus = catchServiceAsync(async (id, body) => {
-    const {
-      syllabus_name,
-      items,
-      assig_percentage,
-      test_percentage,
-      exam_percentage,
-      assignments,
-      progress_tests,
-      movers_exam,
-      percentages,
-    } = body;
-
-    const syllabus = await _syllabus.findByPk(id, {
-      include: [
-        {
-          model: _syllabusItems,
-          as: 'items',
-        },
-        {
-          model: _gradePercentages,
-          as: 'percentages',
-        },
-      ],
-    });
-
-    if (!syllabus) {
-      throw new AppError('Syllabus not found', 404);
-    }
-
-    await syllabus.update({ syllabus_name });
-
-    //TODO: verificar que no se guarda correctamente
-
-    // if (items && items.length > 0) {
-    //   await _syllabusItems.destroy({ where: { syllabus_id: id } });
-    //   const syllabusItems = items.map((item) => ({
-    //     syllabus_id: id,
-    //     item_name: item,
-    //   }));
-    //   await _syllabusItems.bulkCreate(syllabusItems);
-    // }
-
-    if (
-      assig_percentage !== undefined &&
-      test_percentage !== undefined &&
-      exam_percentage !== undefined
-    ) {
-      const percentages = await _gradePercentages.findOne({
-        where: { syllabus_id: id },
+    return await _sequelize.transaction(async (transaction) => {
+      const {
+        syllabus_name,
+        items,
+        assig_percentage,
+        test_percentage,
+        exam_percentage,
+        assignments,
+        progress_tests,
+        movers_exam,
+        percentages: bodyPercentages,
+      } = body;
+  
+      const syllabus = await _syllabus.findByPk(id, {
+        include: [
+          { model: _syllabusItems, as: 'items' },
+          { model: _gradePercentages, as: 'percentages' },
+        ],
+        transaction,
       });
-
-      if (percentages) {
-        await percentages.update({
-          assig_percentage,
-          test_percentage,
-          exam_percentage,
-        });
-      } else {
-        await _gradePercentages.create({
-          syllabus_id: id,
-          assig_percentage,
-          test_percentage,
-          exam_percentage,
-        });
+  
+      if (!syllabus) {
+        throw new AppError('Syllabus not found', 404);
       }
-    }
-
-    const gradingCategories = [
-      { categoryId: 1, items: assignments },
-      { categoryId: 2, items: progress_tests },
-      { categoryId: 3, items: movers_exam },
-    ];
-
-    await _gradingItem.destroy({ where: { syllabus_id: id } });
-
-    const gradingItems = gradingCategories.flatMap(({ categoryId, items }) =>
-      (items || []).map((item) => ({
-        category_id: categoryId,
-        syllabus_id: id,
-        name: item,
-      }))
-    );
-
-    if (gradingItems.length > 0) {
-      await _gradingItem.bulkCreate(gradingItems);
-    }
-
-    if (percentages && Array.isArray(percentages)) {
-      await _percentages.destroy({ where: { syllabus_id: id } });
-
-      const newPercentages = percentages.map(({ name, min, max }) => ({
-        name,
-        min,
-        max,
-        syllabus_id: id,
-      }));
-
-      if (newPercentages.length > 0) {
-        await _percentages.bulkCreate(newPercentages);
+  
+      await syllabus.update({ syllabus_name }, { transaction });
+  
+      if (items && Array.isArray(items)) {
+        const currentItems = await _syllabusItems.findAll({
+          where: { syllabus_id: id },
+          order: [['id', 'ASC']],
+          transaction,
+        });
+        for (let i = 0; i < items.length; i++) {
+          if (i < currentItems.length) {
+            await currentItems[i].update({ item_name: items[i] }, { transaction });
+          } else {
+            await _syllabusItems.create({ syllabus_id: id, item_name: items[i] }, { transaction });
+          }
+        }
+        if (currentItems.length > items.length) {
+          for (let i = items.length; i < currentItems.length; i++) {
+            await currentItems[i].update({ item_name: currentItems[i].item_name + ' (eliminado)' }, { transaction });
+          }
+        }
       }
-    }
-
-    return { data: syllabus };
+  
+      if (
+        assig_percentage !== undefined &&
+        test_percentage !== undefined &&
+        exam_percentage !== undefined
+      ) {
+        const gradePercentageRecord = await _gradePercentages.findOne({
+          where: { syllabus_id: id },
+          transaction,
+        });
+        if (gradePercentageRecord) {
+          await gradePercentageRecord.update(
+            { assig_percentage, test_percentage, exam_percentage },
+            { transaction }
+          );
+        } else {
+          await _gradePercentages.create(
+            { syllabus_id: id, assig_percentage, test_percentage, exam_percentage },
+            { transaction }
+          );
+        }
+      }
+  
+      const gradingCategories = [
+        { categoryId: 1, items: assignments },
+        { categoryId: 2, items: progress_tests },
+        { categoryId: 3, items: movers_exam },
+      ];
+  
+      for (const { categoryId, items: categoryItems } of gradingCategories) {
+        if (categoryItems && Array.isArray(categoryItems)) {
+          const currentGradingItems = await _gradingItem.findAll({
+            where: { syllabus_id: id, category_id: categoryId },
+            order: [['id', 'ASC']],
+            transaction,
+          });
+          for (let i = 0; i < categoryItems.length; i++) {
+            if (i < currentGradingItems.length) {
+              await currentGradingItems[i].update({ name: categoryItems[i] }, { transaction });
+            } else {
+              await _gradingItem.create(
+                { syllabus_id: id, category_id: categoryId, name: categoryItems[i] },
+                { transaction }
+              );
+            }
+          }
+          if (currentGradingItems.length > categoryItems.length) {
+            for (let i = categoryItems.length; i < currentGradingItems.length; i++) {
+              await currentGradingItems[i].update(
+                { name: currentGradingItems[i].name + ' (eliminado)' },
+                { transaction }
+              );
+            }
+          }
+        }
+      }
+  
+      if (bodyPercentages && Array.isArray(bodyPercentages)) {
+        const currentPercentages = await _percentages.findAll({
+          where: { syllabus_id: id },
+          order: [['id', 'ASC']],
+          transaction,
+        });
+        for (let i = 0; i < bodyPercentages.length; i++) {
+          const { name, min, max } = bodyPercentages[i];
+          if (i < currentPercentages.length) {
+            await currentPercentages[i].update({ name, min, max }, { transaction });
+          } else {
+            await _percentages.create({ syllabus_id: id, name, min, max }, { transaction });
+          }
+        }
+        if (currentPercentages.length > bodyPercentages.length) {
+          for (let i = bodyPercentages.length; i < currentPercentages.length; i++) {
+            await currentPercentages[i].update(
+              { name: currentPercentages[i].name + ' (eliminado)' },
+              { transaction }
+            );
+          }
+        }
+      }
+  
+      return { data: syllabus };
+    });
   });
-
+  
   getIdSyllabus = catchServiceAsync(async (id) => {
     const syllabus = await _syllabus.findByPk(id, {
       include: [
