@@ -6,6 +6,10 @@ module.exports = {
   PORT: process.env.PORT,
   APPLICATION_NAME: process.env.APPLICATION_NAME,
   API_URL: `${process.env.API_URL}:${process.env.PORT}`,
+  EMAIL_ADMIN_USER: process.env.EMAIL_ADMIN_USER,
+  EMAIL_PASSWORD: process.env.EMAIL_PASSWORD,
+  EMAIL_SERVER_HOST: process.env.EMAIL_SERVER_HOST,
+  EMAIL_SERVER_PORT: process.env.EMAIL_SERVER_PORT,
   DB: {
     username: process.env.DB_USER,
     password: process.env.DB_PASSWORD,

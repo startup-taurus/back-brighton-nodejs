@@ -2,6 +2,7 @@ const catchServiceAsync = require('../utils/catch-service-async');
 const BaseService = require('./base.service');
 const AppError = require('../utils/app-error');
 const { validateParameters, generateCredentials } = require('../utils/utils');
+const sendEmail = require('../utils/email.utils');
 
 let _registeredStudent = null;
 
@@ -87,6 +88,16 @@ module.exports = class RegisteredStudentService extends BaseService {
       same_billing,
       billing_address,
       where_hear_about_us,
+    });
+
+    await sendEmail({
+      subject: 'Student Registration',
+      text: `A Student has been registered with the following details: \n
+      Name: ${first_name} ${middle_name} ${last_name} ${second_last_name}, ID: ${id_number},\n 
+      Phone: ${phone_number}, Email: ${email}, Address: ${address} \n
+      Age Category: ${age_category}, Level: ${level}, \nSame Billing: ${same_billing}, Billing Address ${
+        same_billing === 'yes' ? address : billing_address
+      }, \nWhere did you hear about us: ${where_hear_about_us}`,
     });
 
     return { data: student };
