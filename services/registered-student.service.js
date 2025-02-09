@@ -1,7 +1,7 @@
 const catchServiceAsync = require('../utils/catch-service-async');
 const BaseService = require('./base.service');
 const AppError = require('../utils/app-error');
-const { validateParameters, generateCredentials } = require('../utils/utils');
+const { validateParameters } = require('../utils/utils');
 const sendEmail = require('../utils/email.utils');
 
 let _registeredStudent = null;
@@ -13,12 +13,16 @@ module.exports = class RegisteredStudentService extends BaseService {
   }
 
   getAllRegisteredStudents = catchServiceAsync(async (query) => {
-    const { page = 1, limit = 10 } = query;
+    const { page = 1, limit = 10, ...filters } = query;
 
     let limitNumber = parseInt(limit);
     let pageNumber = parseInt(page);
 
+    let where = {};
+    filters?.level && (where.level = filters.level);
+
     const data = await _registeredStudent.findAndCountAll({
+      where,
       limit: limitNumber,
       offset: limitNumber * (pageNumber - 1),
       order: [['id', 'DESC']],
