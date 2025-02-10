@@ -1,4 +1,5 @@
 const nodemailer = require('nodemailer');
+
 const {
   EMAIL_SERVER_HOST,
   EMAIL_SERVER_PORT,
@@ -25,7 +26,7 @@ const sendEmail = async (options) => {
     text: options.text,
   };
 
-  await transporter.sendEmail(mailOptions);
+  await transporter.sendMail(mailOptions);
 };
 
 module.exports = sendEmail;
