@@ -18,9 +18,9 @@ const sendEmail = async (options) => {
   });
 
   const mailOptions = {
-    from: '"Brighton " <recepcion@bebrighton.net>',
-    // to: 'richardgarcia2499@gmail.com',
-    to: 'info@bebrighton.net, recepcionbrighton@gmail.com',
+    from: '"Brighton " <register-students@bebrighton.net>',
+    to: 'richardgarcia2499@gmail.com',
+    // to: 'info@bebrighton.net, recepcionbrighton@gmail.com',
     subject: options.subject,
     text: options.text,
   };
