@@ -1,7 +1,7 @@
 const catchServiceAsync = require("../utils/catch-service-async");
 const BaseService = require("./base.service");
 const AppError = require("../utils/app-error");
-const { Op } = require("sequelize");
+const { Op, fn, col, literal } = require("sequelize");
 const {
   validateParameters,
   scheduleStringToDates,
@@ -18,6 +18,7 @@ let _gradingItem = null;
 let _courseGrading = null;
 let _courseSchedule = null;
 let _holidays = null;
+let _grades = null;
 
 module.exports = class CourseService extends BaseService {
   constructor({
@@ -32,6 +33,7 @@ module.exports = class CourseService extends BaseService {
     CourseGrading,
     GradingItem,
     Holidays,
+    Grades,
   }) {
     super(Course);
     _user = User.User;
@@ -44,6 +46,7 @@ module.exports = class CourseService extends BaseService {
     _courseGrading = CourseGrading.CourseGrading;
     _gradingItem = GradingItem.GradingItem;
     _holidays = Holidays.Holidays;
+    _grades = Grades.Grades;
     _sequelize = Sequelize;
   }
 
@@ -224,6 +227,101 @@ module.exports = class CourseService extends BaseService {
     }
   );
 
+  getAcademicPerformance = catchServiceAsync(async (req, res) => {
+    const courses = await _course.findAll({
+      attributes: [
+        "id",
+        "course_name",
+        [fn("AVG", col("grades.grade")), "avgGrade"],
+      ],
+      include: [
+        {
+          model: _grades,
+          as: "grades",
+          attributes: [],
+        },
+      ],
+      group: ["id", "course_name"],
+    });
+
+    const categories = courses.map((course) => course.course_name);
+    const seriesData = courses.map(
+      (course) => parseFloat(course.get("avgGrade")) || 0
+    );
+
+    const chartData = {
+      series: [
+        {
+          name: "Calificación Promedio",
+          data: seriesData,
+        },
+      ],
+      options: {
+        chart: {
+          id: "academic-performance-chart",
+          type: "area",
+        },
+        xaxis: {
+          categories: categories,
+        },
+        dataLabels: {
+          enabled: false,
+        },
+        stroke: {
+          curve: "smooth",
+        },
+      },
+    };
+
+    return {
+      data: chartData,
+    };
+  });
+
+  getSchoolPerformance = catchServiceAsync(async (req, res) => {
+    const performance = await _grades.findAll({
+      attributes: [
+        [fn("DATE_FORMAT", col("createdAt"), "%Y-%m"), "month"],
+        [fn("AVG", col("grade")), "avgGrade"],
+      ],
+      group: ["month"],
+      order: [[literal("month"), "ASC"]],
+    });
+
+    const categories = performance.map((item) => item.get("month"));
+    const seriesData = performance.map(
+      (item) => parseFloat(item.get("avgGrade")) || 0
+    );
+
+    const chartData = {
+      series: [
+        {
+          name: "Promedio de Calificaciones",
+          data: seriesData,
+        },
+      ],
+      options: {
+        chart: {
+          id: "school-performance-chart",
+          type: "line",
+        },
+        xaxis: {
+          categories: categories,
+        },
+        dataLabels: {
+          enabled: false,
+        },
+        stroke: {
+          curve: "smooth",
+        },
+      },
+    };
+
+    return {
+      data: chartData,
+    };
+  });
+
   createCourse = catchServiceAsync(async (body) => {
     const {
       course_name,
@@ -249,7 +347,7 @@ module.exports = class CourseService extends BaseService {
 
     body.professor_id = parseInt(professor_id);
     body.syllabus_id = parseInt(syllabus_id);
-    
+
     const course = await _course.create(body);
 
     await this.createCourseSchedule(start_date, schedule, syllabus_id, course);

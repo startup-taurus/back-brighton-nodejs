@@ -6,6 +6,7 @@ module.exports = function ({ ProfessorController }) {
   router.get("/get-one/:id", ProfessorController.getProfessor);
   router.get("/:id/courses", ProfessorController.getProfessorCourses);
   router.get("/get-active", ProfessorController.getActiveProfessors);
+  router.get("/get-courses-and-students", ProfessorController.getProfessorsCourseAndStudentCount);
   router.post(
     "/create",
     upload.single("image"),
