@@ -11,6 +11,7 @@ module.exports = class AttendanceController extends BaseController {
   getAttendanceByCourse = catchControllerAsync(async (req, res) => {
     const { id } = req.params;
     const result = await _attendanceService.getAttendanceByCourse(id);
+
     return appResponse(res, result);
   });
 

@@ -7,17 +7,61 @@ let _course = null;
 let _student = null;
 let _attendance = null;
 let _courseSchedule = null;
+let _courseService = null;
+let _courseScheduleService = null;
 module.exports = class AttendanceService extends BaseService {
-  constructor({ Attendance, User, CourseSchedule, Course, Student }) {
+  constructor({
+    Attendance,
+    User,
+    CourseSchedule,
+    Course,
+    Student,
+    CourseService,
+    CourseScheduleService,
+  }) {
     super(Attendance);
     _user = User.User;
     _course = Course.Course;
     _student = Student.Student;
     _attendance = Attendance.Attendance;
     _courseSchedule = CourseSchedule.CourseSchedule;
+    _courseService = CourseService;
+    _courseScheduleService = CourseScheduleService;
   }
 
-  getAttendanceByCourse = catchServiceAsync(async (courseId) => {
+  initializeAttendanceStructure = (
+    courseSchedule,
+    students,
+    attendanceDate
+  ) => {
+    courseSchedule?.forEach((courseScheduleItem) => {
+      attendanceDate[courseScheduleItem.id] = {};
+      students?.forEach((student) => {
+        attendanceDate[courseScheduleItem.id][student.id] = '';
+      });
+    });
+  };
+
+  buildAttendanceStructure = (courseSchedule, students, studentsAttendance) => {
+    let attendanceDate = {};
+    this.initializeAttendanceStructure(
+      courseSchedule,
+      students,
+      attendanceDate
+    );
+
+    studentsAttendance?.forEach((studentAttendance) => {
+      if (attendanceDate[studentAttendance?.course_schedule_id]) {
+        attendanceDate[studentAttendance.course_schedule_id][
+          studentAttendance?.student_id
+        ] = studentAttendance?.status;
+      }
+    });
+
+    return attendanceDate;
+  };
+
+  getAttendanceByCourseId = catchServiceAsync(async (courseId) => {
     const attendanceRecords = await _attendance.findAll({
       include: [
         {
@@ -29,6 +73,22 @@ module.exports = class AttendanceService extends BaseService {
     });
 
     return { data: attendanceRecords ?? [] };
+  });
+
+  getAttendanceByCourse = catchServiceAsync(async (courseId) => {
+    const courseAttendance = await this.getAttendanceByCourseId(courseId);
+    const students = await _courseService.getCourseWithStudents(courseId);
+    const courseSchedule = await _courseScheduleService.getCourseScheduleDates(
+      courseId
+    );
+
+    const attendance = this.buildAttendanceStructure(
+      courseSchedule?.data,
+      students?.data?.students,
+      courseAttendance?.data
+    );
+
+    return { data: attendance ?? [] };
   });
 
   getAttendanceByCourseAndStudent = catchServiceAsync(
@@ -54,8 +114,6 @@ module.exports = class AttendanceService extends BaseService {
       const attendancePercentage = Number(
         (attendanceTotal / totalDaysOfClasses) * 100
       ).toFixed(2);
-
-      console.log(attendancePercentage);
 
       return {
         data: {
@@ -93,7 +151,6 @@ module.exports = class AttendanceService extends BaseService {
       currentAttendance = await attendance.update({
         status,
       });
-      console.log(currentAttendance);
     }
 
     return { data: currentAttendance };
