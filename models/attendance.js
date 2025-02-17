@@ -34,7 +34,7 @@ module.exports = class AttendanceModel {
       },
       {
         tableName: 'attendance',
-        timestamps: false,
+        timestamps: true,
       }
     );
   }
