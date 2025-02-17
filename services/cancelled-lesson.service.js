@@ -5,13 +5,20 @@ const AppError = require('../utils/app-error');
 let _cancelledLeasson = null;
 let _courseSchedule = null;
 let _courseScheduleService = null;
+let _sequelize = null;
 
 module.exports = class CancelledLessonService extends BaseService {
-  constructor({ CancelledLesson, CourseSchedule, CourseScheduleService }) {
+  constructor({
+    CancelledLesson,
+    CourseSchedule,
+    CourseScheduleService,
+    Sequelize,
+  }) {
     super(CancelledLesson.CancelledLesson);
     _cancelledLeasson = CancelledLesson.CancelledLesson;
     _courseSchedule = CourseSchedule.CourseSchedule;
     _courseScheduleService = CourseScheduleService;
+    _sequelize = Sequelize;
   }
 
   valideIfDayOfClassExist = catchServiceAsync(async (body) => {
@@ -52,12 +59,17 @@ module.exports = class CancelledLessonService extends BaseService {
     await this.valideIfDayOfClassExist(body);
     await this.validateIfCancelledLessonExist(body);
 
-    await _cancelledLeasson.create(body);
-    await _courseScheduleService.updateScheduleDaysOfClasess(body);
+    return await _sequelize.transaction(async (transaction) => {
+      await _cancelledLeasson.create(body, { transaction });
+      await _courseScheduleService.updateScheduleDaysOfClasess(
+        body,
+        transaction
+      );
 
-    return {
-      data: {},
-    };
+      return {
+        data: {},
+      };
+    });
   });
 
   getCancelledLessonsByCourse = catchServiceAsync(async (courseId) => {

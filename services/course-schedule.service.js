@@ -40,38 +40,51 @@ module.exports = class CourseScheduleService extends BaseService {
     return { data: response };
   });
 
-  updateScheduleDaysOfClasess = catchServiceAsync(async (cancelledDate) => {
-    const scheduledDates = await _courseSchedule.findAll({
-      where: { course_id: cancelledDate.course_id },
-      order: [['scheduled_date', 'ASC']],
-    });
+  updateScheduleDaysOfClasess = catchServiceAsync(
+    async (cancelledDate, transaction) => {
+      const scheduledDates = await _courseSchedule.findAll({
+        where: { course_id: cancelledDate.course_id },
+        order: [['scheduled_date', 'ASC']],
+        raw: true,
+        transaction,
+      });
 
-    const course = await _course.findByPk(cancelledDate.course_id, {
-      raw: true,
-    });
+      const course = await _course.findByPk(cancelledDate.course_id, {
+        raw: true,
+      });
 
-    const startDate = scheduledDates[scheduledDates.length - 1].scheduled_date;
-    const classDates = calculateClassDates(startDate, [1, 2], course.schedule);
-    const newClassDate = classDates[1].toISOString().split('T')[0];
-    let currentScheduleIndex = 0;
+      const startDate =
+        scheduledDates[scheduledDates.length - 1].scheduled_date;
+      const classDates = calculateClassDates(
+        startDate,
+        [1, 2],
+        course.schedule
+      );
+      const newClassDate = classDates[1].toISOString().split('T')[0];
+      let currentScheduleIndex = 0;
 
-    const scheduledDatesToUpdate = scheduledDates.map((scheduledDate) => {
-      if (scheduledDate.scheduled_date === cancelledDate.cancel_date) {
+      const scheduledDatesToUpdate = scheduledDates.map((scheduledDate) => {
+        if (scheduledDate.scheduled_date === cancelledDate.cancel_date) {
+          currentScheduleIndex++;
+        }
+
+        let currentScheduleDate = {
+          ...scheduledDate,
+          id: scheduledDate.id,
+          scheduled_date:
+            scheduledDates[currentScheduleIndex]?.scheduled_date ??
+            newClassDate,
+        };
         currentScheduleIndex++;
-      }
-      let currentScheduleDate = {
-        id: scheduledDate.id,
-        scheduled_date:
-          scheduledDates[currentScheduleIndex]?.scheduled_date ?? newClassDate,
-      };
-      currentScheduleIndex++;
-      return currentScheduleDate;
-    });
+        return currentScheduleDate;
+      });
 
-    await _courseSchedule.bulkCreate(scheduledDatesToUpdate, {
-      updateOnDuplicate: ['scheduled_date'],
-    });
-  });
+      await _courseSchedule.bulkCreate(scheduledDatesToUpdate, {
+        updateOnDuplicate: ['scheduled_date'],
+        transaction,
+      });
+    }
+  );
 
   deleteScheduleDaysOfClasess = catchServiceAsync(async (cancelledDate) => {
     let scheduledDates = await _courseSchedule.findAll({
