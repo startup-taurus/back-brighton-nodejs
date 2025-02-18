@@ -63,6 +63,8 @@ module.exports = class RegisteredStudentService extends BaseService {
       same_billing,
       billing_address,
       where_hear_about_us,
+      birthday,
+      schedule,
     } = body;
 
     validateParameters({
@@ -76,6 +78,8 @@ module.exports = class RegisteredStudentService extends BaseService {
       address,
       age_category,
       level,
+      birthday,
+      schedule,
     });
 
     const student = await _registeredStudent.create({
@@ -91,17 +95,22 @@ module.exports = class RegisteredStudentService extends BaseService {
       level,
       same_billing,
       billing_address,
+      birthday,
+      schedule,
       where_hear_about_us,
     });
 
     await sendEmail({
       subject: 'Student Registration',
-      text: `A Student has been registered with the following details: \n
-      Name: ${first_name} ${middle_name} ${last_name} ${second_last_name}, ID: ${id_number},\n 
-      Phone: ${phone_number}, Email: ${email}, Address: ${address} \n
-      Age Category: ${age_category}, Level: ${level}, \nSame Billing: ${same_billing}, Billing Address ${
+      text: `A Student has been registered with the following details: 
+      \nName: ${first_name} ${middle_name} ${last_name} ${second_last_name}, ID: ${id_number}, 
+      Birthday: ${birthday}, Schedule: ${schedule},
+      \nPhone: ${phone_number}, Email: ${email}, Address: ${address} 
+      \nAge Category: ${age_category}, Level: ${level},
+      \nSame Billing: ${same_billing}, Billing Address ${
         same_billing === 'yes' ? address : billing_address
-      }, \nWhere did you hear about us: ${where_hear_about_us}`,
+      },
+      \nWhere did you hear about us: ${where_hear_about_us}`,
     });
 
     return { data: student };

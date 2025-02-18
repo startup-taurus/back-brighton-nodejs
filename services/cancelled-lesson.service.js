@@ -92,7 +92,15 @@ module.exports = class CancelledLessonService extends BaseService {
     }
     await this.validateIfCancelledLessonExist(body, false);
 
-    await _courseScheduleService.deleteScheduleDaysOfClasess(body);
-    return await _cancelledLeasson.destroy({ where: { id: body.id } });
+    return await _sequelize.transaction(async (transaction) => {
+      await _courseScheduleService.deleteScheduleDaysOfClasess(
+        body,
+        transaction
+      );
+      return await _cancelledLeasson.destroy({
+        where: { id: body.id },
+        transaction,
+      });
+    });
   });
 };

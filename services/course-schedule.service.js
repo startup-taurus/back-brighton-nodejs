@@ -86,49 +86,48 @@ module.exports = class CourseScheduleService extends BaseService {
     }
   );
 
-  deleteScheduleDaysOfClasess = catchServiceAsync(async (cancelledDate) => {
-    let scheduledDates = await _courseSchedule.findAll({
-      where: { course_id: cancelledDate.course_id },
-      order: [['scheduled_date', 'ASC']],
-      raw: true,
-    });
+  deleteScheduleDaysOfClasess = catchServiceAsync(
+    async (cancelledDate, transaction) => {
+      let scheduledDates = await _courseSchedule.findAll({
+        where: { course_id: cancelledDate.course_id },
+        order: [['scheduled_date', 'ASC']],
+        raw: true,
+        transaction,
+      });
 
-    let isUpdated = false;
+      let isUpdated = false;
 
-    const scheduledDatesToUpdate = scheduledDates.map(
-      (scheduledDate, index) => {
-        const qurrentDate = scheduledDates[index].scheduled_date;
-        const nextDate = scheduledDates[index + 1]
-          ? scheduledDates[index + 1].scheduled_date
-          : null;
+      const scheduledDatesToUpdate = scheduledDates.map(
+        (scheduledDate, index) => {
+          if (
+            !isUpdated &&
+            isBefore(
+              new Date(cancelledDate.cancel_date),
+              new Date(scheduledDate.scheduled_date)
+            )
+          ) {
+            isUpdated = true;
+            return {
+              ...scheduledDate,
+              scheduled_date: cancelledDate.cancel_date,
+            };
+          }
 
-        if (
-          !isUpdated &&
-          isBefore(
-            new Date(cancelledDate.cancel_date),
-            new Date(scheduledDate.scheduled_date)
-          )
-        ) {
-          isUpdated = true;
-          return {
-            ...scheduledDate,
-            scheduled_date: cancelledDate.cancel_date,
-          };
+          if (isUpdated) {
+            return {
+              ...scheduledDate,
+              scheduled_date: scheduledDates[index - 1].scheduled_date,
+            };
+          }
+
+          return scheduledDate;
         }
+      );
 
-        if (isUpdated) {
-          return {
-            ...scheduledDate,
-            scheduled_date: scheduledDates[index - 1].scheduled_date,
-          };
-        }
-
-        return scheduledDate;
-      }
-    );
-
-    await _courseSchedule.bulkCreate(scheduledDatesToUpdate, {
-      updateOnDuplicate: ['scheduled_date'],
-    });
-  });
+      await _courseSchedule.bulkCreate(scheduledDatesToUpdate, {
+        updateOnDuplicate: ['scheduled_date'],
+        transaction,
+      });
+    }
+  );
 };
