@@ -36,6 +36,10 @@ module.exports = class RegisteredStudent {
           type: DataTypes.TEXT,
           allowNull: false,
         },
+        birthday: {
+          type: DataTypes.DATE,
+          allowNull: false,
+        },
         phone_number: {
           type: DataTypes.TEXT,
           allowNull: false,
@@ -53,6 +57,10 @@ module.exports = class RegisteredStudent {
           allowNull: true,
         },
         level: {
+          type: DataTypes.TEXT,
+          allowNull: true,
+        },
+        schedule: {
           type: DataTypes.TEXT,
           allowNull: true,
         },
