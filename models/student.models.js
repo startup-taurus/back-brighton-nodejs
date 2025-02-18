@@ -35,6 +35,12 @@ module.exports = class StudentModel {
           type: DataTypes.BOOLEAN,
           defaultValue: false,
         },
+        age_category: {
+          type: DataTypes.STRING,
+        },
+        birth_date: {
+          type: DataTypes.DATE,
+        },
         observations: {
           type: DataTypes.TEXT,
         },
