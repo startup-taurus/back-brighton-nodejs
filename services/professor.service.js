@@ -62,6 +62,7 @@ module.exports = class ProfessorService extends BaseService {
           email: professor.email,
           phone: professor.phone,
           hourly_rate: professor.hourly_rate,
+          report_link: professor.report_link,
           user: professor.user,
         })),
         totalCount: data.count,
@@ -219,6 +220,7 @@ module.exports = class ProfessorService extends BaseService {
       status,
       hourly_rate,
       phone,
+      report_link
     } = body;
 
     validateParameters({
@@ -242,6 +244,7 @@ module.exports = class ProfessorService extends BaseService {
       email,
       phone,
       hourly_rate,
+      report_link
     });
 
     return { data: professor };

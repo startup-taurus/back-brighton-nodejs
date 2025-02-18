@@ -1,8 +1,8 @@
-const catchServiceAsync = require('../utils/catch-service-async');
-const BaseService = require('./base.service');
-const AppError = require('../utils/app-error');
-const { validateParameters, generateCredentials } = require('../utils/utils');
-const { or } = require('sequelize');
+const catchServiceAsync = require("../utils/catch-service-async");
+const BaseService = require("./base.service");
+const AppError = require("../utils/app-error");
+const { validateParameters, generateCredentials } = require("../utils/utils");
+const { or } = require("sequelize");
 let _user = null;
 let _student = null;
 let _course = null;
@@ -38,23 +38,23 @@ module.exports = class StudentService extends BaseService {
       include: [
         {
           model: _user,
-          as: 'user',
-          attributes: ['id', 'name', 'email', 'status', 'username', 'password'],
+          as: "user",
+          attributes: ["id", "name", "email", "status", "username", "password"],
         },
         {
           model: _payment,
-          as: 'payment',
-          attributes: ['payment_date', 'total_payment', 'payment_method'],
+          as: "payment",
+          attributes: ["payment_date", "total_payment", "payment_method"],
         },
         {
           model: _course,
           where: { ...(query.course && { id: query.course }) },
-          as: 'course',
+          as: "course",
           through: { attributes: [] },
-          attributes: ['id', 'course_name', 'course_number'],
+          attributes: ["id", "course_name", "course_number"],
         },
       ],
-      order: [['id', 'DESC']],
+      order: [["id", "DESC"]],
     });
 
     return {
@@ -73,6 +73,8 @@ module.exports = class StudentService extends BaseService {
           profession: student.profession,
           book_given: student.book_given,
           promotion: student.promotion,
+          age_category: student.age_category,
+          birth_date: student.birth_date,
           user: {
             id: student.user.id,
             name: student.user.name,
@@ -105,14 +107,14 @@ module.exports = class StudentService extends BaseService {
       include: [
         {
           model: _user,
-          as: 'user',
-          attributes: ['id', 'name', 'email'],
+          as: "user",
+          attributes: ["id", "name", "email"],
         },
       ],
     });
 
     if (!student) {
-      throw new AppError('Student not found', 404);
+      throw new AppError("Student not found", 404);
     }
 
     return {
@@ -125,6 +127,8 @@ module.exports = class StudentService extends BaseService {
         emergency_contact_name: student.emergency_contact_name,
         emergency_contact_phone: student.emergency_contact_phone,
         emergency_contact_relationship: student.emergency_contact_relationship,
+        age_category: student.age_category,
+        birth_date: student.birth_date,
         user: {
           id: student.user.id,
           name: student.user.name,
@@ -135,7 +139,7 @@ module.exports = class StudentService extends BaseService {
   });
 
   createStudent = catchServiceAsync(async (body) => {
-    body.role = 'student';
+    body.role = "student";
     const {
       name,
       cedula,
@@ -143,14 +147,15 @@ module.exports = class StudentService extends BaseService {
       courseId,
       level,
       status,
-      bookGiven,
-      pendingPayments,
+      book_given,
+      pending_payments,
       emergency_contact_name,
       emergency_contact_phone,
       emergency_contact_relationship,
       promotion,
+      age_category,
+      birth_date,
     } = body;
-
     validateParameters({
       name,
       cedula,
@@ -172,8 +177,10 @@ module.exports = class StudentService extends BaseService {
       profession,
       level,
       status,
-      book_given: bookGiven,
-      pending_payments: pendingPayments,
+      book_given,
+      age_category,
+      birth_date,
+      pending_payments,
       emergency_contact_name,
       emergency_contact_phone,
       emergency_contact_relationship,
@@ -192,23 +199,25 @@ module.exports = class StudentService extends BaseService {
   });
 
   updateStudent = catchServiceAsync(async (id, body) => {
-    body.role = 'student';
+    body.role = "student";
     const {
       cedula,
       level,
       status,
       promotion,
-      bookGiven,
-      pendingPayments,
+      book_given,
+      pending_payments,
       emergency_contact_name,
       emergency_contact_phone,
       emergency_contact_relationship,
+      age_category,
+      birth_date,
     } = body;
 
     const student = await _student.findByPk(id);
 
     if (!student) {
-      throw new AppError('Student not found', 404);
+      throw new AppError("Student not found", 404);
     }
 
     await _userService.updateUser(student.user_id, body);
@@ -218,12 +227,14 @@ module.exports = class StudentService extends BaseService {
         cedula,
         level,
         status,
-        book_given: bookGiven,
-        pending_payments: pendingPayments,
+        book_given,
+        pending_payments,
         emergency_contact_name,
         emergency_contact_phone,
         emergency_contact_relationship,
         promotion,
+        age_category,
+        birth_date,
       },
       { where: { id } }
     );
@@ -232,8 +243,8 @@ module.exports = class StudentService extends BaseService {
       include: [
         {
           model: _user,
-          as: 'user',
-          attributes: ['name', 'username', 'email', 'status'],
+          as: "user",
+          attributes: ["name", "username", "email", "status"],
         },
       ],
     });
@@ -252,12 +263,12 @@ module.exports = class StudentService extends BaseService {
     const student = await _student.findByPk(id);
 
     if (!student) {
-      throw new AppError('Student not found', 404);
+      throw new AppError("Student not found", 404);
     }
 
     await _student.destroy({ where: { id } });
     await _user.destroy({ where: { id: student.user_id } });
 
-    return { message: 'Student and associated user deleted successfully' };
+    return { message: "Student and associated user deleted successfully" };
   });
 };

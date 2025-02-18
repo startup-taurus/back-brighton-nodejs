@@ -40,6 +40,9 @@ module.exports = class ProfessorModel {
           type: DataTypes.DECIMAL(10, 2),
           allowNull: false,
         },
+        report_link: {
+          type: DataTypes.TEXT,
+        },
         created_at: {
           type: DataTypes.DATE,
           defaultValue: DataTypes.NOW,
