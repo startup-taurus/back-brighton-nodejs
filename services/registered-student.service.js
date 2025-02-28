@@ -3,6 +3,7 @@ const BaseService = require('./base.service');
 const AppError = require('../utils/app-error');
 const { validateParameters } = require('../utils/utils');
 const sendEmail = require('../utils/email.utils');
+const { Op } = require('sequelize');
 
 let _registeredStudent = null;
 
@@ -20,6 +21,7 @@ module.exports = class RegisteredStudentService extends BaseService {
 
     let where = {};
     filters?.level && (where.level = filters.level);
+    filters?.id_number && (where.id_number = { [Op.like]: filters?.id_number });
 
     const data = await _registeredStudent.findAndCountAll({
       where,
