@@ -129,7 +129,6 @@ module.exports = class AttendanceService extends BaseService {
     validateParameters({
       course_schedule_id,
       student_id,
-      status,
     });
 
     const attendance = await _attendance.findOne({

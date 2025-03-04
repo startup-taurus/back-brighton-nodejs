@@ -28,7 +28,7 @@ module.exports = class AttendanceModel {
           allowNull: false,
         },
         status: {
-          type: DataTypes.ENUM('present', 'absent', 'late', 'recovered'),
+          type: DataTypes.ENUM('', 'present', 'absent', 'late', 'recovered'),
           allowNull: false,
         },
       },
