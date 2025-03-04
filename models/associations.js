@@ -62,215 +62,222 @@ module.exports = class AuditModel {
   defineModel() {
     // Relación entre curso y profesor
     _course.belongsTo(_professor, {
-      foreignKey: "professor_id",
-      as: "professor",
+      foreignKey: 'professor_id',
+      as: 'professor',
     });
 
     _professor.hasMany(_course, {
-      foreignKey: "professor_id",
-      as: "courses",
+      foreignKey: 'professor_id',
+      as: 'courses',
     });
 
     _professor.belongsTo(_user, {
-      foreignKey: "user_id",
-      as: "user",
+      foreignKey: 'user_id',
+      as: 'user',
     });
 
     // Relación de muchos a muchos entre cursos y estudiantes a través de course_student
     _course.belongsToMany(_student, {
       through: _courseStudent,
-      foreignKey: "course_id",
-      as: "students",
+      foreignKey: 'course_id',
+      as: 'students',
     });
 
     _student.belongsToMany(_course, {
       through: _courseStudent,
-      foreignKey: "student_id",
-      as: "courses",
+      foreignKey: 'student_id',
+      as: 'courses',
     });
 
     _student.belongsTo(_user, {
-      foreignKey: "user_id",
-      as: "user",
+      foreignKey: 'user_id',
+      as: 'user',
     });
 
     _attendance.belongsTo(_courseSchedule, {
-      foreignKey: "course_schedule_id",
+      foreignKey: 'course_schedule_id',
     });
     _courseSchedule.hasMany(_attendance, {
-      foreignKey: "course_schedule_id",
+      foreignKey: 'course_schedule_id',
+    });
+
+    _courseSchedule.belongsTo(_course, {
+      foreignKey: 'course_id',
+    });
+    _course.hasMany(_courseSchedule, {
+      foreignKey: 'course_id',
     });
 
     // Relación de uno a muchos entre estudiante y asistencia
     _attendance.belongsTo(_student, {
-      foreignKey: "student_id",
+      foreignKey: 'student_id',
     });
     _student.hasMany(_attendance, {
-      foreignKey: "student_id",
+      foreignKey: 'student_id',
     });
 
     // Relación de uno a muchos entre curso y notas (grades)
     _grades.belongsTo(_course, {
-      foreignKey: "course_id",
+      foreignKey: 'course_id',
     });
     _course.hasMany(_grades, {
-      foreignKey: "course_id",
+      foreignKey: 'course_id',
     });
 
     // Relación de uno a muchos entre estudiante y notas (grades)
     _grades.belongsTo(_student, {
-      foreignKey: "student_id",
+      foreignKey: 'student_id',
     });
     _student.hasMany(_grades, {
-      foreignKey: "student_id",
+      foreignKey: 'student_id',
     });
 
     // Relación de uno a uno entre estudiante y pago
     _student.hasMany(_payment, {
-      foreignKey: "student_id",
-      as: "payment",
+      foreignKey: 'student_id',
+      as: 'payment',
     });
     _payment.belongsTo(_student, {
-      foreignKey: "student_id",
-      as: "student",
+      foreignKey: 'student_id',
+      as: 'student',
     });
 
     // Relación de muchos a muchos entre estudiantes y cursos
     _student.belongsToMany(_course, {
       through: {
-        model: "course_student",
+        model: 'course_student',
         timestamps: false,
       },
-      foreignKey: "student_id",
-      otherKey: "course_id",
-      as: "course",
+      foreignKey: 'student_id',
+      otherKey: 'course_id',
+      as: 'course',
     });
 
     _course.belongsToMany(_student, {
       through: {
-        model: "course_student",
+        model: 'course_student',
         timestamps: false,
       },
-      foreignKey: "course_id",
-      otherKey: "student_id",
-      as: "student",
+      foreignKey: 'course_id',
+      otherKey: 'student_id',
+      as: 'student',
     });
 
     // Relación de muchos a muchos entre cancelledLesson y cursos
     _course.hasMany(_cancelledLesson, {
-      foreignKey: "course_id",
-      as: "course",
+      foreignKey: 'course_id',
+      as: 'course',
     });
     _cancelledLesson.belongsTo(_course, {
-      foreignKey: "course_id",
-      as: "course",
+      foreignKey: 'course_id',
+      as: 'course',
     });
 
     _syllabus.hasMany(_syllabusItems, {
-      foreignKey: "syllabus_id",
-      as: "items",
+      foreignKey: 'syllabus_id',
+      as: 'items',
     });
     _syllabusItems.belongsTo(_syllabus, {
-      foreignKey: "syllabus_id",
-      as: "syllabus",
+      foreignKey: 'syllabus_id',
+      as: 'syllabus',
     });
 
     _syllabus.hasOne(_gradePercentages, {
-      foreignKey: "syllabus_id",
-      as: "percentages",
+      foreignKey: 'syllabus_id',
+      as: 'percentages',
     });
     _gradePercentages.belongsTo(_syllabus, {
-      foreignKey: "syllabus_id",
-      as: "syllabus",
+      foreignKey: 'syllabus_id',
+      as: 'syllabus',
     });
 
     _syllabus.hasMany(_course, {
-      foreignKey: "syllabus_id",
-      as: "courses",
+      foreignKey: 'syllabus_id',
+      as: 'courses',
     });
     _course.belongsTo(_syllabus, {
-      foreignKey: "syllabus_id",
-      as: "syllabus",
+      foreignKey: 'syllabus_id',
+      as: 'syllabus',
     });
 
     _syllabusItems.hasMany(_courseSchedule, {
-      foreignKey: "syllabus_item_id",
-      as: "course_schedule",
+      foreignKey: 'syllabus_item_id',
+      as: 'course_schedule',
     });
     _courseSchedule.belongsTo(_syllabusItems, {
-      foreignKey: "syllabus_item_id",
-      as: "syllabusItem",
+      foreignKey: 'syllabus_item_id',
+      as: 'syllabusItem',
     });
 
     _syllabus.hasMany(_gradingItem, {
-      foreignKey: "syllabus_id",
-      as: "grading_items",
+      foreignKey: 'syllabus_id',
+      as: 'grading_items',
     });
     _gradingItem.belongsTo(_syllabus, {
-      foreignKey: "syllabus_id",
-      as: "syllabus",
+      foreignKey: 'syllabus_id',
+      as: 'syllabus',
     });
 
     // GradingCategory -> GradingItem
     _gradingCategory.hasMany(_gradingItem, {
-      foreignKey: "category_id",
-      as: "items",
+      foreignKey: 'category_id',
+      as: 'items',
     });
     _gradingItem.belongsTo(_gradingCategory, {
-      foreignKey: "category_id",
-      as: "category",
+      foreignKey: 'category_id',
+      as: 'category',
     });
 
     // GradingItem -> CourseGrading
     _gradingItem.hasMany(_courseGrading, {
-      foreignKey: "grading_item_id",
-      as: "course_grades",
+      foreignKey: 'grading_item_id',
+      as: 'course_grades',
     });
     _courseGrading.belongsTo(_gradingItem, {
-      foreignKey: "grading_item_id",
-      as: "grading_item",
+      foreignKey: 'grading_item_id',
+      as: 'grading_item',
     });
 
     // Course -> CourseGrading
     _course.hasMany(_courseGrading, {
-      foreignKey: "course_id",
-      as: "grading_items",
+      foreignKey: 'course_id',
+      as: 'grading_items',
     });
     _courseGrading.belongsTo(_course, {
-      foreignKey: "course_id",
-      as: "course",
+      foreignKey: 'course_id',
+      as: 'course',
     });
 
     // CourseGrading -> StudentGrades
     _courseGrading.hasMany(_studentGrades, {
-      foreignKey: "grading_item_id",
-      as: "student_grades",
+      foreignKey: 'grading_item_id',
+      as: 'student_grades',
     });
     _studentGrades.belongsTo(_courseGrading, {
-      foreignKey: "grading_item_id",
-      as: "grading_item",
+      foreignKey: 'grading_item_id',
+      as: 'grading_item',
     });
 
     // Student -> StudentGrades
     _student.hasMany(_studentGrades, {
-      foreignKey: "student_id",
-      as: "student_grades_overall",
+      foreignKey: 'student_id',
+      as: 'student_grades_overall',
     });
     _studentGrades.belongsTo(_student, {
-      foreignKey: "student_id",
-      as: "student",
+      foreignKey: 'student_id',
+      as: 'student',
     });
 
     // SyllabusModel (o donde defines tu modelo syllabus)
     _syllabus.hasMany(_percentages, {
-      foreignKey: "syllabus_id",
-      as: "percentages_syllabus",
+      foreignKey: 'syllabus_id',
+      as: 'percentages_syllabus',
     });
 
     // PercentagesModel
     _percentages.belongsTo(_syllabus, {
-      foreignKey: "syllabus_id",
-      as: "syllabus",
+      foreignKey: 'syllabus_id',
+      as: 'syllabus',
     });
   }
 };

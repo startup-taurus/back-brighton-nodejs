@@ -1,4 +1,5 @@
 const AppError = require('./app-error');
+const { DAYS_OF_WEEK } = require('./constants');
 
 function isHoliday(dateToCheck, holidays = []) {
   return holidays.some((holiday) => {
@@ -114,5 +115,11 @@ module.exports = {
     }, 0);
 
     return Math.floor(attendanceTotal);
+  },
+
+  hasClassToday(day) {
+    const currentDay = new Date().getDay();
+
+    return currentDay === DAYS_OF_WEEK[day];
   },
 };

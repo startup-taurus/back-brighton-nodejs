@@ -1,4 +1,13 @@
-const OUTCOME_RESULT = {
-  LOST: "Lost",
-  WON: "Won",
+const DAYS_OF_WEEK = {
+  Sunday: 0,
+  Monday: 1,
+  Tuestay: 2,
+  Wednesday: 3,
+  Thursday: 4,
+  Friday: 5,
+  Saturday: 6,
+};
+
+module.exports = {
+  DAYS_OF_WEEK,
 };

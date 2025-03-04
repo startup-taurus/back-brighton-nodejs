@@ -1,22 +1,39 @@
-const catchServiceAsync = require("../utils/catch-service-async");
-const BaseService = require("./base.service");
-const AppError = require("../utils/app-error");
-const { validateParameters, scheduleStringToDates } = require("../utils/utils");
-const { Op, col, fn } = require("sequelize");
+const catchServiceAsync = require('../utils/catch-service-async');
+const BaseService = require('./base.service');
+const AppError = require('../utils/app-error');
+const {
+  validateParameters,
+  scheduleStringToDates,
+  hasClassToday,
+} = require('../utils/utils');
+const { Op, col, fn } = require('sequelize');
 
 let _user = null;
 let _course = null;
 let _student = null;
 let _professor = null;
+let _attendance = null;
 let _userService = null;
+let _courseSchedule = null;
 
 module.exports = class ProfessorService extends BaseService {
-  constructor({ User, Professor, Course, Student, UserService }) {
+  constructor({
+    User,
+    Professor,
+    Course,
+    Student,
+    Attendance,
+    UserService,
+    CourseSchedule,
+  }) {
     super(Professor);
     _user = User.User;
     _professor = Professor.Professor;
     _course = Course.Course;
     _student = Student.Student;
+    _courseSchedule = CourseSchedule.CourseSchedule;
+    _attendance = Attendance.Attendance;
+
     _userService = UserService;
   }
 
@@ -39,15 +56,15 @@ module.exports = class ProfessorService extends BaseService {
               name: { [Op.like]: `%${query.name}%` },
             }),
           },
-          as: "user",
+          as: 'user',
           attributes: [
-            "id",
-            "name",
-            "email",
-            "role",
-            "username",
-            "image",
-            "last_login",
+            'id',
+            'name',
+            'email',
+            'role',
+            'username',
+            'image',
+            'last_login',
           ],
         },
       ],
@@ -75,31 +92,38 @@ module.exports = class ProfessorService extends BaseService {
       include: [
         {
           model: _user,
-          as: "user",
-          attributes: ["id", "name", "email"],
+          as: 'user',
+          attributes: ['id', 'name', 'email'],
         },
       ],
     });
 
     if (!professor) {
-      throw new AppError("Professor not found", 404);
+      throw new AppError('Professor not found', 404);
     }
 
     return { data: professor };
   });
 
   getProfessorCourses = catchServiceAsync(async (professorId) => {
+    const today = new Date().toISOString().split('T')[0];
+
     const professor = await _professor.findOne({
       where: { user_id: professorId },
       include: [
         {
           model: _course,
-          as: "courses",
+          as: 'courses',
           include: [
             {
               model: _student,
-              as: "students",
+              as: 'students',
               through: { attributes: [] },
+            },
+            {
+              model: _courseSchedule,
+              as: 'course_schedules',
+              include: [{ model: _attendance }],
             },
           ],
         },
@@ -107,28 +131,67 @@ module.exports = class ProfessorService extends BaseService {
     });
 
     if (!professor) {
-      throw new AppError("Professor not found", 404);
+      throw new AppError('Professor not found', 404);
     }
 
-    const coursesWithStudentCount = professor.courses.map((course) => ({
-      course_id: course.id,
-      course_name: course.course_name,
-      course_number: course.course_number,
-      student_count: course.students.length,
-      classSchedule: course.schedule,
-      schedule: course.schedule ? scheduleStringToDates(course.schedule) : null,
-    }));
+    const currentProfessor = professor.toJSON();
 
-    const totalCourses = professor.courses.length;
+    const coursesWithStudentCount = currentProfessor.courses.map((course) => {
+      const schedule = course.schedule
+        ? scheduleStringToDates(course.schedule)
+        : null;
 
-    const totalStudents = professor.courses.reduce(
+      const hasClassToday = course.course_schedules.some(
+        (schedule) => schedule.scheduled_date === today
+      );
+
+      const hasBeenTakenAttendance = course.course_schedules.some(
+        (schedule) =>
+          schedule.scheduled_date === today && schedule.attendances.length > 0
+      );
+
+      const courseDates = course.course_schedules.map(
+        (schedule) => new Date(schedule.scheduled_date)
+      );
+      const lastCourseDate = courseDates.length
+        ? new Date(Math.max(...courseDates.map((f) => f.getTime())))
+        : null;
+
+      let endThisMoth = false;
+      if (lastCourseDate) {
+        const lasMothClass = lastCourseDate.getMonth() + 1;
+        const yearLastClass = lastCourseDate.getFullYear();
+        endThisMoth =
+          lasMothClass === new Date().getMonth() + 1 &&
+          yearLastClass === new Date().getFullYear();
+      }
+
+      return {
+        course_id: course.id,
+        course_name: course.course_name,
+        course_number: course.course_number,
+        student_count: course.students.length,
+        classSchedule: course.schedule,
+        schedule,
+        options: {
+          hasClassToday,
+          hasBeenTakenAttendance,
+          endThisMoth,
+          isAreadyEnd: lastCourseDate && lastCourseDate < new Date(),
+        },
+      };
+    });
+
+    const totalCourses = currentProfessor.courses.length;
+
+    const totalStudents = currentProfessor.courses.reduce(
       (acc, course) => acc + course.students.length,
       0
     );
 
     return {
       data: {
-        professor_name: professor.name,
+        professor_name: currentProfessor.name,
         total_courses: totalCourses,
         total_students: totalStudents,
         courses: coursesWithStudentCount,
@@ -137,7 +200,7 @@ module.exports = class ProfessorService extends BaseService {
   });
 
   getActiveProfessors = catchServiceAsync(
-    async (page = 1, limit = 10, search = "") => {
+    async (page = 1, limit = 10, search = '') => {
       let limitNumber = parseInt(limit);
       let pageNumber = parseInt(page);
       const offset = (pageNumber - 1) * limitNumber;
@@ -145,7 +208,7 @@ module.exports = class ProfessorService extends BaseService {
 
       const professors = await _professor.findAll({
         where: {
-          status: "active",
+          status: 'active',
           ...(search && {
             course_name: {
               [Op.like]: `%${search}%`,
@@ -155,8 +218,8 @@ module.exports = class ProfessorService extends BaseService {
         include: [
           {
             model: _user,
-            as: "user",
-            attributes: ["id", "name", "email"],
+            as: 'user',
+            attributes: ['id', 'name', 'email'],
           },
         ],
         limit: limitNumber,
@@ -171,35 +234,35 @@ module.exports = class ProfessorService extends BaseService {
 
   getProfessorsCourseAndStudentCount = catchServiceAsync(async () => {
     const professors = await _professor.findAll({
-      where: { status: "active" },
+      where: { status: 'active' },
       include: [
         {
           model: _user,
-          as: "user",
-          attributes: ["id", "name"],
+          as: 'user',
+          attributes: ['id', 'name'],
         },
         {
           model: _course,
-          as: "courses",
+          as: 'courses',
           attributes: [],
           include: [
             {
               model: _student,
-              as: "students",
+              as: 'students',
               attributes: [],
               through: { attributes: [] },
             },
           ],
         },
       ],
-      group: ["professor.id", "user.id"],
+      group: ['professor.id', 'user.id'],
       attributes: [
-        "id",
-        [col("user.name"), "professorName"],
-        [fn("COUNT", fn("DISTINCT", col("courses.id"))), "totalCourses"],
+        'id',
+        [col('user.name'), 'professorName'],
+        [fn('COUNT', fn('DISTINCT', col('courses.id'))), 'totalCourses'],
         [
-          fn("COUNT", fn("DISTINCT", col("courses->students.id"))),
-          "totalStudents",
+          fn('COUNT', fn('DISTINCT', col('courses->students.id'))),
+          'totalStudents',
         ],
       ],
     });
@@ -210,7 +273,7 @@ module.exports = class ProfessorService extends BaseService {
   });
 
   createProfessor = catchServiceAsync(async (body) => {
-    body.role = "professor";
+    body.role = 'professor';
     const {
       name,
       username,
@@ -220,7 +283,7 @@ module.exports = class ProfessorService extends BaseService {
       status,
       hourly_rate,
       phone,
-      report_link
+      report_link,
     } = body;
 
     validateParameters({
@@ -244,7 +307,7 @@ module.exports = class ProfessorService extends BaseService {
       email,
       phone,
       hourly_rate,
-      report_link
+      report_link,
     });
 
     return { data: professor };
@@ -254,7 +317,7 @@ module.exports = class ProfessorService extends BaseService {
     const { email, cedula, status, hourly_rate, phone } = body;
     const professor = await _professor.findByPk(id);
     if (!professor) {
-      throw new AppError("Professor not found", 404);
+      throw new AppError('Professor not found', 404);
     }
 
     await _userService.updateUser(professor.user_id, body);
@@ -272,8 +335,8 @@ module.exports = class ProfessorService extends BaseService {
       include: [
         {
           model: _user,
-          as: "user",
-          attributes: ["name", "username", "email", "status"],
+          as: 'user',
+          attributes: ['name', 'username', 'email', 'status'],
         },
       ],
     });
@@ -292,14 +355,14 @@ module.exports = class ProfessorService extends BaseService {
     const professor = await _professor.findByPk(id);
 
     if (!professor) {
-      throw new AppError("Professor not found", 404);
+      throw new AppError('Professor not found', 404);
     }
 
     await _professor.destroy({ where: { id } });
     await _user.destroy({ where: { id: professor.user_id } });
 
     return {
-      message: "Professor and associated user deleted successfully",
+      message: 'Professor and associated user deleted successfully',
       data: {},
     };
   });
