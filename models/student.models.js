@@ -15,7 +15,7 @@ module.exports = class StudentModel {
           type: DataTypes.INTEGER,
           allowNull: false,
           references: {
-            model: "user", // Hace referencia a la tabla 'user'
+            model: "user", 
             key: "id",
           },
         },
