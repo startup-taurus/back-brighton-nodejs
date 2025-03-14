@@ -3,7 +3,7 @@ const { DataTypes } = require("sequelize");
 module.exports = class ProfessorModel {
   constructor({ Sequelize, User }) {
     this.sequelize = Sequelize;
-    this.User = User; // Referencia al modelo de 'user'
+    this.User = User; 
     this.defineModel();
   }
 
@@ -14,7 +14,7 @@ module.exports = class ProfessorModel {
         user_id: {
           type: DataTypes.INTEGER,
           references: {
-            model: this.User, // Relación con la tabla 'user'
+            model: this.User, 
             key: "id",
           },
           allowNull: false,

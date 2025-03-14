@@ -19,15 +19,21 @@ module.exports = class RegisteredStudentService extends BaseService {
     let limitNumber = parseInt(limit);
     let pageNumber = parseInt(page);
 
+    const trimmedQuery = {
+      ...query,
+      level: query.level?.trim(),
+      id_number: query.id_number?.trim(),
+    };
+
     let where = {};
-    filters?.level && (where.level = filters.level);
+    filters?.level && (where.level = trimmedQuery.level);
     filters?.id_number &&
-      (where.id_number = { [Op.like]: filters?.id_number?.trim() });
+      (where.id_number = { [Op.like]: trimmedQuery.id_number });
 
     const data = await _registeredStudent.findAndCountAll({
-      where,
       limit: limitNumber,
       offset: limitNumber * (pageNumber - 1),
+      where,
       order: [['id', 'DESC']],
     });
 
