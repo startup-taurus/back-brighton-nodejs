@@ -43,13 +43,14 @@ module.exports = class StudentService extends BaseService {
     filters?.level && (where.level = { [Op.like]: `%${trimmedQuery.level}%` });
 
     const totalStudents = await _student.count({
+      distinct: true,
+      col: 'id',
       where,
       include: [
         {
-          model: _course,
-          as: 'course',
+          model: _courseStudent,
+          as: 'coursesStudent',
           where: { ...(query.course && { id: query.course }) },
-          attributes: [],
         },
       ],
     });
