@@ -41,8 +41,18 @@ module.exports = class StudentService extends BaseService {
     filters?.promotion &&
       (where.promotion = { [Op.like]: `%${trimmedQuery.promotion}%` });
     filters?.level && (where.level = { [Op.like]: `%${trimmedQuery.level}%` });
-    console.log(trimmedQuery.level);
 
+    const totalStudents = await _student.count({
+      where,
+      include: [
+        {
+          model: _course,
+          as: 'course',
+          where: { ...(query.course && { id: query.course }) },
+          attributes: [],
+        },
+      ],
+    });
     const data = await _student.findAndCountAll({
       limit: limitNumber,
       offset: limitNumber * (pageNumber - 1),
@@ -109,7 +119,7 @@ module.exports = class StudentService extends BaseService {
               }))
             : [],
         })),
-        totalCount: data.count,
+        totalCount: totalStudents,
       },
     };
   };

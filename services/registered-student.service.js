@@ -28,7 +28,7 @@ module.exports = class RegisteredStudentService extends BaseService {
     let where = {};
     filters?.level && (where.level = trimmedQuery.level);
     filters?.id_number &&
-      (where.id_number = { [Op.like]: trimmedQuery.id_number });
+      (where.id_number = { [Op.like]: `%${trimmedQuery.id_number}%` });
 
     const data = await _registeredStudent.findAndCountAll({
       limit: limitNumber,

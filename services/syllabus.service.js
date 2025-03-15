@@ -38,7 +38,10 @@ module.exports = class SyllabusService extends BaseService {
     const pageNumber = parseInt(page);
     const offset = (pageNumber - 1) * limitNumber;
 
+    const totalSyllabus = await _syllabus.count();
     const syllabus = await _syllabus.findAndCountAll({
+      limit: limitNumber,
+      offset,
       include: [
         {
           model: _syllabusItems,
@@ -66,8 +69,6 @@ module.exports = class SyllabusService extends BaseService {
         },
       ],
       attributes: ['id', 'syllabus_name'],
-      limit: limitNumber,
-      offset,
     });
 
     if (!syllabus || syllabus.rows.length === 0) {
@@ -98,7 +99,7 @@ module.exports = class SyllabusService extends BaseService {
       };
     });
 
-    return { data, totalCount: syllabus.count };
+    return { data: { results: data, totalCount: totalSyllabus } };
   });
 
   getSyllabusById = catchServiceAsync(async (id) => {
@@ -212,7 +213,7 @@ module.exports = class SyllabusService extends BaseService {
         movers_exam,
         percentages: bodyPercentages,
       } = body;
-  
+
       const syllabus = await _syllabus.findByPk(id, {
         include: [
           { model: _syllabusItems, as: 'items' },
@@ -220,13 +221,13 @@ module.exports = class SyllabusService extends BaseService {
         ],
         transaction,
       });
-  
+
       if (!syllabus) {
         throw new AppError('Syllabus not found', 404);
       }
-  
+
       await syllabus.update({ syllabus_name }, { transaction });
-  
+
       if (items && Array.isArray(items)) {
         const currentItems = await _syllabusItems.findAll({
           where: { syllabus_id: id },
@@ -235,18 +236,27 @@ module.exports = class SyllabusService extends BaseService {
         });
         for (let i = 0; i < items.length; i++) {
           if (i < currentItems.length) {
-            await currentItems[i].update({ item_name: items[i] }, { transaction });
+            await currentItems[i].update(
+              { item_name: items[i] },
+              { transaction }
+            );
           } else {
-            await _syllabusItems.create({ syllabus_id: id, item_name: items[i] }, { transaction });
+            await _syllabusItems.create(
+              { syllabus_id: id, item_name: items[i] },
+              { transaction }
+            );
           }
         }
         if (currentItems.length > items.length) {
           for (let i = items.length; i < currentItems.length; i++) {
-            await currentItems[i].update({ item_name: currentItems[i].item_name + ' (eliminado)' }, { transaction });
+            await currentItems[i].update(
+              { item_name: currentItems[i].item_name + ' (eliminado)' },
+              { transaction }
+            );
           }
         }
       }
-  
+
       if (
         assig_percentage !== undefined &&
         test_percentage !== undefined &&
@@ -263,18 +273,23 @@ module.exports = class SyllabusService extends BaseService {
           );
         } else {
           await _gradePercentages.create(
-            { syllabus_id: id, assig_percentage, test_percentage, exam_percentage },
+            {
+              syllabus_id: id,
+              assig_percentage,
+              test_percentage,
+              exam_percentage,
+            },
             { transaction }
           );
         }
       }
-  
+
       const gradingCategories = [
         { categoryId: 1, items: assignments },
         { categoryId: 2, items: progress_tests },
         { categoryId: 3, items: movers_exam },
       ];
-  
+
       for (const { categoryId, items: categoryItems } of gradingCategories) {
         if (categoryItems && Array.isArray(categoryItems)) {
           const currentGradingItems = await _gradingItem.findAll({
@@ -284,16 +299,27 @@ module.exports = class SyllabusService extends BaseService {
           });
           for (let i = 0; i < categoryItems.length; i++) {
             if (i < currentGradingItems.length) {
-              await currentGradingItems[i].update({ name: categoryItems[i] }, { transaction });
+              await currentGradingItems[i].update(
+                { name: categoryItems[i] },
+                { transaction }
+              );
             } else {
               await _gradingItem.create(
-                { syllabus_id: id, category_id: categoryId, name: categoryItems[i] },
+                {
+                  syllabus_id: id,
+                  category_id: categoryId,
+                  name: categoryItems[i],
+                },
                 { transaction }
               );
             }
           }
           if (currentGradingItems.length > categoryItems.length) {
-            for (let i = categoryItems.length; i < currentGradingItems.length; i++) {
+            for (
+              let i = categoryItems.length;
+              i < currentGradingItems.length;
+              i++
+            ) {
               await currentGradingItems[i].update(
                 { name: currentGradingItems[i].name + ' (eliminado)' },
                 { transaction }
@@ -302,7 +328,7 @@ module.exports = class SyllabusService extends BaseService {
           }
         }
       }
-  
+
       if (bodyPercentages && Array.isArray(bodyPercentages)) {
         const currentPercentages = await _percentages.findAll({
           where: { syllabus_id: id },
@@ -312,13 +338,23 @@ module.exports = class SyllabusService extends BaseService {
         for (let i = 0; i < bodyPercentages.length; i++) {
           const { name, min, max } = bodyPercentages[i];
           if (i < currentPercentages.length) {
-            await currentPercentages[i].update({ name, min, max }, { transaction });
+            await currentPercentages[i].update(
+              { name, min, max },
+              { transaction }
+            );
           } else {
-            await _percentages.create({ syllabus_id: id, name, min, max }, { transaction });
+            await _percentages.create(
+              { syllabus_id: id, name, min, max },
+              { transaction }
+            );
           }
         }
         if (currentPercentages.length > bodyPercentages.length) {
-          for (let i = bodyPercentages.length; i < currentPercentages.length; i++) {
+          for (
+            let i = bodyPercentages.length;
+            i < currentPercentages.length;
+            i++
+          ) {
             await currentPercentages[i].update(
               { name: currentPercentages[i].name + ' (eliminado)' },
               { transaction }
@@ -326,11 +362,11 @@ module.exports = class SyllabusService extends BaseService {
           }
         }
       }
-  
+
       return { data: syllabus };
     });
   });
-  
+
   getIdSyllabus = catchServiceAsync(async (id) => {
     const syllabus = await _syllabus.findByPk(id, {
       include: [
