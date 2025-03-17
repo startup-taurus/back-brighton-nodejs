@@ -37,7 +37,7 @@ module.exports = class StudentService extends BaseService {
     };
 
     let where = {};
-    filters?.status && (where.status = `%${trimmedQuery.status}%`);
+    filters?.status && (where.status = trimmedQuery.status);
     filters?.promotion &&
       (where.promotion = { [Op.like]: `%${trimmedQuery.promotion}%` });
     filters?.level && (where.level = { [Op.like]: `%${trimmedQuery.level}%` });

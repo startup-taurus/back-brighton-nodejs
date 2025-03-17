@@ -52,6 +52,18 @@ module.exports = class RegisteredStudent {
           type: DataTypes.TEXT,
           allowNull: false,
         },
+        emergency_contact_name: {
+          type: DataTypes.TEXT,
+          allowNull: true,
+        },
+        emergency_contact_phone: {
+          type: DataTypes.TEXT,
+          allowNull: true,
+        },
+        emergency_contact_relationship: {
+          type: DataTypes.TEXT,
+          allowNull: true,
+        },
         age_category: {
           type: DataTypes.TEXT,
           allowNull: true,
@@ -85,6 +97,6 @@ module.exports = class RegisteredStudent {
   }
 
   syncModel() {
-    return this.CourseSchedule.sync();
+    return this.RegisteredStudent.sync();
   }
 };

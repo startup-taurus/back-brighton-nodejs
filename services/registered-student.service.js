@@ -67,6 +67,9 @@ module.exports = class RegisteredStudentService extends BaseService {
       phone_number,
       email,
       address,
+      emergency_contact_name,
+      emergency_contact_phone,
+      emergency_contact_relationship,
       age_category,
       level,
       same_billing,
@@ -85,6 +88,9 @@ module.exports = class RegisteredStudentService extends BaseService {
       phone_number,
       email,
       address,
+      emergency_contact_name,
+      emergency_contact_phone,
+      emergency_contact_relationship,
       age_category,
       level,
       birthday,
@@ -100,6 +106,9 @@ module.exports = class RegisteredStudentService extends BaseService {
       phone_number,
       email,
       address,
+      emergency_contact_name,
+      emergency_contact_phone,
+      emergency_contact_relationship,
       age_category,
       level,
       same_billing,
@@ -115,6 +124,7 @@ module.exports = class RegisteredStudentService extends BaseService {
       \nName: ${first_name} ${middle_name} ${last_name} ${second_last_name}, ID: ${id_number}, 
       Birthday: ${birthday}, Schedule: ${schedule},
       \nPhone: ${phone_number}, Email: ${email}, Address: ${address} 
+      \nEmergency Contact: ${emergency_contact_name}, Phone: ${emergency_contact_phone}, Relationship: ${emergency_contact_relationship}
       \nAge Category: ${age_category}, Level: ${level},
       \nSame Billing: ${same_billing}, Billing Address ${
         same_billing === 'yes' ? address : billing_address
