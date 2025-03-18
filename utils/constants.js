@@ -1,13 +1,19 @@
 const DAYS_OF_WEEK = {
-  Sunday: 0,
-  Monday: 1,
-  Tuestay: 2,
-  Wednesday: 3,
-  Thursday: 4,
-  Friday: 5,
-  Saturday: 6,
+  SUNDAY: 0,
+  MONDAY: 1,
+  TUESDAY: 2,
+  WEDNESDAY: 3,
+  THURSDAY: 4,
+  FRIDAY: 5,
+  SATURDAY: 6,
+};
+
+const AGE_CATEGORY = {
+  KIDS: 'kids',
+  ADULTS: 'adults',
 };
 
 module.exports = {
   DAYS_OF_WEEK,
+  AGE_CATEGORY,
 };

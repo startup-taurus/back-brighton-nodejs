@@ -4,6 +4,7 @@ const AppError = require('../utils/app-error');
 const { validateParameters } = require('../utils/utils');
 const sendEmail = require('../utils/email.utils');
 const { Op } = require('sequelize');
+const { AGE_CATEGORY } = require('../utils/constants');
 
 let _registeredStudent = null;
 
@@ -79,7 +80,7 @@ module.exports = class RegisteredStudentService extends BaseService {
       schedule,
     } = body;
 
-    validateParameters({
+    const validationParams = {
       first_name,
       middle_name,
       last_name,
@@ -88,14 +89,20 @@ module.exports = class RegisteredStudentService extends BaseService {
       phone_number,
       email,
       address,
-      emergency_contact_name,
-      emergency_contact_phone,
-      emergency_contact_relationship,
       age_category,
       level,
       birthday,
       schedule,
-    });
+    };
+
+    if (age_category === AGE_CATEGORY.KIDS) {
+      validationParams.emergency_contact_name = emergency_contact_name;
+      validationParams.emergency_contact_phone = emergency_contact_phone;
+      validationParams.emergency_contact_relationship =
+        emergency_contact_relationship;
+    }
+
+    validateParameters(validationParams);
 
     const student = await _registeredStudent.create({
       first_name,
