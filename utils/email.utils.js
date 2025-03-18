@@ -28,6 +28,7 @@ const sendEmail = async (options) => {
   const mailOptions = {
     from: '"Brighton " <register-students@bebrighton.net>',
     // to: 'richardgarcia2499@gmail.com',
+    // to: 'mmoya0992@gmail.com',
     to: 'info@bebrighton.net, recepcionbrighton@gmail.com',
     subject: options.subject,
     text: options.text,
