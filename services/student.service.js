@@ -10,9 +10,18 @@ let _course = null;
 let _payment = null;
 let _courseStudent = null;
 let _userService = null;
+let _professor = null;
 
 module.exports = class StudentService extends BaseService {
-  constructor({ User, Student, Course, Payment, CourseStudent, UserService }) {
+  constructor({
+    User,
+    Student,
+    Course,
+    Payment,
+    CourseStudent,
+    UserService,
+    Professor,
+  }) {
     super(Student);
     _user = User.User;
     _student = Student.Student;
@@ -20,6 +29,7 @@ module.exports = class StudentService extends BaseService {
     _payment = Payment.Payment;
     _courseStudent = CourseStudent.CourseStudent;
     _userService = UserService;
+    _professor = Professor.Professor;
   }
 
   getAllStudents = async (query) => {
@@ -33,31 +43,25 @@ module.exports = class StudentService extends BaseService {
       status: query.status?.trim(),
       promotion: query.promotion?.trim(),
       level: query.level?.trim(),
-      course: query.course?.trim(),
+      cedula: query.cedula?.trim(),
     };
 
-    let where = {};
-    filters?.status && (where.status = trimmedQuery.status);
-    filters?.promotion &&
-      (where.promotion = { [Op.like]: `%${trimmedQuery.promotion}%` });
-    filters?.level && (where.level = { [Op.like]: `%${trimmedQuery.level}%` });
-
-    const totalStudents = await _student.count({
-      distinct: true,
-      col: 'id',
-      where,
-      include: [
-        {
-          model: _courseStudent,
-          as: 'coursesStudent',
-          where: { ...(query.course && { id: query.course }) },
-        },
-      ],
-    });
+    // Get all students with basic info
     const data = await _student.findAndCountAll({
       limit: limitNumber,
       offset: limitNumber * (pageNumber - 1),
-      where,
+      where: {
+        ...(filters.status && { status: trimmedQuery.status }),
+        ...(filters.promotion && {
+          promotion: { [Op.like]: `%${trimmedQuery.promotion}%` },
+        }),
+        ...(filters.level && {
+          level: { [Op.like]: `%${trimmedQuery.level}%` },
+        }),
+        ...(filters.cedula && {
+          cedula: { [Op.like]: `%${trimmedQuery.cedula}%` },
+        }),
+      },
       include: [
         {
           model: _user,
@@ -69,20 +73,61 @@ module.exports = class StudentService extends BaseService {
           as: 'payment',
           attributes: ['payment_date', 'total_payment', 'payment_method'],
         },
-        {
-          model: _course,
-          where: { ...(query.course && { id: query.course }) },
-          as: 'course',
-          through: { attributes: [] },
-          attributes: ['id', 'course_name', 'course_number'],
-        },
       ],
       order: [['id', 'DESC']],
     });
 
+    // Prepare an array to hold our formatted student data
+    let formattedRows = data?.rows?.map((row) => row.toJSON());
+
+    // For each student, get their two most recent courses separately
+    for (const student of formattedRows) {
+      const courseStudents = await _courseStudent.findAll({
+        where: { student_id: student.id },
+        limit: 2,
+        include: [
+          {
+            model: _course,
+            as: 'course',
+            where: { ...(query.course && { id: query.course }) },
+            required: false,
+            include: [
+              {
+                model: _professor,
+                as: 'professor',
+                include: [
+                  {
+                    model: _user,
+                    as: 'user',
+                    attributes: ['id', 'name'],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+        order: [['enrollment_date', 'DESC']],
+      });
+
+      // Map course students to the format we need
+      student.course = courseStudents
+        .map((cs) => {
+          const courseJson = cs.toJSON();
+          return {
+            id: courseJson.course?.id,
+            course_student_id: courseJson.id,
+            course_name: courseJson.course?.course_name,
+            course_number: courseJson.course?.course_number,
+            professor: courseJson.course?.professor?.user?.name,
+            enrollment_date: courseJson.enrollment_date,
+          };
+        })
+        .filter((c) => c.id); // Filter out any potential nulls
+    }
+
     return {
       data: {
-        result: data.rows.map((student) => ({
+        result: formattedRows.map((student) => ({
           id: student.id,
           cedula: student.cedula,
           level: student.level,
@@ -105,13 +150,7 @@ module.exports = class StudentService extends BaseService {
             status: student.user.status,
             username: student.user.username,
           },
-          course: Array.isArray(student.course)
-            ? student.course.map((course) => ({
-                id: course.id,
-                course_name: course.course_name,
-                course_number: course.course_number,
-              }))
-            : [],
+          course: student.course || [],
           payments: Array.isArray(student.payment)
             ? student.payment.map((payment) => ({
                 payment_date: payment.payment_date,
@@ -120,7 +159,7 @@ module.exports = class StudentService extends BaseService {
               }))
             : [],
         })),
-        totalCount: totalStudents,
+        totalCount: data.count,
       },
     };
   };
@@ -235,7 +274,20 @@ module.exports = class StudentService extends BaseService {
       emergency_contact_relationship,
       age_category,
       birth_date,
+      courseId,
     } = body;
+
+    // const courseExist = await _courseStudent.count({
+    //   where: { course_id: courseId, student_id: id },
+    // });
+
+    // if (courseExist === 0) {
+    await _courseStudent.create({
+      course_id: parseInt(courseId),
+      student_id: id,
+      enrollment_date: new Date(),
+    });
+    // }
 
     const student = await _student.findByPk(id);
 
