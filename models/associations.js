@@ -94,6 +94,11 @@ module.exports = class AuditModel {
       as: 'user',
     });
 
+    _courseStudent.belongsTo(_course, {
+      foreignKey: 'course_id',
+      as: 'course', 
+    });
+
     _courseStudent.belongsTo(_student, {
       foreignKey: 'student_id',
     });
