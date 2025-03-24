@@ -44,9 +44,28 @@ module.exports = class StudentService extends BaseService {
       promotion: query.promotion?.trim(),
       level: query.level?.trim(),
       cedula: query.cedula?.trim(),
+      name: query.name?.trim(),
     };
 
-    // Get all students with basic info
+    let studentIds = [];
+    if (query.course) {
+      const courseStudents = await _courseStudent.findAll({
+        where: { course_id: query.course },
+        attributes: ['student_id'],
+        raw: true,
+      });
+      studentIds = courseStudents.map((cs) => cs.student_id);
+
+      if (studentIds.length === 0) {
+        return {
+          data: {
+            result: [],
+            totalCount: 0,
+          },
+        };
+      }
+    }
+
     const data = await _student.findAndCountAll({
       limit: limitNumber,
       offset: limitNumber * (pageNumber - 1),
@@ -61,11 +80,17 @@ module.exports = class StudentService extends BaseService {
         ...(filters.cedula && {
           cedula: { [Op.like]: `%${trimmedQuery.cedula}%` },
         }),
+        ...(studentIds.length > 0 && { id: { [Op.in]: studentIds } }),
       },
       include: [
         {
           model: _user,
           as: 'user',
+          ...(filters.name && {
+            where: {
+              name: { [Op.like]: `%${trimmedQuery.name}%` },
+            },
+          }),
           attributes: ['id', 'name', 'email', 'status', 'username', 'password'],
         },
         {
@@ -83,14 +108,16 @@ module.exports = class StudentService extends BaseService {
     // For each student, get their two most recent courses separately
     for (const student of formattedRows) {
       const courseStudents = await _courseStudent.findAll({
-        where: { student_id: student.id },
+        where: {
+          student_id: student.id,
+          ...(query.course && { course_id: query.course }),
+        },
         limit: 2,
         include: [
           {
             model: _course,
             as: 'course',
-            where: { ...(query.course && { id: query.course }) },
-            required: false,
+            required: true,
             include: [
               {
                 model: _professor,
@@ -130,6 +157,7 @@ module.exports = class StudentService extends BaseService {
         result: formattedRows.map((student) => ({
           id: student.id,
           cedula: student.cedula,
+          phone_number: student.phone_number,
           level: student.level,
           status: student.status,
           observations: student.observations,
@@ -183,6 +211,7 @@ module.exports = class StudentService extends BaseService {
       data: {
         id: student.id,
         cedula: student.cedula,
+        phone_number: student.phone_number,
         level: student.level,
         status: student.status,
         observations: student.observations,
@@ -217,6 +246,7 @@ module.exports = class StudentService extends BaseService {
       promotion,
       age_category,
       birth_date,
+      phone_number,
     } = body;
     validateParameters({
       name,
@@ -247,6 +277,7 @@ module.exports = class StudentService extends BaseService {
       emergency_contact_phone,
       emergency_contact_relationship,
       promotion,
+      phone_number,
     });
 
     if (courseId) {
@@ -264,6 +295,7 @@ module.exports = class StudentService extends BaseService {
     body.role = 'student';
     const {
       cedula,
+      phone_number,
       level,
       status,
       promotion,
@@ -300,6 +332,7 @@ module.exports = class StudentService extends BaseService {
     await _student.update(
       {
         cedula,
+        phone_number,
         level,
         status,
         book_given,
