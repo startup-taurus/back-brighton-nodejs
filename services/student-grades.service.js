@@ -39,13 +39,12 @@ module.exports = class StudentGradesService extends BaseService {
   );
 
   createStudentGrade = async (body) => {
-    const { course_id, student_id, grading_item_id, grade } = body;
+    const { course_id, student_id, grading_item_id, grade = 0 } = body;
 
     validateParameters({
       course_id,
       student_id,
       grading_item_id,
-      grade,
     });
 
     const studentGrade = await _studentGrades.findOne({
