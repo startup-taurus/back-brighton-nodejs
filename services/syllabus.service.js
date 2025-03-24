@@ -381,9 +381,9 @@ module.exports = class SyllabusService extends BaseService {
   });
 
   createAssignmentGradingItem = catchServiceAsync(async (body) => {
-    const { syllabus_id, course_id } = body;
+    const { syllabus_id, course_id, name } = body;
 
-    validateParameters({ syllabus_id });
+    validateParameters({ syllabus_id, name });
 
     const transaction = await _sequelize.transaction();
     try {
@@ -391,7 +391,7 @@ module.exports = class SyllabusService extends BaseService {
         {
           category_id: 1,
           syllabus_id,
-          name: 'Item',
+          name,
         },
         { transaction }
       );
