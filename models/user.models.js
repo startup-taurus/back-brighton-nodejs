@@ -1,4 +1,4 @@
-const { DataTypes } = require("sequelize");
+const { DataTypes } = require('sequelize');
 let _sequelize = null;
 module.exports = class UserModel {
   constructor({ Sequelize }) {
@@ -7,7 +7,7 @@ module.exports = class UserModel {
   }
   defineModel() {
     this.User = _sequelize.define(
-      "user",
+      'user',
       {
         name: {
           type: DataTypes.STRING,
@@ -28,15 +28,21 @@ module.exports = class UserModel {
           allowNull: false,
         },
         role: {
-          type: DataTypes.ENUM('professor', 'student', 'admin_staff', 'financial'),
+          type: DataTypes.ENUM(
+            'professor',
+            'student',
+            'admin_staff',
+            'financial',
+            'coordinator'
+          ),
           allowNull: false,
         },
-        image:{
+        image: {
           type: DataTypes.STRING,
         },
         status: {
           type: DataTypes.STRING,
-          defaultValue: "active",
+          defaultValue: 'active',
         },
         created_at: {
           type: DataTypes.DATE,
@@ -51,7 +57,7 @@ module.exports = class UserModel {
         },
       },
       {
-        tableName: "user",
+        tableName: 'user',
         timestamps: false,
       }
     );
