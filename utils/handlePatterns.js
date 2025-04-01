@@ -1,4 +1,3 @@
-//* Expresiones Regulares Reutilizables
 const patterns = {
   alphanumeric: /^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s\.,0-9\-]+$/,
   alphanumericOrEmpty: /^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s\.,0-9\-]*$/,
@@ -14,10 +13,16 @@ const patterns = {
 };
 
 const commonValidations = [
-  {field: "page", options: { required: false, pattern: patterns.positiveNumber } },
-  {field: "pageSize", options: { required: false, pattern: patterns.positiveNumber } },
-  {field: "fromDate", options: { required:false, date: true} },
-  {field: "toDate",options: { required:false, date:true } },
+  {
+    field: 'page',
+    options: { required: false, pattern: patterns.positiveNumber },
+  },
+  {
+    field: 'pageSize',
+    options: { required: false, pattern: patterns.positiveNumber },
+  },
+  { field: 'fromDate', options: { required: false, date: true } },
+  { field: 'toDate', options: { required: false, date: true } },
 ];
 
-module.exports =  {patterns, commonValidations};
+module.exports = { patterns, commonValidations };
