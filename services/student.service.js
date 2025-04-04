@@ -45,6 +45,7 @@ module.exports = class StudentService extends BaseService {
       level: query.level?.trim(),
       cedula: query.cedula?.trim(),
       name: query.name?.trim(),
+      status_level_change: query.status_level_change?.trim(),
     };
 
     let studentIds = [];
@@ -80,6 +81,9 @@ module.exports = class StudentService extends BaseService {
         ...(filters.cedula && {
           cedula: { [Op.like]: `%${trimmedQuery.cedula}%` },
         }),
+        ...(filters.status_level_change && {
+          status_level_change: trimmedQuery.status_level_change,
+        }),
         ...(studentIds.length > 0 && { id: { [Op.in]: studentIds } }),
       },
       include: [
@@ -102,10 +106,8 @@ module.exports = class StudentService extends BaseService {
       order: [['id', 'DESC']],
     });
 
-    // Prepare an array to hold our formatted student data
     let formattedRows = data?.rows?.map((row) => row.toJSON());
 
-    // For each student, get their two most recent courses separately
     for (const student of formattedRows) {
       const courseStudents = await _courseStudent.findAll({
         where: {
@@ -136,7 +138,6 @@ module.exports = class StudentService extends BaseService {
         order: [['enrollment_date', 'DESC']],
       });
 
-      // Map course students to the format we need
       student.course = courseStudents
         .map((cs) => {
           const courseJson = cs.toJSON();
@@ -149,7 +150,7 @@ module.exports = class StudentService extends BaseService {
             enrollment_date: courseJson.enrollment_date,
           };
         })
-        .filter((c) => c.id); // Filter out any potential nulls
+        .filter((c) => c.id);
     }
 
     return {
@@ -160,6 +161,7 @@ module.exports = class StudentService extends BaseService {
           phone_number: student.phone_number,
           level: student.level,
           status: student.status,
+          status_level_change: student.status_level_change,
           observations: student.observations,
           emergency_contact_name: student.emergency_contact_name,
           emergency_contact_phone: student.emergency_contact_phone,
@@ -214,6 +216,7 @@ module.exports = class StudentService extends BaseService {
         phone_number: student.phone_number,
         level: student.level,
         status: student.status,
+        status_level_change: student.status_level_change,
         observations: student.observations,
         emergency_contact_name: student.emergency_contact_name,
         emergency_contact_phone: student.emergency_contact_phone,
@@ -225,6 +228,37 @@ module.exports = class StudentService extends BaseService {
           name: student.user.name,
           email: student.user.email,
         },
+      },
+    };
+  });
+
+  getDistinctLevels = catchServiceAsync(async (query) => {
+    const { page = 1, limit = 10 } = query;
+
+    const limitNumber = parseInt(limit);
+    const pageNumber = parseInt(page);
+
+    const { count, rows } = await _student.findAndCountAll({
+      attributes: [
+        [
+          _student.sequelize.fn('DISTINCT', _student.sequelize.col('level')),
+          'level',
+        ],
+      ],
+      raw: true,
+      limit: limitNumber,
+      offset: limitNumber * (pageNumber - 1),
+      order: [['level', 'ASC']],
+    });
+
+    const distinctLevels = rows
+      .map((item) => item.level)
+      .filter((level) => level !== null);
+
+    return {
+      data: {
+        result: distinctLevels,
+        totalCount: count,
       },
     };
   });
@@ -309,17 +343,11 @@ module.exports = class StudentService extends BaseService {
       courseId,
     } = body;
 
-    // const courseExist = await _courseStudent.count({
-    //   where: { course_id: courseId, student_id: id },
-    // });
-
-    // if (courseExist === 0) {
     await _courseStudent.create({
       course_id: parseInt(courseId),
       student_id: id,
       enrollment_date: new Date(),
     });
-    // }
 
     const student = await _student.findByPk(id);
 

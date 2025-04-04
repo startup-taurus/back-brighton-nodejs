@@ -18,6 +18,11 @@ module.exports = class StudentController extends BaseController {
     return appResponse(res, result);
   });
 
+  getDistinctLevels = catchControllerAsync(async (req, res) => {
+    const result = await _studentService.getDistinctLevels({ ...req.query });
+    return appResponse(res, result);
+  });
+
   createStudent = catchControllerAsync(async (req, res) => {
     const { body } = req;
     const result = await _studentService.createStudent(body);

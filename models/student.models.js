@@ -52,6 +52,10 @@ module.exports = class StudentModel {
           type: DataTypes.STRING,
           allowNull: false,
         },
+        status_level_change: {
+          type: DataTypes.ENUM('pending', 'approved', 'rejected'),
+          defaultValue: false,
+        },
         promotion: {
           type: DataTypes.STRING,
           allowNull: false,
