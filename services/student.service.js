@@ -11,6 +11,8 @@ let _payment = null;
 let _courseStudent = null;
 let _userService = null;
 let _professor = null;
+let _level = null;
+let _studentTransferData = null;
 
 module.exports = class StudentService extends BaseService {
   constructor({
@@ -21,6 +23,8 @@ module.exports = class StudentService extends BaseService {
     CourseStudent,
     UserService,
     Professor,
+    Level,
+    StudentTransferData,
   }) {
     super(Student);
     _user = User.User;
@@ -30,6 +34,8 @@ module.exports = class StudentService extends BaseService {
     _courseStudent = CourseStudent.CourseStudent;
     _userService = UserService;
     _professor = Professor.Professor;
+    _level = Level.Level;
+    _studentTransferData = StudentTransferData.StudentTransferData;
   }
 
   getAllStudents = async (query) => {
@@ -42,7 +48,7 @@ module.exports = class StudentService extends BaseService {
       ...query,
       status: query.status?.trim(),
       promotion: query.promotion?.trim(),
-      level: query.level?.trim(),
+      level_id: query.level_id,
       cedula: query.cedula?.trim(),
       name: query.name?.trim(),
       status_level_change: query.status_level_change?.trim(),
@@ -75,8 +81,8 @@ module.exports = class StudentService extends BaseService {
         ...(filters.promotion && {
           promotion: { [Op.like]: `%${trimmedQuery.promotion}%` },
         }),
-        ...(filters.level && {
-          level: { [Op.like]: `%${trimmedQuery.level}%` },
+        ...(filters.level_id && {
+          level_id: trimmedQuery.level_id,
         }),
         ...(filters.cedula && {
           cedula: { [Op.like]: `%${trimmedQuery.cedula}%` },
@@ -101,6 +107,11 @@ module.exports = class StudentService extends BaseService {
           model: _payment,
           as: 'payment',
           attributes: ['payment_date', 'total_payment', 'payment_method'],
+        },
+        {
+          model: _level,
+          as: 'level',
+          attributes: ['id', 'full_level'],
         },
       ],
       order: [['id', 'DESC']],
@@ -159,7 +170,13 @@ module.exports = class StudentService extends BaseService {
           id: student.id,
           cedula: student.cedula,
           phone_number: student.phone_number,
-          level: student.level,
+          level_id: student.level_id,
+          level: student.level
+            ? {
+                id: student.level.id,
+                name: student.level.full_level,
+              }
+            : null,
           status: student.status,
           status_level_change: student.status_level_change,
           observations: student.observations,
@@ -200,7 +217,12 @@ module.exports = class StudentService extends BaseService {
         {
           model: _user,
           as: 'user',
-          attributes: ['id', 'name', 'email'],
+          attributes: ['id', 'name', 'email', 'status', 'username'],
+        },
+        {
+          model: _level,
+          as: 'level',
+          attributes: ['id', 'full_level'],
         },
       ],
     });
@@ -214,7 +236,13 @@ module.exports = class StudentService extends BaseService {
         id: student.id,
         cedula: student.cedula,
         phone_number: student.phone_number,
-        level: student.level,
+        level_id: student.level_id,
+        level: student.level
+          ? {
+              id: student.level.id,
+              name: student.level.full_level,
+            }
+          : null,
         status: student.status,
         status_level_change: student.status_level_change,
         observations: student.observations,
@@ -233,46 +261,175 @@ module.exports = class StudentService extends BaseService {
   });
 
   getDistinctLevels = catchServiceAsync(async (query) => {
+    // Ahora obtenemos los niveles directamente de la tabla levels
     const { page = 1, limit = 10 } = query;
 
     const limitNumber = parseInt(limit);
     const pageNumber = parseInt(page);
 
-    const { count, rows } = await _student.findAndCountAll({
-      attributes: [
-        [
-          _student.sequelize.fn('DISTINCT', _student.sequelize.col('level')),
-          'level',
-        ],
-      ],
-      raw: true,
+    // Utilizamos el servicio de Level para obtener todos los niveles
+    const { count, rows } = await _level.findAndCountAll({
       limit: limitNumber,
       offset: limitNumber * (pageNumber - 1),
-      order: [['level', 'ASC']],
+      order: [['full_level', 'ASC']],
     });
-
-    const distinctLevels = rows
-      .map((item) => item.level)
-      .filter((level) => level !== null);
 
     return {
       data: {
-        result: distinctLevels,
+        result: rows,
         totalCount: count,
       },
     };
   });
+
+  // Método para solicitar una transferencia (usado por recepcionistas)
+  requestTransferAndProgress = async (studentIds, courseId, levelId) => {
+    try {
+      // Verificar que al menos uno de los parámetros esté presente
+      if (!courseId && !levelId) {
+        throw new AppError(
+          'Please provide either a course or a level to transfer students.',
+          400
+        );
+      }
+
+      const promises = [];
+
+      // Para cada estudiante, creamos una solicitud de transferencia pendiente
+      for (const studentId of studentIds) {
+        // Actualizar el estado del estudiante a 'pending'
+        await _student.update(
+          { status_level_change: 'pending' },
+          { where: { id: studentId } }
+        );
+
+        // Crear o actualizar el registro de transferencia
+        const existingTransfer = await _studentTransferData.findOne({
+          where: { student_id: studentId, status_level_change: 'pending' },
+        });
+
+        if (existingTransfer) {
+          // Actualizar el registro existente
+          promises.push(
+            existingTransfer.update({
+              selected_course_id:
+                courseId || existingTransfer.selected_course_id,
+              selected_level_id: levelId || existingTransfer.selected_level_id,
+              updated_at: new Date(),
+            })
+          );
+        } else {
+          // Crear un nuevo registro
+          promises.push(
+            _studentTransferData.create({
+              student_id: studentId,
+              selected_course_id: courseId || null,
+              selected_level_id: levelId || null,
+              status_level_change: 'pending',
+              created_at: new Date(),
+              updated_at: new Date(),
+            })
+          );
+        }
+      }
+
+      // Ejecutamos las promesas de forma paralela
+      await Promise.all(promises);
+
+      return {
+        statusCode: 200,
+        message: 'Transfer requests created successfully. Pending approval.',
+      };
+    } catch (error) {
+      console.error('Error creating transfer requests:', error);
+      throw new AppError('Error while creating transfer requests.', 500);
+    }
+  };
+
+  // Método para ejecutar una transferencia (usado por coordinadores)
+  transferAndProgressStudents = async (studentIds, courseId, levelId) => {
+    try {
+      // Verificar que al menos uno de los parámetros esté presente
+      if (!courseId && !levelId) {
+        throw new AppError(
+          'Please provide either a course or a level to transfer students.',
+          400
+        );
+      }
+
+      const promises = [];
+
+      // Si hay un nuevo curso, asignamos el curso a los estudiantes
+      if (courseId) {
+        promises.push(
+          studentIds.map((studentId) => {
+            return _courseStudent.create({
+              student_id: studentId,
+              course_id: courseId,
+              enrollment_date: new Date(),
+            });
+          })
+        );
+      }
+
+      // Si hay un nuevo nivel, actualizamos el nivel de los estudiantes y cambiamos el estado a 'approved'
+      if (levelId) {
+        promises.push(
+          studentIds.map((studentId) => {
+            return _student.update(
+              {
+                level_id: levelId,
+                status_level_change: 'approved',
+              },
+              { where: { id: studentId } }
+            );
+          })
+        );
+      }
+
+      // Actualizar los registros de transferencia a 'approved'
+      for (const studentId of studentIds) {
+        const transferRecord = await _studentTransferData.findOne({
+          where: { student_id: studentId, status_level_change: 'pending' },
+        });
+
+        if (transferRecord) {
+          promises.push(
+            transferRecord.update({
+              status_level_change: 'approved',
+              updated_at: new Date(),
+            })
+          );
+        }
+      }
+
+      // Ejecutamos las promesas de forma paralela
+      await Promise.all(promises.flat());
+
+      return {
+        statusCode: 200,
+        message: 'Students successfully transferred and/or progressed.',
+      };
+    } catch (error) {
+      console.error('Error transferring/progressing students:', error);
+      throw new AppError(
+        'Error while transferring or progressing students.',
+        500
+      );
+    }
+  };
 
   createStudent = catchServiceAsync(async (body) => {
     body.role = 'student';
     const {
       name,
       cedula,
-      profession,
       courseId,
-      level,
-      status,
+      level_id,
+      profession,
       book_given,
+      observations,
+      status,
       pending_payments,
       emergency_contact_name,
       emergency_contact_phone,
@@ -301,7 +458,7 @@ module.exports = class StudentService extends BaseService {
       user_id: user.id,
       cedula,
       profession,
-      level,
+      level_id,
       status,
       book_given,
       age_category,
@@ -312,6 +469,7 @@ module.exports = class StudentService extends BaseService {
       emergency_contact_relationship,
       promotion,
       phone_number,
+      observations,
     });
 
     if (courseId) {
@@ -330,7 +488,7 @@ module.exports = class StudentService extends BaseService {
     const {
       cedula,
       phone_number,
-      level,
+      level_id,
       status,
       promotion,
       book_given,
@@ -361,7 +519,7 @@ module.exports = class StudentService extends BaseService {
       {
         cedula,
         phone_number,
-        level,
+        level_id,
         status,
         book_given,
         pending_payments,

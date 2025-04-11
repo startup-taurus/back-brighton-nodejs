@@ -1,9 +1,12 @@
+const StudentTransferData = require('../models/student-transfer-data.models');
+
 module.exports = {
   UserController: require('./user.controller'),
   StudentController: require('./student.controller'),
   ProfessorController: require('./professor.controller'),
   PaymentController: require('./payment.controller'),
   CourseController: require('./course.controller'),
+  LevelController: require('./level.controller'),
   AttendanceController: require('./attendance.controller'),
   HolidaysController: require('./holidays.controller'),
   CancelledLessonController: require('./cancelled-lesson.controller'),
@@ -12,6 +15,7 @@ module.exports = {
   ProfessorController: require('./professor.controller'),
   PaymentController: require('./payment.controller'),
   CourseController: require('./course.controller'),
+  LevelController: require('./level.controller'),
   AttendanceController: require('./attendance.controller'),
   HolidaysController: require('./holidays.controller'),
   SyllabusController: require('./syllabus.controller'),
@@ -19,4 +23,5 @@ module.exports = {
   CourseGradingController: require('./course-grading.controller'),
   StudentGradesController: require('./student-grades.controller'),
   RegisteredStudentController: require('./registered-student.controller'),
+  StudentTransferDataController: require('./student-transfer-data.controller'),
 };

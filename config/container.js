@@ -14,6 +14,7 @@ const {
   ProfessorService,
   PaymentService,
   CourseService,
+  LevelService,
   AttendanceService,
   HolidaysService,
   CancelledLessonService,
@@ -22,6 +23,7 @@ const {
   CourseGradingService,
   StudentGradesService,
   RegisteredStudentService,
+  StudentTransferDataService,
 } = require('../services');
 
 //Controllers
@@ -31,6 +33,7 @@ const {
   ProfessorController,
   PaymentController,
   CourseController,
+  LevelController,
   AttendanceController,
   HolidaysController,
   CancelledLessonController,
@@ -39,6 +42,7 @@ const {
   CourseGradingController,
   StudentGradesController,
   RegisteredStudentController,
+  StudentTransferDataController,
 } = require('../controllers');
 
 //Startup
@@ -51,6 +55,7 @@ const {
   ProfessorRoutes,
   PaymentRoutes,
   CourseRoutes,
+  LevelRoutes,
   AttendanceRoutes,
   HolidaysRoutes,
   CancelledLessonRoutes,
@@ -58,6 +63,7 @@ const {
   CourseScheduleRoutes,
   StudentGradesRoutes,
   RegisteredStudentRoutes,
+  StudentTransferDataRoutes,
 } = require('../routes/api/index');
 
 //Models
@@ -68,6 +74,7 @@ const {
   Professor,
   Payment,
   Course,
+  Level,
   CourseStudent,
   Attendance,
   Grades,
@@ -83,6 +90,7 @@ const {
   StudentGrades,
   Percentages,
   RegisteredStudent,
+  StudentTransferData,
 } = require('../models');
 
 const { protect } = require('../middleware/authMiddleware');
@@ -113,6 +121,8 @@ container
     CourseGradingService: asClass(CourseGradingService).singleton(),
     StudentGradesService: asClass(StudentGradesService).singleton(),
     RegisteredStudentService: asClass(RegisteredStudentService).singleton(),
+    LevelService: asClass(LevelService).singleton(),
+    StudentTransferDataService: asClass(StudentTransferDataService).singleton(),
   })
 
   .register({
@@ -146,6 +156,10 @@ container
     RegisteredStudentController: asClass(
       RegisteredStudentController
     ).singleton(),
+    LevelController: asClass(LevelController).singleton(),
+    StudentTransferDataController: asClass(
+      StudentTransferDataController
+    ).singleton(),
   })
   .register({
     //Configuración de rutas
@@ -161,6 +175,10 @@ container
     CourseScheduleRoutes: asFunction(CourseScheduleRoutes).singleton(),
     StudentGradesRoutes: asFunction(StudentGradesRoutes).singleton(),
     RegisteredStudentRoutes: asFunction(RegisteredStudentRoutes).singleton(),
+    LevelRoutes: asFunction(LevelRoutes).singleton(),
+    StudentTransferDataRoutes: asFunction(
+      StudentTransferDataRoutes
+    ).singleton(),
   })
   .register({
     //Configuración de las asociaciones
@@ -188,6 +206,8 @@ container
     StudentGrades: asClass(StudentGrades).singleton(),
     Percentages: asClass(Percentages).singleton(),
     RegisteredStudent: asClass(RegisteredStudent).singleton(),
+    Level: asClass(Level).singleton(),
+    StudentTransferData: asClass(StudentTransferData).singleton(),
   })
   .register({
     //middlewares

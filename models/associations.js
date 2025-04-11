@@ -16,6 +16,9 @@ let _courseGrading = null;
 let _gradingItem = null;
 let _studentGrades = null;
 let _percentages = null;
+let _level = null;
+let _registeredStudent = null;
+let _studentTransferData = null;
 
 module.exports = class AuditModel {
   constructor({
@@ -37,8 +40,12 @@ module.exports = class AuditModel {
     GradingCategory,
     StudentGrades,
     Percentages,
+    Level,
+    RegisteredStudent,
+    StudentTransferData,
   }) {
     _student = Student.Student;
+    _registeredStudent = RegisteredStudent.RegisteredStudent;
     _course = Course.Course;
     _courseStudent = CourseStudent.CourseStudent;
     _professor = Professor.Professor;
@@ -56,6 +63,8 @@ module.exports = class AuditModel {
     _gradingItem = GradingItem.GradingItem;
     _studentGrades = StudentGrades.StudentGrades;
     _percentages = Percentages.Percentages;
+    _level = Level.Level;
+    _studentTransferData = StudentTransferData.StudentTransferData;
     this.defineModel();
   }
 
@@ -94,9 +103,41 @@ module.exports = class AuditModel {
       as: 'user',
     });
 
+    // Relación entre estudiante y nivel
+    _student.belongsTo(_level, {
+      foreignKey: 'level_id',
+      as: 'level',
+    });
+
+    _level.hasMany(_student, {
+      foreignKey: 'level_id',
+      as: 'students',
+    });
+
+    // Relación entre estudiante y datos de transferencia
+    _student.hasMany(_studentTransferData, {
+      foreignKey: 'student_id',
+      as: 'transfer_data',
+    });
+
+    _studentTransferData.belongsTo(_student, {
+      foreignKey: 'student_id',
+      as: 'student',
+    });
+
+    _registeredStudent.belongsTo(_level, {
+      foreignKey: 'level_id',
+      as: 'level',
+    });
+
+    _level.hasMany(_registeredStudent, {
+      foreignKey: 'level_id',
+      as: 'registered_students',
+    });
+
     _courseStudent.belongsTo(_course, {
       foreignKey: 'course_id',
-      as: 'course', 
+      as: 'course',
     });
 
     _courseStudent.belongsTo(_student, {
