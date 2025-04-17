@@ -13,5 +13,6 @@ module.exports = {
   CourseGradingService: require('./course-grading.service'),
   StudentGradesService: require('./student-grades.service'),
   RegisteredStudentService: require('./registered-student.service'),
-  StudentTransferDataService: require('./student-transfer-data.service'),
+  TransferDataService: require('./transfer-data.service'),
+  StudentTransferService: require('./student-transfer.service'),
 };

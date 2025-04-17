@@ -18,7 +18,8 @@ let _studentGrades = null;
 let _percentages = null;
 let _level = null;
 let _registeredStudent = null;
-let _studentTransferData = null;
+let _studentTransfer = null;
+let _transferData = null;
 
 module.exports = class AuditModel {
   constructor({
@@ -42,7 +43,8 @@ module.exports = class AuditModel {
     Percentages,
     Level,
     RegisteredStudent,
-    StudentTransferData,
+    StudentTransfer,
+    TransferData,
   }) {
     _student = Student.Student;
     _registeredStudent = RegisteredStudent.RegisteredStudent;
@@ -64,7 +66,9 @@ module.exports = class AuditModel {
     _studentGrades = StudentGrades.StudentGrades;
     _percentages = Percentages.Percentages;
     _level = Level.Level;
-    _studentTransferData = StudentTransferData.StudentTransferData;
+    _studentTransfer = StudentTransfer.StudentTransfer;
+    _transferData = TransferData.TransferData;
+
     this.defineModel();
   }
 
@@ -114,15 +118,46 @@ module.exports = class AuditModel {
       as: 'students',
     });
 
-    // Relación entre estudiante y datos de transferencia
-    _student.hasMany(_studentTransferData, {
+    // Relación muchos a muchos entre estudiante y datos de transferencia a través de student_transfer
+    _student.belongsToMany(_transferData, {
+      through: _studentTransfer,
       foreignKey: 'student_id',
+      otherKey: 'transfer_data_id',
       as: 'transfer_data',
     });
 
-    _studentTransferData.belongsTo(_student, {
+    _transferData.belongsToMany(_student, {
+      through: _studentTransfer,
+      foreignKey: 'transfer_data_id',
+      otherKey: 'student_id',
+      as: 'students',
+    });
+
+    // Relaciones de StudentTransfer con Student y TransferData
+    _studentTransfer.belongsTo(_student, {
       foreignKey: 'student_id',
       as: 'student',
+    });
+
+    _studentTransfer.belongsTo(_transferData, {
+      foreignKey: 'transfer_data_id',
+      as: 'transfer_data',
+    });
+
+    // Relaciones de TransferData con Course, Level y User
+    _transferData.belongsTo(_course, {
+      foreignKey: 'selected_course_id',
+      as: 'selected_course',
+    });
+
+    _transferData.belongsTo(_level, {
+      foreignKey: 'selected_level_id',
+      as: 'selected_level',
+    });
+
+    _transferData.belongsTo(_user, {
+      foreignKey: 'created_by_id',
+      as: 'created_by',
     });
 
     _registeredStudent.belongsTo(_level, {

@@ -23,7 +23,8 @@ const {
   CourseGradingService,
   StudentGradesService,
   RegisteredStudentService,
-  StudentTransferDataService,
+  TransferDataService,
+  StudentTransferService,
 } = require('../services');
 
 //Controllers
@@ -42,7 +43,8 @@ const {
   CourseGradingController,
   StudentGradesController,
   RegisteredStudentController,
-  StudentTransferDataController,
+  TransferDataController,
+  StudentTransferController,
 } = require('../controllers');
 
 //Startup
@@ -63,7 +65,8 @@ const {
   CourseScheduleRoutes,
   StudentGradesRoutes,
   RegisteredStudentRoutes,
-  StudentTransferDataRoutes,
+  TransferDataRoutes,
+  StudentTransferRoutes,
 } = require('../routes/api/index');
 
 //Models
@@ -90,7 +93,8 @@ const {
   StudentGrades,
   Percentages,
   RegisteredStudent,
-  StudentTransferData,
+  StudentTransfer,
+  TransferData,
 } = require('../models');
 
 const { protect } = require('../middleware/authMiddleware');
@@ -122,7 +126,8 @@ container
     StudentGradesService: asClass(StudentGradesService).singleton(),
     RegisteredStudentService: asClass(RegisteredStudentService).singleton(),
     LevelService: asClass(LevelService).singleton(),
-    StudentTransferDataService: asClass(StudentTransferDataService).singleton(),
+    TransferDataService: asClass(TransferDataService).singleton(),
+    StudentTransferService: asClass(StudentTransferService).singleton(),
   })
 
   .register({
@@ -157,9 +162,8 @@ container
       RegisteredStudentController
     ).singleton(),
     LevelController: asClass(LevelController).singleton(),
-    StudentTransferDataController: asClass(
-      StudentTransferDataController
-    ).singleton(),
+    TransferDataController: asClass(TransferDataController).singleton(),
+    StudentTransferController: asClass(StudentTransferController).singleton(),
   })
   .register({
     //Configuración de rutas
@@ -176,9 +180,8 @@ container
     StudentGradesRoutes: asFunction(StudentGradesRoutes).singleton(),
     RegisteredStudentRoutes: asFunction(RegisteredStudentRoutes).singleton(),
     LevelRoutes: asFunction(LevelRoutes).singleton(),
-    StudentTransferDataRoutes: asFunction(
-      StudentTransferDataRoutes
-    ).singleton(),
+    TransferDataRoutes: asFunction(TransferDataRoutes).singleton(),
+    StudentTransferRoutes: asFunction(StudentTransferRoutes).singleton(),
   })
   .register({
     //Configuración de las asociaciones
@@ -207,7 +210,8 @@ container
     Percentages: asClass(Percentages).singleton(),
     RegisteredStudent: asClass(RegisteredStudent).singleton(),
     Level: asClass(Level).singleton(),
-    StudentTransferData: asClass(StudentTransferData).singleton(),
+    StudentTransfer: asClass(StudentTransfer).singleton(),
+    TransferData: asClass(TransferData).singleton(),
   })
   .register({
     //middlewares

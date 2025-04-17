@@ -21,5 +21,6 @@ module.exports = {
   Percentages: require('./percentages.model'),
   RegisteredStudent: require('./registered-student.model'),
   Level: require('./level.models'),
-  StudentTransferData: require('./student-transfer-data.models'),
+  StudentTransfer: require('./student-transfer.models'),
+  TransferData: require('./transfer_data.models'),
 };

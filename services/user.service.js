@@ -1,8 +1,8 @@
-const catchServiceAsync = require('../utils/catch-service-async');
+const { Op } = require('sequelize');
 const BaseService = require('./base.service');
 const AppError = require('../utils/app-error');
 const { validateParameters } = require('../utils/utils');
-const { Op } = require('sequelize');
+const catchServiceAsync = require('../utils/catch-service-async');
 let _user = null;
 let _course = null;
 let _authUtils = null;

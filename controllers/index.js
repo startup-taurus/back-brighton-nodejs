@@ -1,5 +1,3 @@
-const StudentTransferData = require('../models/student-transfer-data.models');
-
 module.exports = {
   UserController: require('./user.controller'),
   StudentController: require('./student.controller'),
@@ -23,5 +21,6 @@ module.exports = {
   CourseGradingController: require('./course-grading.controller'),
   StudentGradesController: require('./student-grades.controller'),
   RegisteredStudentController: require('./registered-student.controller'),
-  StudentTransferDataController: require('./student-transfer-data.controller'),
+  TransferDataController: require('./transfer-data.controller'),
+  StudentTransferController: require('./student-transfer.controller'),
 };

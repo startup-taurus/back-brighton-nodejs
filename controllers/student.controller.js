@@ -18,45 +18,6 @@ module.exports = class StudentController extends BaseController {
     return appResponse(res, result);
   });
 
-  getDistinctLevels = catchControllerAsync(async (req, res) => {
-    const result = await _studentService.getDistinctLevels({ ...req.query });
-    return appResponse(res, result);
-  });
-
-  // Endpoint para solicitar una transferencia (usado por recepcionistas)
-  requestTransferAndProgress = catchControllerAsync(async (req, res) => {
-    const { studentIds, courseId, levelId } = req.body;
-
-    if (!studentIds || !Array.isArray(studentIds)) {
-      throw new AppError('studentIds is required and should be an array.', 400);
-    }
-
-    const result = await _studentService.requestTransferAndProgress(
-      studentIds,
-      courseId,
-      levelId
-    );
-
-    return appResponse(res, result);
-  });
-
-  // Endpoint para aprobar y ejecutar una transferencia (usado por coordinadores)
-  transferAndProgressStudents = catchControllerAsync(async (req, res) => {
-    const { studentIds, courseId, levelId } = req.body;
-
-    if (!studentIds || !Array.isArray(studentIds)) {
-      throw new AppError('studentIds is required and should be an array.', 400);
-    }
-
-    const result = await _studentService.transferAndProgressStudents(
-      studentIds,
-      courseId,
-      levelId
-    );
-
-    return appResponse(res, result);
-  });
-
   createStudent = catchControllerAsync(async (req, res) => {
     const { body } = req;
     const result = await _studentService.createStudent(body);
