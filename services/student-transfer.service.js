@@ -1,21 +1,37 @@
-// services/studentTransfer.service.js
-
-const { Op } = require('sequelize');
 const BaseService = require('./base.service');
 const AppError = require('../utils/app-error');
 const { validateParameters } = require('../utils/utils');
 const catchServiceAsync = require('../utils/catch-service-async');
-const { ALLOWED_STATUS } = require('../utils/constants');
 
-let _studentTransfer, _student, _user, _transferData;
+let _studentTransfer,
+  _student,
+  _user,
+  _transferData,
+  _course,
+  _professor,
+  _courseStudent,
+  _level;
 
 module.exports = class StudentTransferService extends BaseService {
-  constructor({ StudentTransfer, Student, User, TransferData }) {
+  constructor({
+    StudentTransfer,
+    Student,
+    User,
+    TransferData,
+    Course,
+    Professor,
+    CourseStudent,
+    Level,
+  }) {
     super(StudentTransfer);
     _studentTransfer = StudentTransfer.StudentTransfer;
     _student = Student.Student;
     _user = User.User;
     _transferData = TransferData.TransferData;
+    _course = Course.Course;
+    _professor = Professor.Professor;
+    _courseStudent = CourseStudent.CourseStudent;
+    _level = Level.Level;
   }
 
   /**
@@ -83,7 +99,7 @@ module.exports = class StudentTransferService extends BaseService {
         {
           model: _student,
           as: 'student',
-          attributes: ['id', 'cedula', 'phone_number', 'status'],
+          attributes: ['id', 'cedula', 'phone_number', 'status', 'level_id'],
           include: [
             {
               model: _user,
@@ -111,9 +127,6 @@ module.exports = class StudentTransferService extends BaseService {
     return st;
   });
 
-  /**
-   * Obtener todas las asociaciones dentro de un mismo transfer_data_id
-   */
   getStudentTransfersByTransferDataId = catchServiceAsync(
     async (transfer_data_id) => {
       if (!transfer_data_id)
@@ -125,47 +138,133 @@ module.exports = class StudentTransferService extends BaseService {
           {
             model: _student,
             as: 'student',
-            attributes: ['id', 'cedula', 'phone_number', 'status'],
+            attributes: ['id', 'cedula', 'phone_number', 'status', 'level_id'],
             include: [
               {
                 model: _user,
                 as: 'user',
                 attributes: ['id', 'name', 'email'],
               },
+              {
+                model: _courseStudent,
+                as: 'coursesStudent',
+                required: false,
+                include: [
+                  {
+                    model: _course,
+                    as: 'course',
+                    required: false,
+                    include: [
+                      {
+                        model: _professor,
+                        as: 'professor',
+                        include: [
+                          {
+                            model: _user,
+                            as: 'user',
+                            attributes: ['id', 'name'],
+                          },
+                        ],
+                      },
+                    ],
+                  },
+                ],
+              },
+              {
+                model: _level,
+                as: 'level',
+                attributes: ['id', 'full_level'],
+              },
+            ],
+          },
+          {
+            model: _transferData,
+            as: 'transfer_data',
+            attributes: [
+              'id',
+              'selected_course_id',
+              'selected_level_id',
+              'status_level_change',
+              'description',
+              'is_group',
             ],
           },
         ],
       });
 
-      return sts;
+      const dataFormatted = sts.map((record) => {
+        const recordJson = record.toJSON();
+        const student = recordJson.student;
+        const transferData = recordJson.transfer_data;
+
+        const courses = (student.coursesStudent || [])
+          .map((cs) => ({
+            course_id: cs.course?.id,
+            course_number: cs.course?.course_number,
+            course_name: cs.course?.course_name,
+            schedule: cs.course?.schedule,
+            professor_name: cs.course?.professor?.user?.name,
+          }))
+          .filter((c) => !!c.course_id);
+
+        const selectedCourse = courses.find(
+          (c) => c.course_id === transferData?.selected_course_id
+        );
+
+        const levelLabel = student.level?.full_level || null;
+
+        return {
+          ...recordJson,
+          student: {
+            ...student,
+            course: courses,
+            level: student.level
+              ? { id: student.level.id, name: student.level.full_level }
+              : null,
+          },
+          transfer_data: {
+            ...transferData,
+            selected_course_id: transferData?.selected_course_id || null,
+            selected_level_id: transferData?.selected_level_id || null,
+            selected_course:
+              selectedCourse ||
+              (transferData.selected_course_id
+                ? {
+                    label: `ID ${transferData.selected_course_id}`,
+                    value: transferData.selected_course_id,
+                  }
+                : null),
+            selected_level:
+              levelLabel && transferData?.selected_level_id
+                ? {
+                    label: levelLabel,
+                    value: transferData.selected_level_id,
+                  }
+                : null,
+          },
+        };
+      });
+
+      return { data: dataFormatted };
     }
   );
 
-  /**
-   * Crear una nueva asociación StudentTransfer
-   * (cuerpo por defecto {} para evitar errores de destructuring)
-   */
   createStudentTransfer = catchServiceAsync(async (body = {}) => {
     const { student_id, transfer_data_id } = body;
 
-    // Validar parámetros requeridos
     validateParameters({ student_id, transfer_data_id });
 
-    // 1) Existe el estudiante?
     const student = await _student.findByPk(student_id);
     if (!student) throw new AppError('Student not found', 404);
 
-    // 2) Existe el TransferData?
     const td = await _transferData.findByPk(transfer_data_id);
     if (!td) throw new AppError('Transfer data not found', 404);
 
-    // 3) No esté ya asociado
     const exists = await _studentTransfer.findOne({
       where: { student_id, transfer_data_id },
     });
     if (exists) throw new AppError('Student is already in this transfer', 400);
 
-    // 4) Crear la asociación
     const newST = await _studentTransfer.create({
       student_id,
       transfer_data_id,
@@ -173,14 +272,10 @@ module.exports = class StudentTransferService extends BaseService {
       updated_at: new Date(),
     });
 
-    // Obtener detalle completo y devolver en { data: … }
     const result = await this.getStudentTransfer(newST.id);
     return { data: result };
   });
 
-  /**
-   * Eliminar una asociación por su ID
-   */
   deleteStudentTransfer = catchServiceAsync(async (id) => {
     if (!id) throw new AppError('Id must be sent', 400);
 
@@ -191,9 +286,6 @@ module.exports = class StudentTransferService extends BaseService {
     return { message: 'Student transfer deleted successfully' };
   });
 
-  /**
-   * Quitar un student de un transfer_data concreto
-   */
   deleteStudentFromTransfer = catchServiceAsync(
     async (student_id, transfer_data_id) => {
       if (!student_id || !transfer_data_id) {

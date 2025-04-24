@@ -32,6 +32,18 @@ module.exports = class TransferDataController extends BaseController {
     return appResponse(res, result);
   });
 
+  approveTransfer = catchControllerAsync(async (req, res) => {
+    const { transferDataId } = req.params; 
+    const result = await _transferDataService.approveTransfer(transferDataId);
+    return appResponse(res, result);
+  });
+
+  rejectTransfer = catchControllerAsync(async (req, res) => {
+    const { transferDataId } = req.params; 
+    const result = await _transferDataService.rejectTransfer(transferDataId);
+    return appResponse(res, result);
+  });
+
   updateTransferData = catchControllerAsync(async (req, res) => {
     const { body } = req;
     const { id } = req.params;
