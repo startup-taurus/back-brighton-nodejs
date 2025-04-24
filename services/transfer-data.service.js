@@ -53,8 +53,8 @@ module.exports = class TransferDataService extends BaseService {
       created_by_id: query.created_by_id,
       created_at_from: query.created_at_from,
       created_at_to: query.created_at_to,
-      course_name: query.course_name?.trim(),
-      level_name: query.level_name?.trim(),
+      selected_course_id: query.selected_course_id,
+      selected_level_id: query.selected_level_id,
       creator_name: query.creator_name?.trim(),
     };
 
@@ -87,6 +87,13 @@ module.exports = class TransferDataService extends BaseService {
       where.created_at[Op.lte] = new Date(trimmedQuery.created_at_to);
     }
 
+    if (filters.selected_course_id) {
+      where.selected_course_id = trimmedQuery.selected_course_id;
+    }
+    if (filters.selected_level_id) {
+      where.selected_level_id = trimmedQuery.selected_level_id;
+    }
+
     if (filters.student_id) {
       const studentTransfers = await _studentTransfer.findAll({
         where: { student_id: filters.student_id },
@@ -107,19 +114,11 @@ module.exports = class TransferDataService extends BaseService {
         model: _course,
         as: 'selected_course',
         attributes: ['id', 'course_name'],
-        ...(filters.course_name && {
-          where: {
-            course_name: { [Op.like]: `%${trimmedQuery.course_name}%` },
-          },
-        }),
       },
       {
         model: _level,
         as: 'selected_level',
         attributes: ['id', 'full_level'],
-        ...(filters.level_name && {
-          where: { full_level: { [Op.like]: `%${trimmedQuery.level_name}%` } },
-        }),
       },
       {
         model: _user,

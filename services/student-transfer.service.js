@@ -34,10 +34,6 @@ module.exports = class StudentTransferService extends BaseService {
     _level = Level.Level;
   }
 
-  /**
-   * Listar todas las asociaciones Student–TransferData
-   * con paginación y opcional filtro por transfer_data_id
-   */
   getAllStudentTransfers = catchServiceAsync(async (query) => {
     const { page = 1, limit = 10, transfer_data_id } = query;
     const limitNum = parseInt(limit, 10);
@@ -87,13 +83,10 @@ module.exports = class StudentTransferService extends BaseService {
     };
   });
 
-  /**
-   * Obtener una asociación por su ID
-   */
   getStudentTransfer = catchServiceAsync(async (id) => {
     if (!id) throw new AppError('Id must be sent', 400);
 
-    const st = await _studentTransfer.findOne({
+    const studentTransfer = await _studentTransfer.findOne({
       where: { id },
       include: [
         {
@@ -123,8 +116,8 @@ module.exports = class StudentTransferService extends BaseService {
       ],
     });
 
-    if (!st) throw new AppError('Student transfer not found', 404);
-    return st;
+    if (!studentTransfer) throw new AppError('Student transfer not found', 404);
+    return studentTransfer;
   });
 
   getStudentTransfersByTransferDataId = catchServiceAsync(
@@ -132,7 +125,7 @@ module.exports = class StudentTransferService extends BaseService {
       if (!transfer_data_id)
         throw new AppError('Transfer data id must be sent', 400);
 
-      const sts = await _studentTransfer.findAll({
+      const studentTransferRecords = await _studentTransfer.findAll({
         where: { transfer_data_id },
         include: [
           {
@@ -192,7 +185,7 @@ module.exports = class StudentTransferService extends BaseService {
         ],
       });
 
-      const dataFormatted = sts.map((record) => {
+      const dataFormatted = studentTransferRecords.map((record) => {
         const recordJson = record.toJSON();
         const student = recordJson.student;
         const transferData = recordJson.transfer_data;
@@ -279,8 +272,8 @@ module.exports = class StudentTransferService extends BaseService {
   deleteStudentTransfer = catchServiceAsync(async (id) => {
     if (!id) throw new AppError('Id must be sent', 400);
 
-    const st = await _studentTransfer.findByPk(id);
-    if (!st) throw new AppError('Student transfer not found', 404);
+    const studentTransfer = await _studentTransfer.findByPk(id);
+    if (!studentTransfer) throw new AppError('Student transfer not found', 404);
 
     await _studentTransfer.destroy({ where: { id } });
     return { message: 'Student transfer deleted successfully' };
@@ -292,10 +285,11 @@ module.exports = class StudentTransferService extends BaseService {
         throw new AppError('Student id and transfer data id must be sent', 400);
       }
 
-      const st = await _studentTransfer.findOne({
+      const studentTransfer = await _studentTransfer.findOne({
         where: { student_id, transfer_data_id },
       });
-      if (!st) throw new AppError('Student transfer not found', 404);
+      if (!studentTransfer)
+        throw new AppError('Student transfer not found', 404);
 
       await _studentTransfer.destroy({
         where: { student_id, transfer_data_id },
