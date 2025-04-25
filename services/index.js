@@ -4,6 +4,7 @@ module.exports = {
   ProfessorService: require('./professor.service'),
   PaymentService: require('./payment.service'),
   CourseService: require('./course.service'),
+  LevelService: require('./level.service'),
   AttendanceService: require('./attendance.service'),
   HolidaysService: require('./holidays.service'),
   SyllabusService: require('./syllabus.service'),
@@ -12,4 +13,6 @@ module.exports = {
   CourseGradingService: require('./course-grading.service'),
   StudentGradesService: require('./student-grades.service'),
   RegisteredStudentService: require('./registered-student.service'),
+  TransferDataService: require('./transfer-data.service'),
+  StudentTransferService: require('./student-transfer.service'),
 };

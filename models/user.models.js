@@ -33,7 +33,8 @@ module.exports = class UserModel {
             'student',
             'admin_staff',
             'financial',
-            'coordinator'
+            'coordinator',
+            'receptionist'
           ),
           allowNull: false,
         },

@@ -68,9 +68,13 @@ module.exports = class RegisteredStudent {
           type: DataTypes.TEXT,
           allowNull: true,
         },
-        level: {
-          type: DataTypes.TEXT,
-          allowNull: true,
+        level_id: {
+          type: DataTypes.INTEGER,
+          allowNull: false,
+          references: {
+            model: 'level',
+            key: 'id',
+          },
         },
         schedule: {
           type: DataTypes.TEXT,

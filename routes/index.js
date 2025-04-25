@@ -15,6 +15,7 @@ module.exports = function ({
   ProfessorRoutes,
   PaymentRoutes,
   CourseRoutes,
+  LevelRoutes,
   AttendanceRoutes,
   HolidaysRoutes,
   CancelledLessonRoutes,
@@ -22,6 +23,8 @@ module.exports = function ({
   CourseScheduleRoutes,
   StudentGradesRoutes,
   RegisteredStudentRoutes,
+  TransferDataRoutes,
+  StudentTransferRoutes,
 }) {
   const router = express.Router();
   const apiRouter = express.Router();
@@ -33,16 +36,19 @@ module.exports = function ({
     .use(express.urlencoded({ extended: true }));
 
   apiRouter.use('/user', UserRoutes);
-  apiRouter.use('/student', StudentRoutes);
-  apiRouter.use('/professor', ProfessorRoutes);
-  apiRouter.use('/payment', PaymentRoutes);
+  apiRouter.use('/level', LevelRoutes);
   apiRouter.use('/course', CourseRoutes);
-  apiRouter.use('/attendance', AttendanceRoutes);
+  apiRouter.use('/payment', PaymentRoutes);
+  apiRouter.use('/student', StudentRoutes);
   apiRouter.use('/holidays', HolidaysRoutes);
   apiRouter.use('/syllabus', SyllabusRoutes);
-  apiRouter.use('/cancelled-lesson', CancelledLessonRoutes);
-  apiRouter.use('/course-schedule', CourseScheduleRoutes);
+  apiRouter.use('/professor', ProfessorRoutes);
+  apiRouter.use('/attendance', AttendanceRoutes);
+  apiRouter.use('/transfer-data', TransferDataRoutes);
   apiRouter.use('/student-grades', StudentGradesRoutes);
+  apiRouter.use('/course-schedule', CourseScheduleRoutes);
+  apiRouter.use('/cancelled-lesson', CancelledLessonRoutes);
+  apiRouter.use('/student-transfer', StudentTransferRoutes);
   apiRouter.use('/registered-student', RegisteredStudentRoutes);
 
   apiRouter.use('/images', express.static(path.join(__dirname, '../uploads')));

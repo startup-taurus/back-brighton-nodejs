@@ -4,6 +4,7 @@ module.exports = {
   ProfessorRoutes: require('./v1.professor'),
   PaymentRoutes: require('./v1.payment'),
   CourseRoutes: require('./v1.course'),
+  LevelRoutes: require('./v1.level'),
   AttendanceRoutes: require('./v1.attendance'),
   HolidaysRoutes: require('./v1.holidays'),
   SyllabusRoutes: require('./v1.syllabus'),
@@ -11,4 +12,6 @@ module.exports = {
   CourseScheduleRoutes: require('./v1.course-schedule'),
   StudentGradesRoutes: require('./v1.student-grades'),
   RegisteredStudentRoutes: require('./v1.registered-student'),
+  TransferDataRoutes: require('./v1.transfer-data'),
+  StudentTransferRoutes: require('./v1.student-transfer'),
 };

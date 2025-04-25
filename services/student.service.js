@@ -3,7 +3,6 @@ const BaseService = require('./base.service');
 const AppError = require('../utils/app-error');
 const { validateParameters, generateCredentials } = require('../utils/utils');
 const { or, Op } = require('sequelize');
-const { filter } = require('lodash');
 let _user = null;
 let _student = null;
 let _course = null;
@@ -11,6 +10,7 @@ let _payment = null;
 let _courseStudent = null;
 let _userService = null;
 let _professor = null;
+let _level = null;
 
 module.exports = class StudentService extends BaseService {
   constructor({
@@ -21,6 +21,7 @@ module.exports = class StudentService extends BaseService {
     CourseStudent,
     UserService,
     Professor,
+    Level,
   }) {
     super(Student);
     _user = User.User;
@@ -30,6 +31,7 @@ module.exports = class StudentService extends BaseService {
     _courseStudent = CourseStudent.CourseStudent;
     _userService = UserService;
     _professor = Professor.Professor;
+    _level = Level.Level;
   }
 
   getAllStudents = async (query) => {
@@ -42,10 +44,9 @@ module.exports = class StudentService extends BaseService {
       ...query,
       status: query.status?.trim(),
       promotion: query.promotion?.trim(),
-      level: query.level?.trim(),
+      level_id: query.level_id,
       cedula: query.cedula?.trim(),
       name: query.name?.trim(),
-      status_level_change: query.status_level_change?.trim(),
     };
 
     let studentIds = [];
@@ -75,15 +76,13 @@ module.exports = class StudentService extends BaseService {
         ...(filters.promotion && {
           promotion: { [Op.like]: `%${trimmedQuery.promotion}%` },
         }),
-        ...(filters.level && {
-          level: { [Op.like]: `%${trimmedQuery.level}%` },
+        ...(filters.level_id && {
+          level_id: trimmedQuery.level_id,
         }),
         ...(filters.cedula && {
           cedula: { [Op.like]: `%${trimmedQuery.cedula}%` },
         }),
-        ...(filters.status_level_change && {
-          status_level_change: trimmedQuery.status_level_change,
-        }),
+
         ...(studentIds.length > 0 && { id: { [Op.in]: studentIds } }),
       },
       include: [
@@ -101,6 +100,11 @@ module.exports = class StudentService extends BaseService {
           model: _payment,
           as: 'payment',
           attributes: ['payment_date', 'total_payment', 'payment_method'],
+        },
+        {
+          model: _level,
+          as: 'level',
+          attributes: ['id', 'full_level'],
         },
       ],
       order: [['id', 'DESC']],
@@ -159,9 +163,14 @@ module.exports = class StudentService extends BaseService {
           id: student.id,
           cedula: student.cedula,
           phone_number: student.phone_number,
-          level: student.level,
+          level_id: student.level_id,
+          level: student.level
+            ? {
+                id: student.level.id,
+                name: student.level.full_level,
+              }
+            : null,
           status: student.status,
-          status_level_change: student.status_level_change,
           observations: student.observations,
           emergency_contact_name: student.emergency_contact_name,
           emergency_contact_phone: student.emergency_contact_phone,
@@ -200,7 +209,12 @@ module.exports = class StudentService extends BaseService {
         {
           model: _user,
           as: 'user',
-          attributes: ['id', 'name', 'email'],
+          attributes: ['id', 'name', 'email', 'status', 'username'],
+        },
+        {
+          model: _level,
+          as: 'level',
+          attributes: ['id', 'full_level'],
         },
       ],
     });
@@ -214,9 +228,14 @@ module.exports = class StudentService extends BaseService {
         id: student.id,
         cedula: student.cedula,
         phone_number: student.phone_number,
-        level: student.level,
+        level_id: student.level_id,
+        level: student.level
+          ? {
+              id: student.level.id,
+              name: student.level.full_level,
+            }
+          : null,
         status: student.status,
-        status_level_change: student.status_level_change,
         observations: student.observations,
         emergency_contact_name: student.emergency_contact_name,
         emergency_contact_phone: student.emergency_contact_phone,
@@ -232,47 +251,17 @@ module.exports = class StudentService extends BaseService {
     };
   });
 
-  getDistinctLevels = catchServiceAsync(async (query) => {
-    const { page = 1, limit = 10 } = query;
-
-    const limitNumber = parseInt(limit);
-    const pageNumber = parseInt(page);
-
-    const { count, rows } = await _student.findAndCountAll({
-      attributes: [
-        [
-          _student.sequelize.fn('DISTINCT', _student.sequelize.col('level')),
-          'level',
-        ],
-      ],
-      raw: true,
-      limit: limitNumber,
-      offset: limitNumber * (pageNumber - 1),
-      order: [['level', 'ASC']],
-    });
-
-    const distinctLevels = rows
-      .map((item) => item.level)
-      .filter((level) => level !== null);
-
-    return {
-      data: {
-        result: distinctLevels,
-        totalCount: count,
-      },
-    };
-  });
-
   createStudent = catchServiceAsync(async (body) => {
     body.role = 'student';
     const {
       name,
       cedula,
-      profession,
       courseId,
-      level,
-      status,
+      level_id,
+      profession,
       book_given,
+      observations,
+      status,
       pending_payments,
       emergency_contact_name,
       emergency_contact_phone,
@@ -301,7 +290,7 @@ module.exports = class StudentService extends BaseService {
       user_id: user.id,
       cedula,
       profession,
-      level,
+      level_id,
       status,
       book_given,
       age_category,
@@ -312,6 +301,7 @@ module.exports = class StudentService extends BaseService {
       emergency_contact_relationship,
       promotion,
       phone_number,
+      observations,
     });
 
     if (courseId) {
@@ -330,7 +320,7 @@ module.exports = class StudentService extends BaseService {
     const {
       cedula,
       phone_number,
-      level,
+      level_id,
       status,
       promotion,
       book_given,
@@ -361,7 +351,7 @@ module.exports = class StudentService extends BaseService {
       {
         cedula,
         phone_number,
-        level,
+        level_id,
         status,
         book_given,
         pending_payments,

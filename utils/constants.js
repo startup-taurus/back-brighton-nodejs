@@ -13,7 +13,15 @@ const AGE_CATEGORY = {
   ADULTS: 'adults',
 };
 
+const ALLOWED_STATUS = {
+  APPROVED: 'approved',
+  PENDING: 'pending',
+  REJECTED: 'rejected',
+  N_A: 'n/a',
+};
+
 module.exports = {
   DAYS_OF_WEEK,
   AGE_CATEGORY,
+  ALLOWED_STATUS,
 };
