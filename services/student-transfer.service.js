@@ -250,8 +250,8 @@ module.exports = class StudentTransferService extends BaseService {
     const student = await _student.findByPk(student_id);
     if (!student) throw new AppError('Student not found', 404);
 
-    const td = await _transferData.findByPk(transfer_data_id);
-    if (!td) throw new AppError('Transfer data not found', 404);
+    const transferData = await _transferData.findByPk(transfer_data_id);
+    if (!transferData) throw new AppError('Transfer data not found', 404);
 
     const exists = await _studentTransfer.findOne({
       where: { student_id, transfer_data_id },
