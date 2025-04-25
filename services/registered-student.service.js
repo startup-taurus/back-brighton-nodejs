@@ -13,7 +13,7 @@ module.exports = class RegisteredStudentService extends BaseService {
   constructor({ RegisteredStudent, Level }) {
     super(RegisteredStudent);
     _registeredStudent = RegisteredStudent.RegisteredStudent;
-    _level = Level.Level; // Para poder hacer join y traer el full_level
+    _level = Level.Level;
   }
 
   getAllRegisteredStudents = catchServiceAsync(async (query) => {
@@ -30,13 +30,11 @@ module.exports = class RegisteredStudentService extends BaseService {
 
     let where = {};
 
-    // Filtrado por level_id
     filters?.level_id && (where.level_id = trimmedQuery.level_id);
-    // Filtrado por id_number
+
     filters?.id_number &&
       (where.id_number = { [Op.like]: `%${trimmedQuery.id_number}%` });
 
-    // Hacemos include con la tabla Level, para traer full_level
     const data = await _registeredStudent.findAndCountAll({
       limit: limitNumber,
       offset: limitNumber * (pageNumber - 1),
@@ -45,13 +43,12 @@ module.exports = class RegisteredStudentService extends BaseService {
       include: [
         {
           model: _level,
-          as: 'level', // Debe coincidir con la asociación definida en el modelo
+          as: 'level',
           attributes: ['id', 'full_level'],
         },
       ],
     });
 
-    // Formateamos la respuesta para incluir el full_level
     const formattedRows = data.rows.map((row) => {
       const student = row.toJSON();
       return {
@@ -70,7 +67,7 @@ module.exports = class RegisteredStudentService extends BaseService {
         emergency_contact_relationship: student.emergency_contact_relationship,
         age_category: student.age_category,
         level_id: student.level_id,
-        // Si existe la relación level, retornamos su id y full_level
+
         level: student.level
           ? {
               id: student.level.id,
@@ -93,7 +90,6 @@ module.exports = class RegisteredStudentService extends BaseService {
   });
 
   getStudent = catchServiceAsync(async (id) => {
-    // Include con Level para poder traer el full_level de este estudiante
     const student = await _registeredStudent.findByPk(id, {
       include: [
         {
@@ -108,35 +104,35 @@ module.exports = class RegisteredStudentService extends BaseService {
       throw new AppError('Student not found', 404);
     }
 
-    const st = student.toJSON();
-    // Armamos la estructura de respuesta con el full_level
+    const studentTransfer = student.toJSON();
+
     return {
       data: {
-        id: st.id,
-        first_name: st.first_name,
-        middle_name: st.middle_name,
-        last_name: st.last_name,
-        second_last_name: st.second_last_name,
-        id_number: st.id_number,
-        birthday: st.birthday,
-        phone_number: st.phone_number,
-        email: st.email,
-        address: st.address,
-        emergency_contact_name: st.emergency_contact_name,
-        emergency_contact_phone: st.emergency_contact_phone,
-        emergency_contact_relationship: st.emergency_contact_relationship,
-        age_category: st.age_category,
-        level_id: st.level_id,
-        level: st.level
+        id: studentTransfer.id,
+        first_name: studentTransfer.first_name,
+        middle_name: studentTransfer.middle_name,
+        last_name: studentTransfer.last_name,
+        second_last_name: studentTransfer.second_last_name,
+        id_number: studentTransfer.id_number,
+        birthday: studentTransfer.birthday,
+        phone_number: studentTransfer.phone_number,
+        email: studentTransfer.email,
+        address: studentTransfer.address,
+        emergency_contact_name: studentTransfer.emergency_contact_name,
+        emergency_contact_phone: studentTransfer.emergency_contact_phone,
+        emergency_contact_relationship: studentTransfer.emergency_contact_relationship,
+        age_category: studentTransfer.age_category,
+        level_id: studentTransfer.level_id,
+        level: studentTransfer.level
           ? {
-              id: st.level.id,
-              name: st.level.full_level,
+              id: studentTransfer.level.id,
+              name: studentTransfer.level.full_level,
             }
           : null,
-        same_billing: st.same_billing,
-        billing_address: st.billing_address,
-        schedule: st.schedule,
-        where_hear_about_us: st.where_hear_about_us,
+        same_billing: studentTransfer.same_billing,
+        billing_address: studentTransfer.billing_address,
+        schedule: studentTransfer.schedule,
+        where_hear_about_us: studentTransfer.where_hear_about_us,
       },
     };
   });
@@ -225,9 +221,6 @@ module.exports = class RegisteredStudentService extends BaseService {
     return { data: student };
   });
 
-  // OJO: este método hace referencia a _student y _userService,
-  // que en el código original no están inyectados en este servicio.
-  // Se deja tal cual, para mantener la lógica original:
   updateStudent = catchServiceAsync(async (id, body) => {
     body.role = 'student';
     const {
@@ -242,9 +235,6 @@ module.exports = class RegisteredStudentService extends BaseService {
       emergency_contact_relationship,
     } = body;
 
-    // Nota: en el snippet original esto apunta a _student
-    // y también se usa _userService.
-    // Se conserva para no alterar la lógica pedida.
     const student = await _student.findByPk(id);
 
     if (!student) {
