@@ -1,3 +1,3 @@
 module.exports = {
-  ErrorMiddleware: require("./errorMiddleware"),
+  ErrorMiddleware: require('./errorMiddleware'),
 };
