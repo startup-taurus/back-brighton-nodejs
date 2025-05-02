@@ -463,15 +463,25 @@ module.exports = class TransferDataService extends BaseService {
         );
       }
 
+      // Actualizar el nivel del estudiante
       await _student.update(
         { level_id: transferData.selected_level_id },
         { where: { id: student.id } }
       );
 
+      // Marcar los registros actuales de course_student como retirados
       await _courseStudent.update(
-        { course_id: transferData.selected_course_id },
-        { where: { student_id: student.id } }
+        { is_retired: true },
+        { where: { student_id: student.id, is_retired: false } }
       );
+
+      // Crear un nuevo registro en course_student con el curso seleccionado
+      await _courseStudent.create({
+        student_id: student.id,
+        course_id: transferData.selected_course_id,
+        enrollment_date: new Date(),
+        is_retired: false,
+      });
     }
 
     const updatedStudents = await Promise.all(

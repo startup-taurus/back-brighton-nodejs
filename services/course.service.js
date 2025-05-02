@@ -19,6 +19,8 @@ let _courseGrading = null;
 let _courseSchedule = null;
 let _holidays = null;
 let _grades = null;
+let _syllabus = null;
+let _level = null;
 
 module.exports = class CourseService extends BaseService {
   constructor({
@@ -34,6 +36,8 @@ module.exports = class CourseService extends BaseService {
     GradingItem,
     Holidays,
     Grades,
+    Syllabus,
+    Level,
   }) {
     super(Course);
     _user = User.User;
@@ -48,6 +52,8 @@ module.exports = class CourseService extends BaseService {
     _holidays = Holidays.Holidays;
     _grades = Grades.Grades;
     _sequelize = Sequelize;
+    _syllabus = Syllabus.Syllabus;
+    _level = Level.Level;
   }
 
   getAllCoursesWithoutFilters = catchServiceAsync(async () => {
@@ -110,7 +116,9 @@ module.exports = class CourseService extends BaseService {
               attributes: ['id', 'name', 'status'],
             },
           ],
-          through: { attributes: [] },
+          through: {
+            attributes: ['enrollment_date', 'is_retired', 'observations'],
+          },
         },
       ],
     });
@@ -123,6 +131,9 @@ module.exports = class CourseService extends BaseService {
       id: student.id,
       name: student.user.name,
       status: student.status,
+      enrollment_date: student.courseStudent?.enrollment_date,
+      is_retired: student.courseStudent?.is_retired,
+      observations: student.courseStudent?.observations,
     }));
 
     return {
@@ -187,11 +198,24 @@ module.exports = class CourseService extends BaseService {
       countOptions.distinct = true;
     }
 
+    const syllabusInclude = {
+      model: _syllabus,
+      as: 'syllabus',
+      attributes: ['id', 'syllabus_name', 'level_id'],
+      include: [
+        {
+          model: _level,
+          as: 'level',
+          attributes: ['id', 'full_level'],
+        },
+      ],
+    };
+
     const totalCount = await _course.count(countOptions);
 
     const courses = await _course.findAll({
       where,
-      include: [professorInclude],
+      include: [professorInclude, syllabusInclude],
       limit: limitNumber,
       offset: limitNumber * (pageNumber - 1),
     });
@@ -237,6 +261,18 @@ module.exports = class CourseService extends BaseService {
                 model: _user,
                 as: 'user',
                 attributes: ['name'],
+              },
+            ],
+          },
+          {
+            model: _syllabus,
+            as: 'syllabus',
+            attributes: ['id', 'syllabus_name'],
+            include: [
+              {
+                model: _level,
+                as: 'level',
+                attributes: ['id', 'full_level'],
               },
             ],
           },

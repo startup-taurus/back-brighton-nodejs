@@ -1,4 +1,4 @@
-const { DataTypes } = require("sequelize");
+const { DataTypes } = require('sequelize');
 let _sequelize = null;
 
 module.exports = class SyllabusModel {
@@ -9,7 +9,7 @@ module.exports = class SyllabusModel {
 
   defineModel() {
     this.Syllabus = _sequelize.define(
-      "syllabus",
+      'syllabus',
       {
         id: {
           type: DataTypes.INTEGER,
@@ -20,9 +20,17 @@ module.exports = class SyllabusModel {
           type: DataTypes.STRING(100),
           allowNull: false,
         },
+        level_id: {
+          type: DataTypes.INTEGER,
+          allowNull: false,
+          references: {
+            model: 'level',
+            key: 'id',
+          },
+        },
       },
       {
-        tableName: "syllabus",
+        tableName: 'syllabus',
         timestamps: false,
       }
     );
