@@ -261,7 +261,15 @@ module.exports = class AuditModel {
       foreignKey: 'course_id',
       as: 'course',
     });
+    _syllabus.belongsTo(_level, {
+      foreignKey: 'level_id',
+      as: 'level',
+    });
 
+    _level.hasMany(_syllabus, {
+      foreignKey: 'level_id',
+      as: 'syllabus',
+    });
     _syllabus.hasMany(_syllabusItems, {
       foreignKey: 'syllabus_id',
       as: 'items',

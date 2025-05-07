@@ -469,9 +469,16 @@ module.exports = class TransferDataService extends BaseService {
       );
 
       await _courseStudent.update(
-        { course_id: transferData.selected_course_id },
-        { where: { student_id: student.id } }
+        { is_retired: true },
+        { where: { student_id: student.id, is_retired: false } }
       );
+
+      await _courseStudent.create({
+        student_id: student.id,
+        course_id: transferData.selected_course_id,
+        enrollment_date: new Date(),
+        is_retired: false,
+      });
     }
 
     const updatedStudents = await Promise.all(

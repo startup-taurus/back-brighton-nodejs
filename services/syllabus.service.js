@@ -10,6 +10,7 @@ let _gradePercentages = null;
 let _courseGrading = null;
 let _sequelize = null;
 let _percentages = null;
+let _level = null;
 
 module.exports = class SyllabusService extends BaseService {
   constructor({
@@ -21,6 +22,7 @@ module.exports = class SyllabusService extends BaseService {
     CourseGrading,
     Percentages,
     Sequelize,
+    Level,
   }) {
     super(Syllabus.Syllabus);
     _course = Syllabus.Course;
@@ -31,6 +33,7 @@ module.exports = class SyllabusService extends BaseService {
     _courseGrading = CourseGrading.CourseGrading;
     _percentages = Percentages.Percentages;
     _sequelize = Sequelize;
+    _level = Level.Level;
   }
 
   getAllSyllabus = catchServiceAsync(async (page = 1, limit = 10) => {
@@ -67,8 +70,14 @@ module.exports = class SyllabusService extends BaseService {
           as: 'percentages_syllabus',
           attributes: ['name', 'min', 'max'],
         },
+        {
+          model: _level,
+          as: 'level',
+          attributes: ['id', 'full_level'],
+        },
       ],
       attributes: ['id', 'syllabus_name'],
+      order: [['id', 'DESC']],
     });
 
     if (!syllabus || syllabus.rows.length === 0) {
@@ -90,6 +99,7 @@ module.exports = class SyllabusService extends BaseService {
       return {
         id: syllabus.id,
         syllabus_name: syllabus.syllabus_name,
+        level: syllabus.level,
         items: syllabus.items,
         percentages: syllabus.percentages,
         assignments,
@@ -141,6 +151,7 @@ module.exports = class SyllabusService extends BaseService {
       progress_tests,
       movers_exam,
       percentages,
+      level_id,
     } = body;
 
     validateParameters({
@@ -149,9 +160,10 @@ module.exports = class SyllabusService extends BaseService {
       test_percentage,
       exam_percentage,
       percentages,
+      level_id,
     });
 
-    const syllabus = await _syllabus.create({ syllabus_name });
+    const syllabus = await _syllabus.create({ syllabus_name, level_id });
 
     if (items && items.length > 0) {
       await Promise.all(
@@ -211,6 +223,7 @@ module.exports = class SyllabusService extends BaseService {
         assignments,
         progress_tests,
         movers_exam,
+        level_id,
         percentages: bodyPercentages,
       } = body;
 
@@ -226,7 +239,7 @@ module.exports = class SyllabusService extends BaseService {
         throw new AppError('Syllabus not found', 404);
       }
 
-      await syllabus.update({ syllabus_name }, { transaction });
+      await syllabus.update({ syllabus_name, level_id }, { transaction });
 
       if (items && Array.isArray(items)) {
         const currentItems = await _syllabusItems.findAll({
