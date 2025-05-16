@@ -1,6 +1,7 @@
 const { Op } = require('sequelize');
 const BaseService = require('./base.service');
 const AppError = require('../utils/app-error');
+const { deleteFile } = require('../utils/upload');
 const { validateParameters } = require('../utils/utils');
 const catchServiceAsync = require('../utils/catch-service-async');
 let _user = null;
@@ -21,7 +22,9 @@ module.exports = class UserService extends BaseService {
     validateParameters({ username, password });
 
     let user = await _user.findOne({
-      where: { username: username },
+      where: {
+        [Op.or]: [{ username: username }, { email: username }],
+      },
       raw: true,
     });
     if (!user) {
@@ -116,21 +119,35 @@ module.exports = class UserService extends BaseService {
   });
 
   createUser = catchServiceAsync(async (body) => {
-    const { name, username, email, password, role, status } = body;
+    const { name, username, email, password, role, status, image } = body;
     validateParameters({ name, role, status });
 
     const hashedPassword = await _authUtils.hashPassword(body.password);
     body.password = hashedPassword;
 
-    const user = await _user.create(body);
+    const userData = { ...body };
+
+    const user = await _user.create(userData);
     return { data: user };
   });
 
   updateUser = catchServiceAsync(async (id, body) => {
-    const { name, username, email, password, role, status } = body;
+    const { name, username, email, password, role, status, image } = body;
     validateParameters({ name, username, email, role, status });
 
+    const currentUser = await _user.findByPk(id);
+    if (!currentUser) {
+      throw new AppError('Usuario no encontrado', 404);
+    }
+
     const updateData = { name, username, email, role, status };
+
+    if (image) {
+      if (currentUser.image && image !== currentUser.image) {
+        deleteFile(currentUser.image);
+      }
+      updateData.image = image;
+    }
 
     if (password) {
       const hashedPassword = await _authUtils.hashPassword(password);
