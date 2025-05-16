@@ -1,5 +1,5 @@
 const { Router } = require('express');
-const upload = require('../../utils/upload');
+const { upload } = require('../../utils/upload');
 module.exports = function ({ ProfessorController }) {
   const router = Router();
   router.get('/get-all', ProfessorController.getAllProfessors);

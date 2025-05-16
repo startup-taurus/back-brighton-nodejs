@@ -8,6 +8,7 @@ const {
 } = require('../utils/utils');
 const { Op, col, fn } = require('sequelize');
 const { DAYS_OF_WEEK } = require('../utils/constants');
+const { orderBy } = require('lodash');
 
 let _user = null;
 let _course = null;
@@ -76,6 +77,7 @@ module.exports = class ProfessorService extends BaseService {
           ],
         },
       ],
+      order: [['id', 'DESC']],
     });
 
     return {
@@ -358,9 +360,27 @@ module.exports = class ProfessorService extends BaseService {
 
   updateProfessor = catchServiceAsync(async (id, body) => {
     const { email, cedula, status, hourly_rate, phone } = body;
-    const professor = await _professor.findByPk(id);
+    const professor = await _professor.findByPk(id, {
+      include: [
+        {
+          model: _user,
+          as: 'user',
+          attributes: ['id', 'name', 'username', 'email', 'status', 'image'],
+        },
+      ],
+    });
+
     if (!professor) {
       throw new AppError('Professor not found', 404);
+    }
+
+    const { deleteFile } = require('../utils/upload');
+    if (
+      body.image &&
+      professor.user.image &&
+      body.image !== professor.user.image
+    ) {
+      deleteFile(professor.user.image);
     }
 
     await _userService.updateUser(professor.user_id, body);
@@ -374,12 +394,13 @@ module.exports = class ProfessorService extends BaseService {
       },
       { where: { id } }
     );
+
     const updatedProfessor = await _professor.findByPk(id, {
       include: [
         {
           model: _user,
           as: 'user',
-          attributes: ['name', 'username', 'email', 'status'],
+          attributes: ['name', 'username', 'email', 'status', 'image'],
         },
       ],
     });

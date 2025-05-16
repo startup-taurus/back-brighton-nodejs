@@ -134,9 +134,19 @@ module.exports = class UserService extends BaseService {
     const { name, username, email, password, role, status, image } = body;
     validateParameters({ name, username, email, role, status });
 
+    const currentUser = await _user.findByPk(id);
+    if (!currentUser) {
+      throw new AppError('Usuario no encontrado', 404);
+    }
+
     const updateData = { name, username, email, role, status };
 
     if (image) {
+      if (currentUser.image && image !== currentUser.image) {
+        const { deleteFile } = require('../utils/upload');
+
+        deleteFile(currentUser.image);
+      }
       updateData.image = image;
     }
 
