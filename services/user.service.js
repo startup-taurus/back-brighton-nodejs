@@ -1,6 +1,7 @@
 const { Op } = require('sequelize');
 const BaseService = require('./base.service');
 const AppError = require('../utils/app-error');
+const { deleteFile } = require('../utils/upload');
 const { validateParameters } = require('../utils/utils');
 const catchServiceAsync = require('../utils/catch-service-async');
 let _user = null;
@@ -143,8 +144,6 @@ module.exports = class UserService extends BaseService {
 
     if (image) {
       if (currentUser.image && image !== currentUser.image) {
-        const { deleteFile } = require('../utils/upload');
-
         deleteFile(currentUser.image);
       }
       updateData.image = image;
