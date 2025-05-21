@@ -11,9 +11,13 @@ let _courseStudent = null;
 let _userService = null;
 let _professor = null;
 let _level = null;
-
+let _studentGrades = null;
+let _sequelize = null;
+let _syllabus = null;
+let _gradePercentages = null;
 module.exports = class StudentService extends BaseService {
   constructor({
+    Sequelize,
     User,
     Student,
     Course,
@@ -22,8 +26,12 @@ module.exports = class StudentService extends BaseService {
     UserService,
     Professor,
     Level,
+    StudentGrades,
+    Syllabus,
+    GradePercentages,
   }) {
     super(Student);
+    _sequelize = Sequelize;
     _user = User.User;
     _student = Student.Student;
     _course = Course.Course;
@@ -32,6 +40,9 @@ module.exports = class StudentService extends BaseService {
     _userService = UserService;
     _professor = Professor.Professor;
     _level = Level.Level;
+    _studentGrades = StudentGrades.StudentGrades;
+    _syllabus = Syllabus.Syllabus;
+    _gradePercentages = GradePercentages.GradePercentages;
   }
 
   getAllStudents = async (query) => {
@@ -396,5 +407,201 @@ module.exports = class StudentService extends BaseService {
     await _user.destroy({ where: { id: student.user_id } });
 
     return { message: 'Student and associated user deleted successfully' };
+  });
+
+  getBestStudents = catchServiceAsync(async (query) => {
+    const { course_id, level_id, limit = 10 } = query;
+
+    let studentWhereConditions = { status: 'active' };
+    if (level_id) {
+      studentWhereConditions.level_id = level_id;
+    }
+
+    let courseStudentWhereConditions = { is_retired: false };
+    if (course_id) {
+      courseStudentWhereConditions.course_id = course_id;
+    }
+
+    let totalAssignmentsCount = 0;
+    let totalTestItemsCount = 0;
+    let totalExamItemsCount = 0;
+
+    if (course_id) {
+      try {
+        const courseData = await _course.findByPk(course_id, {
+          include: [{ model: _syllabus, as: 'syllabus', attributes: ['id'] }],
+        });
+
+        if (courseData?.syllabus) {
+          const syllabus_id = courseData.syllabus.id;
+
+          const gradingItems = await _sequelize.models.grading_item.findAll({
+            where: {
+              category_id: 1,
+              syllabus_id,
+              name: { [Op.notLike]: '%(eliminado)%' },
+            },
+          });
+
+          const testItems = await _sequelize.models.grading_item.findAll({
+            where: {
+              category_id: 2,
+              syllabus_id,
+              name: { [Op.notLike]: '%(eliminado)%' },
+            },
+          });
+
+          const examItems = await _sequelize.models.grading_item.findAll({
+            where: {
+              category_id: 3,
+              syllabus_id,
+              name: { [Op.notLike]: '%(eliminado)%' },
+            },
+          });
+
+          totalAssignmentsCount = gradingItems.length;
+          totalTestItemsCount = testItems.length;
+          totalExamItemsCount = examItems.length;
+        }
+      } catch (error) {}
+    }
+
+    const students = await _student.findAll({
+      where: studentWhereConditions,
+      include: [
+        { model: _user, as: 'user', attributes: ['id', 'name', 'email'] },
+        { model: _level, as: 'level', attributes: ['id', 'full_level'] },
+        {
+          model: _courseStudent,
+          as: 'coursesStudent',
+          where: courseStudentWhereConditions,
+          include: [
+            {
+              model: _course,
+              as: 'course',
+              include: [
+                {
+                  model: _professor,
+                  as: 'professor',
+                  include: [
+                    { model: _user, as: 'user', attributes: ['id', 'name'] },
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+        {
+          model: _studentGrades,
+          as: 'student_grades_overall',
+          attributes: ['id', 'grade', 'grading_item_id', 'course_id'],
+          include: [
+            {
+              model: _sequelize.models.grading_item,
+              as: 'grading_item',
+              attributes: ['id', 'name', 'category_id'],
+              include: [
+                {
+                  model: _sequelize.models.grading_category,
+                  as: 'category',
+                  attributes: ['id', 'name'],
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    });
+
+    const maxAssign = totalAssignmentsCount * 10;
+    const maxTest = totalTestItemsCount * 10;
+    const maxExam = totalExamItemsCount * 10;
+
+    const studentsWithAverage = students.map((student) => {
+      const dataStudent = student.toJSON();
+      const grades = dataStudent.student_grades_overall || [];
+
+      const assignmentGrades = grades.filter(
+        (grade) => grade.grading_item?.category_id === 1
+      );
+      const testGrades = grades.filter(
+        (grade) => grade.grading_item?.category_id === 2
+      );
+      const examGrades = grades.filter(
+        (grade) => grade.grading_item?.category_id === 3
+      );
+
+      const sumGrades = (list) =>
+        list.reduce((student, grade) => student + parseFloat(grade.grade || 0), 0);
+
+      const assignmentSum = sumGrades(assignmentGrades);
+      const testSum = sumGrades(testGrades);
+      const examSum = sumGrades(examGrades);
+
+      const assignmentPct = maxAssign ? (assignmentSum / maxAssign) * 100 : 0;
+      const testPct = maxTest ? (testSum / maxTest) * 100 : 0;
+      const examPct = maxExam ? (examSum / maxExam) * 100 : 0;
+
+      const assignment_percent = assignmentPct.toFixed(2) + '%';
+      const test_percent = testPct.toFixed(2) + '%';
+      const exam_percent = examPct.toFixed(2) + '%';
+
+      const totalPctNumeric =
+        assignmentPct * 0.1 + testPct * 0.2 + examPct * 0.7;
+      const total_percent = totalPctNumeric.toFixed(2) + '%';
+
+      const avg = (list) => (list.length ? sumGrades(list) / list.length : 0);
+      const assignmentAvg = avg(assignmentGrades);
+      const testAvg = avg(testGrades);
+      const examAvg = avg(examGrades);
+
+      const average_grade = assignmentAvg * 0.1 + testAvg * 0.2 + examAvg * 0.7;
+
+      let status = 'NOT REPORTED';
+      if (grades.length) {
+        status =
+          average_grade >= 7.0
+            ? 'PASS (A2)'
+            : average_grade >= 5.0
+            ? 'PASS'
+            : 'FAIL';
+      }
+
+      const courseInfo = dataStudent.coursesStudent?.[0]?.course || null;
+
+      return {
+        id: dataStudent.id,
+        name: dataStudent.user.name,
+        email: dataStudent.user.email,
+        cedula: dataStudent.cedula,
+        level: dataStudent.level?.full_level || null,
+        level_id: dataStudent.level_id,
+        course_id: courseInfo?.id || null,
+        course_name: courseInfo?.course_name || null,
+        course_number: courseInfo?.course_number || null,
+        professor: courseInfo?.professor?.user.name || 'Sin profesor',
+        assignment_percent,
+        test_percent,
+        exam_percent,
+        total_percent,
+        average_grade: average_grade.toFixed(2),
+        status,
+        assignment_count: totalAssignmentsCount,
+        test_count: totalTestItemsCount,
+        exam_count: totalExamItemsCount,
+        grades_count: grades.length,
+      };
+    });
+
+    const sortedStudents = studentsWithAverage
+      .sort((a, b) => parseFloat(b.average_grade) - parseFloat(a.average_grade))
+      .slice(0, parseInt(limit, 10));
+
+    return {
+      data: {
+        result: sortedStudents,
+        totalCount: sortedStudents.length,
+      },
+    };
   });
 };

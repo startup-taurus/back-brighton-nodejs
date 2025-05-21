@@ -33,13 +33,13 @@ module.exports = class TransferDataController extends BaseController {
   });
 
   approveTransfer = catchControllerAsync(async (req, res) => {
-    const { transferDataId } = req.params; 
+    const { transferDataId } = req.params;
     const result = await _transferDataService.approveTransfer(transferDataId);
     return appResponse(res, result);
   });
 
   rejectTransfer = catchControllerAsync(async (req, res) => {
-    const { transferDataId } = req.params; 
+    const { transferDataId } = req.params;
     const result = await _transferDataService.rejectTransfer(transferDataId);
     return appResponse(res, result);
   });
@@ -59,6 +59,11 @@ module.exports = class TransferDataController extends BaseController {
   deleteTransferData = catchControllerAsync(async (req, res) => {
     const { id } = req.params;
     const result = await _transferDataService.deleteTransferData(id);
+    return appResponse(res, result);
+  });
+
+  getApprovedTransfers = catchControllerAsync(async (req, res) => {
+    const result = await _transferDataService.getApprovedTransfers(req.query);
     return appResponse(res, result);
   });
 };

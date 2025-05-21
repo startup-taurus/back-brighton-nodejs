@@ -277,7 +277,16 @@ module.exports = class ProfessorService extends BaseService {
     }
   );
 
-  getProfessorsCourseAndStudentCount = catchServiceAsync(async () => {
+  getProfessorsCourseAndStudentCount = catchServiceAsync(async (query) => {
+    const { page = 1, limit = 10 } = query;
+    const limitNumber = parseInt(limit, 10);
+    const pageNumber = parseInt(page, 10);
+    const offset = limitNumber * (pageNumber - 1);
+
+    const totalCount = await _professor.count({
+      where: { status: 'active' },
+    });
+
     const professors = await _professor.findAll({
       where: { status: 'active' },
       include: [
@@ -310,10 +319,21 @@ module.exports = class ProfessorService extends BaseService {
           'totalStudents',
         ],
       ],
+      order: [['id', 'DESC']],
+      limit: limitNumber,
+      offset: offset,
+      subQuery: false,
     });
 
+    const result = professors.map((professor) => professor.get({ plain: true }));
+
     return {
-      data: professors,
+      data: {
+        result,
+        totalCount,
+        page: pageNumber,
+        limit: limitNumber,
+      },
     };
   });
 
@@ -428,6 +448,147 @@ module.exports = class ProfessorService extends BaseService {
     return {
       message: 'Professor and associated user deleted successfully',
       data: {},
+    };
+  });
+
+  getAllProfessorsCourses = catchServiceAsync(async () => {
+    const today = new Date().toISOString().split('T')[0];
+    const now = new Date();
+    const twoWeeksFromNow = new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000);
+
+    const professors = await _professor.findAll({
+      where: { status: 'active' },
+      include: [
+        {
+          model: _user,
+          as: 'user',
+          attributes: ['id', 'name', 'email'],
+        },
+        {
+          model: _course,
+          as: 'courses',
+          where: { status: 'active' },
+          include: [
+            {
+              model: _student,
+              as: 'students',
+              through: { attributes: [] },
+            },
+            {
+              model: _courseSchedule,
+              as: 'course_schedules',
+              include: [{ model: _attendance }],
+            },
+          ],
+        },
+      ],
+    });
+
+    if (!professors || professors.length === 0) {
+      return { data: { professors: [] } };
+    }
+
+    const professorsWithCourseDetails = professors.map((prof) => {
+      const currentProfessor = prof.toJSON();
+      const coursesWithDetails = currentProfessor.courses.map((course) => {
+        const schedule = course.schedule
+          ? scheduleStringToDates(course.schedule)
+          : null;
+
+        const hasClassToday = course.course_schedules.some(
+          (schedule) => schedule.scheduled_date === today
+        );
+
+        const hasBeenTakenAttendance = course.course_schedules.some(
+          (schedule) => schedule.scheduled_date === today && schedule.attendances.length > 0
+        );
+
+        const courseDates = course.course_schedules.map(
+          (schedule) => new Date(schedule.scheduled_date)
+        );
+
+        const lastCourseDate = courseDates.length
+          ? new Date(Math.max(...courseDates.map((date) => date.getTime())))
+          : null;
+
+        let endThisMonth = false;
+        if (lastCourseDate) {
+          const lastMonthClass = lastCourseDate.getMonth() + 1;
+          const yearLastClass = lastCourseDate.getFullYear();
+          endThisMonth =
+            lastMonthClass === now.getMonth() + 1 &&
+            yearLastClass === now.getFullYear();
+        }
+
+        let endsInTwoWeeks = false;
+        if (lastCourseDate) {
+          const lastCourseDateTime = lastCourseDate.getTime();
+          endsInTwoWeeks =
+            lastCourseDateTime <= twoWeeksFromNow.getTime() &&
+            lastCourseDateTime >= now.getTime();
+        }
+
+        return {
+          course_id: course.id,
+          course_name: course.course_name,
+          course_number: course.course_number,
+          student_count: course.students.length,
+          classSchedule: course.schedule,
+          schedule,
+          options: {
+            hasClassToday,
+            hasBeenTakenAttendance: hasClassToday
+              ? (() => {
+                  if (hasBeenTakenAttendance) {
+                    return true;
+                  }
+                  const currentHour = now.getHours();
+                  const currentMinutes = now.getMinutes();
+                  const todaySchedule = schedule
+                    ? schedule.find((s) => {
+                        const dayOfWeek = now.getDay();
+                        return DAYS_OF_WEEK[s.day.toUpperCase()] === dayOfWeek;
+                      })
+                    : null;
+                  if (!todaySchedule) {
+                    return true;
+                  }
+                  const [startHour, startMinutes] = todaySchedule.startTime
+                    .split(':')
+                    .map(Number);
+                  const isPastStartTime =
+                    currentHour > startHour ||
+                    (currentHour === startHour &&
+                      currentMinutes >= startMinutes);
+                  return !isPastStartTime;
+                })()
+              : false,
+            endThisMonth,
+            endsInTwoWeeks,
+            isAlreadyEnd: lastCourseDate && lastCourseDate < now,
+          },
+        };
+      });
+
+      const totalCourses = currentProfessor.courses.length;
+      const totalStudents = currentProfessor.courses.reduce(
+        (acc, course) => acc + course.students.length,
+        0
+      );
+
+      return {
+        professor_id: currentProfessor.id,
+        professor_name: currentProfessor.user.name,
+        total_courses: totalCourses,
+        total_students: totalStudents,
+        courses: coursesWithDetails,
+      };
+    });
+
+    return {
+      data: {
+        professors: professorsWithCourseDetails,
+      },
     };
   });
 };

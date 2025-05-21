@@ -5,6 +5,7 @@ module.exports = function ({ TransferDataController }) {
   router.get('/get-all', TransferDataController.getAllTransferData);
   router.get('/get-one/:id', TransferDataController.getTransferData);
   router.get('/get-pending', TransferDataController.getPendingTransferData);
+  router.get('/get-approved', TransferDataController.getApprovedTransfers);
   router.post('/create', TransferDataController.createTransferData);
   router.put(
     '/approve/:transferDataId',

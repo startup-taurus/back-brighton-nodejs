@@ -43,4 +43,14 @@ module.exports = class StudentController extends BaseController {
     const result = await _studentService.deleteStudent(id);
     return appResponse(res, result);
   });
+
+  getBestStudents = catchControllerAsync(async (req, res) => {
+    const { course_id, level_id, limit = 10 } = req.query;
+    const result = await _studentService.getBestStudents({
+      course_id,
+      level_id,
+      limit: parseInt(limit),
+    });
+    return appResponse(res, result);
+  });
 };
