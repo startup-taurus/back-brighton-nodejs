@@ -518,21 +518,21 @@ module.exports = class StudentService extends BaseService {
     const maxExam = totalExamItemsCount * 10;
 
     const studentsWithAverage = students.map((student) => {
-      const sd = student.toJSON();
-      const grades = sd.student_grades_overall || [];
+      const dataStudent = student.toJSON();
+      const grades = dataStudent.student_grades_overall || [];
 
       const assignmentGrades = grades.filter(
-        (g) => g.grading_item?.category_id === 1
+        (grade) => grade.grading_item?.category_id === 1
       );
       const testGrades = grades.filter(
-        (g) => g.grading_item?.category_id === 2
+        (grade) => grade.grading_item?.category_id === 2
       );
       const examGrades = grades.filter(
-        (g) => g.grading_item?.category_id === 3
+        (grade) => grade.grading_item?.category_id === 3
       );
 
       const sumGrades = (list) =>
-        list.reduce((s, g) => s + parseFloat(g.grade || 0), 0);
+        list.reduce((student, grade) => student + parseFloat(grade.grade || 0), 0);
 
       const assignmentSum = sumGrades(assignmentGrades);
       const testSum = sumGrades(testGrades);
@@ -567,15 +567,15 @@ module.exports = class StudentService extends BaseService {
             : 'FAIL';
       }
 
-      const courseInfo = sd.coursesStudent?.[0]?.course || null;
+      const courseInfo = dataStudent.coursesStudent?.[0]?.course || null;
 
       return {
-        id: sd.id,
-        name: sd.user.name,
-        email: sd.user.email,
-        cedula: sd.cedula,
-        level: sd.level?.full_level || null,
-        level_id: sd.level_id,
+        id: dataStudent.id,
+        name: dataStudent.user.name,
+        email: dataStudent.user.email,
+        cedula: dataStudent.cedula,
+        level: dataStudent.level?.full_level || null,
+        level_id: dataStudent.level_id,
         course_id: courseInfo?.id || null,
         course_name: courseInfo?.course_name || null,
         course_number: courseInfo?.course_number || null,
