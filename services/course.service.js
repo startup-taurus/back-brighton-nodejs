@@ -229,7 +229,7 @@ module.exports = class CourseService extends BaseService {
   });
 
   getActiveCourses = catchServiceAsync(
-    async (page = 1, limit = 10, search = '') => {
+    async (page = 1, limit = 100, search = '') => {
       let limitNumber = parseInt(limit);
       let pageNumber = parseInt(page);
       const offset = (pageNumber - 1) * limitNumber;

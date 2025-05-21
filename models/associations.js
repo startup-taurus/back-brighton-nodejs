@@ -160,6 +160,12 @@ module.exports = class AuditModel {
       as: 'created_by',
     });
 
+    // Relación de TransferData con StudentTransfer
+    _transferData.hasMany(_studentTransfer, {
+      foreignKey: 'transfer_data_id',
+      as: 'student_transfers',
+    });
+
     _registeredStudent.belongsTo(_level, {
       foreignKey: 'level_id',
       as: 'level',
@@ -345,14 +351,16 @@ module.exports = class AuditModel {
       as: 'course',
     });
 
-    // CourseGrading -> StudentGrades
-    _courseGrading.hasMany(_studentGrades, {
+    // StudentGrades -> GradingItem
+    _studentGrades.belongsTo(_gradingItem, {
       foreignKey: 'grading_item_id',
-      as: 'student_grades',
+      as: 'grading_item', // This alias matches the service query
     });
-    _studentGrades.belongsTo(_courseGrading, {
+
+    // GradingItem -> StudentGrades
+    _gradingItem.hasMany(_studentGrades, {
       foreignKey: 'grading_item_id',
-      as: 'grading_item',
+      as: 'studentGradeEntries', // Using a distinct alias for clarity
     });
 
     // Student -> StudentGrades

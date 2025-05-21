@@ -22,5 +22,6 @@ module.exports = function ({ ProfessorController }) {
   );
   router.put('/update-status/:id', ProfessorController.updateProfessorStatus);
   router.delete('/delete/:id', ProfessorController.deleteProfessor);
+  router.get('/get-all-courses', ProfessorController.getAllProfessorsCourses);
   return router;
 };

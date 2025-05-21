@@ -585,4 +585,61 @@ module.exports = class TransferDataService extends BaseService {
     await _transferData.destroy({ where: { id } });
     return { message: 'Transfer data deleted successfully' };
   });
+
+  getApprovedTransfers = catchServiceAsync(async (query) => {
+    const { page = 1, limit = 10 } = query;
+    const limitNumber = parseInt(limit, 10);
+    const pageNumber = parseInt(page, 10);
+
+    const where = { status_level_change: 'approved' };
+
+    const includes = [
+      {
+        model: _course,
+        as: 'selected_course',
+        attributes: ['id', 'course_name'],
+      },
+      {
+        model: _level,
+        as: 'selected_level',
+        attributes: ['id', 'full_level'],
+      },
+      {
+        model: _user,
+        as: 'created_by',
+        attributes: ['id', 'name', 'email'],
+      },
+      {
+        model: _studentTransfer,
+        as: 'student_transfers',
+        include: [
+          {
+            model: _student,
+            as: 'student',
+            attributes: ['id', 'cedula', 'status', 'level_id'],
+            include: [
+              { model: _user, as: 'user', attributes: ['id', 'name', 'email'] },
+              { model: _level, as: 'level', attributes: ['id', 'full_level'] },
+            ],
+          },
+        ],
+      },
+    ];
+
+    const { count, rows } = await _transferData.findAndCountAll({
+      where,
+      include: includes,
+      limit: limitNumber,
+      offset: limitNumber * (pageNumber - 1),
+      order: [['updated_at', 'DESC']],
+      distinct: true,
+    });
+
+    return {
+      data: {
+        result: rows,
+        totalCount: count,
+      },
+    };
+  });
 };

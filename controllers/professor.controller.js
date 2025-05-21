@@ -37,8 +37,9 @@ module.exports = class ProfessorController extends BaseController {
 
   getProfessorsCourseAndStudentCount = catchControllerAsync(
     async (req, res) => {
-      const result =
-        await _professorService.getProfessorsCourseAndStudentCount();
+      const result = await _professorService.getProfessorsCourseAndStudentCount(
+        { ...req.query }
+      );
       return appResponse(res, result);
     }
   );
@@ -72,6 +73,11 @@ module.exports = class ProfessorController extends BaseController {
   deleteProfessor = catchControllerAsync(async (req, res) => {
     const { id } = req.params;
     const result = await _professorService.deleteProfessor(id);
+    return appResponse(res, result);
+  });
+
+  getAllProfessorsCourses = catchControllerAsync(async (req, res) => {
+    const result = await _professorService.getAllProfessorsCourses();
     return appResponse(res, result);
   });
 };
