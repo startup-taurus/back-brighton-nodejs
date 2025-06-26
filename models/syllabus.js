@@ -28,6 +28,11 @@ module.exports = class SyllabusModel {
             key: 'id',
           },
         },
+        exam_type: {
+          type: DataTypes.ENUM('STARTERS', 'MOVERS', 'FLYERS', 'KEY', 'PRELIM', 'FIRST'),
+          allowNull: true,
+          defaultValue: 'PRELIM.',
+        },
       },
       {
         tableName: 'syllabus',
