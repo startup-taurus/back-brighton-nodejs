@@ -26,7 +26,7 @@ module.exports = class SyllabusService extends BaseService {
     Level,
   }) {
     super(Syllabus.Syllabus);
-    _course = Syllabus.Course;
+    _course = Course.Course;
     _syllabus = Syllabus.Syllabus;
     _gradingItem = GradingItem.GradingItem;
     _syllabusItems = SyllabusItems.SyllabusItems;
@@ -369,7 +369,7 @@ module.exports = class SyllabusService extends BaseService {
                 { transaction }
               );
             } else {
-              await _gradingItem.create(
+              const newGradingItem = await _gradingItem.create(
                 {
                   syllabus_id: id,
                   category_id: categoryId,
@@ -377,12 +377,33 @@ module.exports = class SyllabusService extends BaseService {
                 },
                 { transaction }
               );
+              
+              const coursesWithSyllabus = await _course.findAll({
+                where: { syllabus_id: id },
+                attributes: ['id'],
+                transaction
+              });
+              
+              const courseGradingRecords = coursesWithSyllabus.map(course => ({
+                course_id: course.id,
+                grading_item_id: newGradingItem.id,
+                weight: 0
+              }));
+              
+              if (courseGradingRecords.length > 0) {
+                await _courseGrading.bulkCreate(courseGradingRecords, { transaction });
+              }
             }
           }
           
           if (currentGradingItems.length > validItems.length) {
             const itemsToDelete = currentGradingItems.slice(validItems.length);
             for (const item of itemsToDelete) {
+              await _courseGrading.destroy({
+                where: { grading_item_id: item.id },
+                transaction
+              });
+              
               await item.destroy({ transaction });
             }
           }
@@ -541,14 +562,6 @@ module.exports = class SyllabusService extends BaseService {
   getExamTypeByLevel = (levelId) => {
     return LEVEL_TO_EXAM_TYPE[levelId] || 'PRELIM';
   };
-
-  getFinalPercentageBySyllabusId = catchServiceAsync(async (syllabus_id) => {
-    validateParameters({ 'Sylllabus id': syllabus_id });
-
-    const response = await _percentages.findAll({ where: { syllabus_id } });
-
-    return { data: response };
-  });
 
   createExamModulesByType = catchServiceAsync(async (syllabusId, examType) => {
     const modulesByType = {
