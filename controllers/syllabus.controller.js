@@ -1,6 +1,6 @@
-const catchControllerAsync = require('../utils/catch-controller-async');
 const BaseController = require('./base.controller');
 const { appResponse } = require('../utils/app-response');
+const catchControllerAsync = require('../utils/catch-controller-async');
 let _syllabusService = null;
 module.exports = class SyllabusController extends BaseController {
   constructor({ SyllabusService }) {
@@ -49,6 +49,11 @@ module.exports = class SyllabusController extends BaseController {
   getFinalPercentageBySyllabusId = catchControllerAsync(async (req, res) => {
     const { id } = req.params;
     const result = await _syllabusService.getFinalPercentageBySyllabusId(id);
+    return appResponse(res, result);
+  });
+
+  updateExamTypes = catchControllerAsync(async (req, res) => {
+    const result = await _syllabusService.updateExamTypesByLevel();
     return appResponse(res, result);
   });
 };

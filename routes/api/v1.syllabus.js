@@ -20,6 +20,6 @@ module.exports = function ({ SyllabusController }) {
     SyllabusController.updateAssignmentGradingItem
   );
   router.put('/update/:id', SyllabusController.updateSyllabus);
-  // router.delete("/delete/:id", SyllabusController.deleteSyllabus);
+  router.put('/update-exam-types', SyllabusController.updateExamTypes);
   return router;
 };
