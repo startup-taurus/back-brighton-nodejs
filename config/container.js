@@ -97,7 +97,8 @@ const {
   TransferData,
 } = require('../models');
 
-const { protect } = require('../middleware/authMiddleware');
+const protect = require('../middleware/authMiddleware');
+const TeacherMiddlewareModule = require('../middleware/teacherMiddleware');
 const AuthUtils = require('../utils/auth');
 const container = createContainer();
 container
@@ -217,6 +218,7 @@ container
   .register({
     //middlewares
     AuthMiddleware: asFunction(protect).singleton(),
+    TeacherMiddleware: asValue(TeacherMiddlewareModule),
 });
 
 module.exports = container;
