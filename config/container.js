@@ -190,6 +190,7 @@ container
   .register({
     //Configuración de modelos
     User: asClass(User).singleton(),
+    Course: asClass(Course).singleton(),
     Student: asClass(Student).singleton(),
     Professor: asClass(Professor).singleton(),
     Payment: asClass(Payment).singleton(),
@@ -216,6 +217,6 @@ container
   .register({
     //middlewares
     AuthMiddleware: asFunction(protect).singleton(),
-  });
+});
 
 module.exports = container;

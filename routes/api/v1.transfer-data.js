@@ -2,6 +2,7 @@ const { Router } = require('express');
 
 module.exports = function ({ TransferDataController }) {
   const router = Router();
+  
   router.get('/get-all', TransferDataController.getAllTransferData);
   router.get('/get-one/:id', TransferDataController.getTransferData);
   router.get('/get-pending', TransferDataController.getPendingTransferData);
