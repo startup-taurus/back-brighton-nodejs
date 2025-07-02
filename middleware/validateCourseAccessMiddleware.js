@@ -20,7 +20,7 @@ const validateProfessorCourseAccess = ({ Course, Professor }) =>
         },
       });
 
-      if (!teacher) next(new AppError('No existe este profesor', 404));
+      if (!teacher) next(new AppError('This teacher does not exist.', 404));
 
       const course = await Course.Course.findOne({
         where: {
@@ -30,7 +30,7 @@ const validateProfessorCourseAccess = ({ Course, Professor }) =>
       });
 
       if (!course) {
-        return next(new AppError('No tienes acceso a este curso', 403));
+        return next(new AppError('You do not have access to this course.', 403));
       }
     }
 
