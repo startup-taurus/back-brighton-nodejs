@@ -98,7 +98,12 @@ const {
 } = require('../models');
 
 const protect = require('../middleware/authMiddleware');
-const TeacherMiddlewareModule = require('../middleware/teacherMiddleware');
+
+const {
+  TeacherMiddleware,
+  ValidateCourseMiddleware,
+} = require('../middleware');
+
 const AuthUtils = require('../utils/auth');
 const container = createContainer();
 container
@@ -218,7 +223,8 @@ container
   .register({
     //middlewares
     AuthMiddleware: asFunction(protect).singleton(),
-    TeacherMiddleware: asValue(TeacherMiddlewareModule),
-});
+    TeacherMiddleware: asValue(TeacherMiddleware),
+    ValidateCourseMiddleware: asFunction(ValidateCourseMiddleware).singleton(),
+  });
 
 module.exports = container;
