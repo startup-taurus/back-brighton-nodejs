@@ -1,11 +1,10 @@
 const { Router } = require('express');
 const { requireRoles } = require('../../middleware/teacherMiddleware');
-const { USER_TYPES } = require('../../utils/constants'); // ← Importar directamente
+const { USER_TYPES } = require('../../utils/constants'); 
 
 module.exports = function ({ StudentGradesController, AuthMiddleware }) {
   const router = Router();
   
-  // Profesores, coordinadores y admins pueden ver todas las calificaciones por curso
   router.get(
     '/get-grades-by-course/:id',
     AuthMiddleware,
