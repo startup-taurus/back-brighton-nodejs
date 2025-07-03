@@ -19,7 +19,8 @@ module.exports = function ({
       requireRoles(
         USER_TYPES.PROFESSOR,
         USER_TYPES.COORDINATOR,
-        USER_TYPES.ADMIN
+        USER_TYPES.ADMIN,
+        USER_TYPES.RECEPTIONIST,
       ),
       ValidateCourseMiddleware,
     ],
@@ -28,7 +29,7 @@ module.exports = function ({
 
   router.get(
     '/get-all-with-professors',
-    [AuthMiddleware, requireRoles(USER_TYPES.COORDINATOR, USER_TYPES.ADMIN)],
+    [AuthMiddleware, requireRoles(USER_TYPES.COORDINATOR, USER_TYPES.ADMIN, USER_TYPES.RECEPTIONIST)],
     CourseController.getAllCoursesWithProfessors
   );
   router.get(

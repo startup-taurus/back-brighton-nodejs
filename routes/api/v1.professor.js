@@ -8,13 +8,13 @@ module.exports = function ({ ProfessorController, AuthMiddleware }) {
   router.get('/get-all', [
       AuthMiddleware,
       requireRoles(
+        USER_TYPES.ADMIN,
         USER_TYPES.COORDINATOR,
-        USER_TYPES.ADMIN
+        USER_TYPES.RECEPTIONIST
       ),
-     
     ],ProfessorController.getAllProfessors);
   router.get('/get-one/:id', ProfessorController.getProfessor);
-  router.get('/:id/courses', ProfessorController.getProfessorCourses);
+  router.get('/:id/courses',  ProfessorController.getProfessorCourses);
   router.get('/get-active', ProfessorController.getActiveProfessors);
   router.get(
     '/get-courses-and-students',
