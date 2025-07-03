@@ -1,10 +1,20 @@
 const { Router } = require('express');
 const { upload } = require('../../utils/upload');
-module.exports = function ({ ProfessorController }) {
+const { requireRoles } = require('../../middleware/teacherMiddleware');
+const { USER_TYPES } = require('../../utils/constants');
+
+module.exports = function ({ ProfessorController, AuthMiddleware }) {
   const router = Router();
-  router.get('/get-all', ProfessorController.getAllProfessors);
+  router.get('/get-all', [
+      AuthMiddleware,
+      requireRoles(
+        USER_TYPES.ADMIN,
+        USER_TYPES.COORDINATOR,
+        USER_TYPES.RECEPTIONIST
+      ),
+    ],ProfessorController.getAllProfessors);
   router.get('/get-one/:id', ProfessorController.getProfessor);
-  router.get('/:id/courses', ProfessorController.getProfessorCourses);
+  router.get('/:id/courses',  ProfessorController.getProfessorCourses);
   router.get('/get-active', ProfessorController.getActiveProfessors);
   router.get(
     '/get-courses-and-students',

@@ -1,13 +1,15 @@
 const jwt = require("jsonwebtoken");
 const asyncHandler = require("express-async-handler");
+const { promisify } = require("util");
 const AppError = require("../utils/app-error");
 
-const protect = ({ Users, config }) =>
+const protect = ({ User, config }) =>
   asyncHandler(async (req, res, next) => {
     let authorization = req.headers["authorization"];
     let token;
+    
     if (authorization && authorization.startsWith("Bearer")) {
-      token = authorization && authorization.split(" ")[1];
+      token = authorization.split(" ")[1]; 
     }
 
     if (!token) {
@@ -15,17 +17,40 @@ const protect = ({ Users, config }) =>
     }
 
     try {
+      if (!token || token === 'undefined' || token === 'null') {
+        return next(new AppError("Token inválido o vacío", 401));
+      }
+
       const decoded = await promisify(jwt.verify)(token, config.JWT_SECRET);
-      req.user = await _user.findByPk(decoded.id);
+      
+      if (!decoded || !decoded.id) {
+        return next(new AppError("Token no contiene información válida", 401));
+      }
+
+      req.user = await User.User.findByPk(decoded.id);
+
+      if (!req.user) {
+        return next(new AppError("No existe el usuario", 404));
+      }
 
       next();
     } catch (error) {
+      console.log('Error en authMiddleware:', error.message);
+      
       if (error.message === "jwt malformed") {
-        return next(new AppError("Token mal formado", 400));
+        return next(new AppError("Token mal formado. Verifica que el token sea válido.", 400));
+      }
+      
+      if (error.message === "invalid token") {
+        return next(new AppError("Token inválido", 401));
+      }
+      
+      if (error.message === "jwt expired") {
+        return next(new AppError("Token expirado", 401));
       }
 
-      console.log(error);
-      return next(new AppError("No existe el usuario", 404));
+      return next(new AppError("Error de autenticación", 401));
     }
   });
-module.exports = { protect };
+
+module.exports = protect;

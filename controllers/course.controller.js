@@ -1,6 +1,6 @@
-const catchControllerAsync = require("../utils/catch-controller-async");
-const BaseController = require("./base.controller");
-const { appResponse } = require("../utils/app-response");
+const catchControllerAsync = require('../utils/catch-controller-async');
+const BaseController = require('./base.controller');
+const { appResponse } = require('../utils/app-response');
 let _courseService = null;
 module.exports = class CourseController extends BaseController {
   constructor({ CourseService }) {

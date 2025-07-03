@@ -97,7 +97,13 @@ const {
   TransferData,
 } = require('../models');
 
-const { protect } = require('../middleware/authMiddleware');
+const protect = require('../middleware/authMiddleware');
+
+const {
+  TeacherMiddleware,
+  ValidateCourseMiddleware,
+} = require('../middleware');
+
 const AuthUtils = require('../utils/auth');
 const container = createContainer();
 container
@@ -190,6 +196,7 @@ container
   .register({
     //Configuración de modelos
     User: asClass(User).singleton(),
+    Course: asClass(Course).singleton(),
     Student: asClass(Student).singleton(),
     Professor: asClass(Professor).singleton(),
     Payment: asClass(Payment).singleton(),
@@ -216,6 +223,8 @@ container
   .register({
     //middlewares
     AuthMiddleware: asFunction(protect).singleton(),
+    TeacherMiddleware: asValue(TeacherMiddleware),
+    ValidateCourseMiddleware: asFunction(ValidateCourseMiddleware).singleton(),
   });
 
 module.exports = container;

@@ -10,6 +10,7 @@ module.exports = {
   EMAIL_PASSWORD: process.env.EMAIL_PASSWORD,
   EMAIL_SERVER_HOST: process.env.EMAIL_SERVER_HOST,
   EMAIL_SERVER_PORT: process.env.EMAIL_SERVER_PORT,
+  JWT_SECRET: process.env.JWT_SECRET,
   DB: {
     username: process.env.DB_USER,
     password: process.env.DB_PASSWORD,

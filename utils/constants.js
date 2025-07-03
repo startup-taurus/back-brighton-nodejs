@@ -20,6 +20,16 @@ const ALLOWED_STATUS = {
   N_A: 'n/a',
 };
 
+const USER_TYPES = {
+  ADMIN: 'admin_staff',
+  PROFESSOR: 'professor',
+  TEACHER: 'teacher', 
+  STUDENT: 'student',
+  FINANCIAL: 'financial',
+  COORDINATOR: 'coordinator',
+  RECEPTIONIST: 'receptionist',
+};
+
 const EXAMS_TYPE = {
   STARTERS: 'STARTERS',
   MOVERS: 'MOVERS',
@@ -106,6 +116,7 @@ module.exports = {
   DAYS_OF_WEEK,
   AGE_CATEGORY,
   ALLOWED_STATUS,
+  USER_TYPES,
   EXAMS_TYPE,
   EXAM_MODULES,
   EXAM_TYPE_MODULES,

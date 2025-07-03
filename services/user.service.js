@@ -69,7 +69,9 @@ module.exports = class UserService extends BaseService {
       user.report_link = professor?.report_link;
     }
 
-    return { data: user, message: null };
+    const token = _authUtils.generateToken(user.id);
+    
+    return { data: { ...user, token }, message: null };
   });
 
   getAllUsers = catchServiceAsync(async (query) => {
