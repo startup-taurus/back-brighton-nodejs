@@ -2,7 +2,7 @@ const catchServiceAsync = require('../utils/catch-service-async');
 const BaseService = require('./base.service');
 const { validateParameters } = require('../utils/utils');
 const AppError = require('../utils/app-error');
-const { LEVEL_TO_EXAM_TYPE, EXAMS_TYPE } = require('../utils/constants'); 
+const { LEVEL_TO_EXAM_TYPE, EXAMS_TYPE } = require('../utils/constants');
 let _course = null;
 let _syllabus = null;
 let _gradingItem = null;
@@ -77,7 +77,7 @@ module.exports = class SyllabusService extends BaseService {
           attributes: ['id', 'full_level'],
         },
       ],
-      attributes: ['id', 'syllabus_name'],
+      attributes: ['id', 'syllabus_name', 'exam_type'],
       order: [['id', 'DESC']],
     });
 
@@ -100,14 +100,14 @@ module.exports = class SyllabusService extends BaseService {
       return {
         id: syllabus.id,
         syllabus_name: syllabus.syllabus_name,
-        exam_type: syllabus.exam_type, 
+        exam_type: syllabus.exam_type,
         level: syllabus.level,
         items: syllabus.items,
         percentages: syllabus.percentages,
         assignments,
         progress_tests: progressTests,
-        exam_modules: examModules, 
-        movers_exam: examModules, 
+        exam_modules: examModules,
+        movers_exam: examModules,
         percentages_syllabus: syllabus.percentages_syllabus,
       };
     });
@@ -143,7 +143,7 @@ module.exports = class SyllabusService extends BaseService {
           attributes: ['name', 'min', 'max'],
         },
       ],
-      attributes: ['id', 'syllabus_name', 'exam_type'], 
+      attributes: ['id', 'syllabus_name', 'exam_type'],
     });
 
     if (!syllabus) {
@@ -160,7 +160,7 @@ module.exports = class SyllabusService extends BaseService {
     const examModules = gradingItems
       .filter((item) => item.category_id === 3)
       .map((item) => item.name);
-  
+
     const formattedSyllabus = {
       id: syllabus.id,
       syllabus_name: syllabus.syllabus_name,
@@ -173,7 +173,7 @@ module.exports = class SyllabusService extends BaseService {
       movers_exam: examModules,
       percentages_syllabus: syllabus.percentages_syllabus,
     };
-  
+
     return { data: formattedSyllabus };
   });
 
@@ -203,10 +203,10 @@ module.exports = class SyllabusService extends BaseService {
 
     const finalExamType = exam_type || LEVEL_TO_EXAM_TYPE[level_id] || 'PRELIM';
 
-    const syllabus = await _syllabus.create({ 
-      syllabus_name, 
+    const syllabus = await _syllabus.create({
+      syllabus_name,
       level_id,
-      exam_type: finalExamType 
+      exam_type: finalExamType,
     });
 
     if (items && items.length > 0) {
@@ -270,12 +270,12 @@ module.exports = class SyllabusService extends BaseService {
         assignments,
         progress_tests,
         movers_exam,
-        exam_modules, 
+        exam_modules,
         level_id,
-        exam_type, 
+        exam_type,
         percentages: bodyPercentages,
       } = body;
-  
+
       const syllabus = await _syllabus.findByPk(id, {
         include: [
           { model: _syllabusItems, as: 'items' },
@@ -283,13 +283,16 @@ module.exports = class SyllabusService extends BaseService {
         ],
         transaction,
       });
-  
+
       if (!syllabus) {
         throw new AppError('Syllabus not found', 404);
       }
-  
-      await syllabus.update({ syllabus_name, level_id, exam_type }, { transaction });
-  
+
+      await syllabus.update(
+        { syllabus_name, level_id, exam_type },
+        { transaction }
+      );
+
       if (items && Array.isArray(items)) {
         const currentItems = await _syllabusItems.findAll({
           where: { syllabus_id: id },
@@ -318,7 +321,7 @@ module.exports = class SyllabusService extends BaseService {
           }
         }
       }
-  
+
       if (
         assig_percentage !== undefined &&
         test_percentage !== undefined &&
@@ -345,13 +348,13 @@ module.exports = class SyllabusService extends BaseService {
           );
         }
       }
-  
+
       const gradingCategories = [
         { categoryId: 1, items: assignments },
         { categoryId: 2, items: progress_tests },
-        { categoryId: 3, items: exam_modules || movers_exam }, 
+        { categoryId: 3, items: exam_modules || movers_exam },
       ];
-  
+
       for (const { categoryId, items: categoryItems } of gradingCategories) {
         if (categoryItems && Array.isArray(categoryItems)) {
           const currentGradingItems = await _gradingItem.findAll({
@@ -359,9 +362,11 @@ module.exports = class SyllabusService extends BaseService {
             order: [['id', 'ASC']],
             transaction,
           });
-          
-          const validItems = categoryItems.filter(item => item && item.trim() !== '');
-          
+
+          const validItems = categoryItems.filter(
+            (item) => item && item.trim() !== ''
+          );
+
           for (let i = 0; i < validItems.length; i++) {
             if (i < currentGradingItems.length) {
               await currentGradingItems[i].update(
@@ -377,39 +382,43 @@ module.exports = class SyllabusService extends BaseService {
                 },
                 { transaction }
               );
-              
+
               const coursesWithSyllabus = await _course.findAll({
                 where: { syllabus_id: id },
                 attributes: ['id'],
-                transaction
+                transaction,
               });
-              
-              const courseGradingRecords = coursesWithSyllabus.map(course => ({
-                course_id: course.id,
-                grading_item_id: newGradingItem.id,
-                weight: 0
-              }));
-              
+
+              const courseGradingRecords = coursesWithSyllabus.map(
+                (course) => ({
+                  course_id: course.id,
+                  grading_item_id: newGradingItem.id,
+                  weight: 0,
+                })
+              );
+
               if (courseGradingRecords.length > 0) {
-                await _courseGrading.bulkCreate(courseGradingRecords, { transaction });
+                await _courseGrading.bulkCreate(courseGradingRecords, {
+                  transaction,
+                });
               }
             }
           }
-          
+
           if (currentGradingItems.length > validItems.length) {
             const itemsToDelete = currentGradingItems.slice(validItems.length);
             for (const item of itemsToDelete) {
               await _courseGrading.destroy({
                 where: { grading_item_id: item.id },
-                transaction
+                transaction,
               });
-              
+
               await item.destroy({ transaction });
             }
           }
         }
       }
-  
+
       if (bodyPercentages && Array.isArray(bodyPercentages)) {
         const currentPercentages = await _percentages.findAll({
           where: { syllabus_id: id },
@@ -443,7 +452,7 @@ module.exports = class SyllabusService extends BaseService {
           }
         }
       }
-  
+
       return { data: syllabus };
     });
   });
@@ -520,25 +529,25 @@ module.exports = class SyllabusService extends BaseService {
 
   updateExamTypesByLevel = catchServiceAsync(async () => {
     const transaction = await _sequelize.transaction();
-    
+
     try {
       const syllabi = await _syllabus.findAll({
         attributes: ['id', 'level_id', 'exam_type'],
-        transaction
+        transaction,
       });
 
       const updates = [];
-      
+
       for (const syllabus of syllabi) {
         const correctExamType = LEVEL_TO_EXAM_TYPE[syllabus.level_id];
-        
+
         if (correctExamType && syllabus.exam_type !== correctExamType) {
           updates.push(
             _syllabus.update(
               { exam_type: correctExamType },
-              { 
+              {
                 where: { id: syllabus.id },
-                transaction 
+                transaction,
               }
             )
           );
@@ -547,11 +556,11 @@ module.exports = class SyllabusService extends BaseService {
 
       await Promise.all(updates);
       await transaction.commit();
-      
+
       return {
         success: true,
         message: `Updated ${updates.length} syllabi with correct exam types`,
-        updatedCount: updates.length
+        updatedCount: updates.length,
       };
     } catch (error) {
       await transaction.rollback();
@@ -568,48 +577,48 @@ module.exports = class SyllabusService extends BaseService {
       [EXAMS_TYPE.STARTERS]: [
         { name: 'READING & WRITING', category_id: 3 },
         { name: 'LISTENING', category_id: 3 },
-        { name: 'SPEAKING', category_id: 3 }
+        { name: 'SPEAKING', category_id: 3 },
       ],
       [EXAMS_TYPE.MOVERS]: [
         { name: 'READING & WRITING', category_id: 3 },
         { name: 'LISTENING', category_id: 3 },
-        { name: 'SPEAKING', category_id: 3 }
+        { name: 'SPEAKING', category_id: 3 },
       ],
       [EXAMS_TYPE.FLYERS]: [
         { name: 'READING & WRITING', category_id: 3 },
         { name: 'LISTENING', category_id: 3 },
-        { name: 'SPEAKING', category_id: 3 }
+        { name: 'SPEAKING', category_id: 3 },
       ],
       [EXAMS_TYPE.KEY]: [
         { name: 'READING & WRITING', category_id: 3 },
         { name: 'LISTENING', category_id: 3 },
-        { name: 'SPEAKING', category_id: 3 }
+        { name: 'SPEAKING', category_id: 3 },
       ],
       [EXAMS_TYPE.PRELIM]: [
         { name: 'READING', category_id: 3 },
         { name: 'LISTENING', category_id: 3 },
         { name: 'WRITING', category_id: 3 },
-        { name: 'SPEAKING', category_id: 3 }
+        { name: 'SPEAKING', category_id: 3 },
       ],
       [EXAMS_TYPE.FIRST]: [
         { name: 'READING', category_id: 3 },
         { name: 'LISTENING', category_id: 3 },
         { name: 'WRITING', category_id: 3 },
-        { name: 'SPEAKING', category_id: 3 }
-      ]
+        { name: 'SPEAKING', category_id: 3 },
+      ],
     };
-  
+
     const modules = modulesByType[examType] || modulesByType[EXAMS_TYPE.PRELIM];
-    
-    const gradingItems = modules.map(module => ({
+
+    const gradingItems = modules.map((module) => ({
       ...module,
-      syllabus_id: syllabusId
+      syllabus_id: syllabusId,
     }));
-  
+
     if (gradingItems.length > 0) {
       await _gradingItem.bulkCreate(gradingItems);
     }
-  
+
     return { success: true, modulesCreated: gradingItems.length };
   });
 };
