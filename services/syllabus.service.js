@@ -78,7 +78,11 @@ module.exports = class SyllabusService extends BaseService {
         },
       ],
       attributes: ['id', 'syllabus_name', 'exam_type'],
-      order: [['id', 'DESC']],
+      order: [
+        ['id', 'DESC'],
+        [{ model: _syllabusItems, as: 'items' }, 'id', 'ASC'],
+        [{ model: _gradingItem, as: 'grading_items' }, 'id', 'ASC']
+      ],
     });
 
     if (!syllabus || syllabus.rows.length === 0) {
@@ -144,8 +148,11 @@ module.exports = class SyllabusService extends BaseService {
         },
       ],
       attributes: ['id', 'syllabus_name', 'exam_type'],
+      order: [
+        [{ model: _syllabusItems, as: 'items' }, 'id', 'ASC'],
+        [{ model: _gradingItem, as: 'grading_items' }, 'id', 'ASC']
+      ],
     });
-
     if (!syllabus) {
       throw new AppError('Syllabus not found', 404);
     }
@@ -210,11 +217,11 @@ module.exports = class SyllabusService extends BaseService {
     });
 
     if (items && items.length > 0) {
-      await Promise.all(
-        items.map((item) =>
-          _syllabusItems.create({ syllabus_id: syllabus.id, item_name: item })
-        )
-      );
+      const itemsToCreate = items.map((item, index) => ({
+        syllabus_id: syllabus.id,
+        item_name: item
+      }));
+      await _syllabusItems.bulkCreate(itemsToCreate);
     }
 
     await _gradePercentages.create({
