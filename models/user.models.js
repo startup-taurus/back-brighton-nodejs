@@ -45,6 +45,10 @@ module.exports = class UserModel {
           type: DataTypes.STRING,
           defaultValue: 'active',
         },
+        isActive: {
+          type: DataTypes.BOOLEAN,
+          defaultValue: true,
+        },
         created_at: {
           type: DataTypes.DATE,
           defaultValue: DataTypes.NOW,

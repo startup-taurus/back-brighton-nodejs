@@ -112,6 +112,14 @@ const LEVEL_TO_EXAM_TYPE_BY_AGE = {
   }
 };
 
+const ERROR_MESSAGES = {
+  STUDENT_NOT_FOUND: 'Student not found',
+  STUDENT_HIDDEN_SUCCESS: 'Student hidden from frontend successfully',
+  TRANSFER_VALIDATION: 'Please provide either a course or a level to transfer students.',
+  TRANSFER_ERROR: 'Error requesting transfer for students',
+  PROGRESS_ERROR: 'Error transferring or progressing students'
+};
+
 module.exports = {
   DAYS_OF_WEEK,
   AGE_CATEGORY,
@@ -121,5 +129,6 @@ module.exports = {
   EXAM_MODULES,
   EXAM_TYPE_MODULES,
   LEVEL_TO_EXAM_TYPE,
-  LEVEL_TO_EXAM_TYPE_BY_AGE, 
+  LEVEL_TO_EXAM_TYPE_BY_AGE,
+  ERROR_MESSAGES
 };

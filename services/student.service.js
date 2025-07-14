@@ -3,6 +3,7 @@ const BaseService = require('./base.service');
 const AppError = require('../utils/app-error');
 const { validateParameters, generateCredentials } = require('../utils/utils');
 const { or, Op } = require('sequelize');
+const { ERROR_MESSAGES } = require('../utils/constants');
 let _user = null;
 let _student = null;
 let _course = null;
@@ -83,6 +84,7 @@ module.exports = class StudentService extends BaseService {
       limit: limitNumber,
       offset: limitNumber * (pageNumber - 1),
       where: {
+        status: { [Op.ne]: 'deleted' }, 
         ...(filters.status && { status: trimmedQuery.status }),
         ...(filters.promotion && {
           promotion: { [Op.like]: `%${trimmedQuery.promotion}%` },
@@ -93,18 +95,18 @@ module.exports = class StudentService extends BaseService {
         ...(filters.cedula && {
           cedula: { [Op.like]: `%${trimmedQuery.cedula}%` },
         }),
-
         ...(studentIds.length > 0 && { id: { [Op.in]: studentIds } }),
       },
       include: [
         {
           model: _user,
           as: 'user',
-          ...(filters.name && {
-            where: {
+          where: {
+            isActive: 1, 
+            ...(filters.name && {
               name: { [Op.like]: `%${trimmedQuery.name}%` },
-            },
-          }),
+            }),
+          },
           attributes: ['id', 'name', 'email', 'status', 'username', 'password'],
         },
         {
@@ -216,7 +218,7 @@ module.exports = class StudentService extends BaseService {
 
   getStudent = catchServiceAsync(async (id) => {
     const student = await _student.findByPk(id, {
-      include: [
+      include: [ 
         {
           model: _user,
           as: 'user',
@@ -400,13 +402,15 @@ module.exports = class StudentService extends BaseService {
     const student = await _student.findByPk(id);
 
     if (!student) {
-      throw new AppError('Student not found', 404);
+      throw new AppError(ERROR_MESSAGES.STUDENT_NOT_FOUND, 404);
     }
 
-    await _student.destroy({ where: { id } });
-    await _user.destroy({ where: { id: student.user_id } });
+    await _user.update(
+      { isActive: 0 },
+      { where: { id: student.user_id } }
+    );
 
-    return { message: 'Student and associated user deleted successfully' };
+    return { message: 'Student hidden from frontend successfully' };
   });
 
   getBestStudents = catchServiceAsync(async (query) => {
