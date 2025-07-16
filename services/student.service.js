@@ -3,7 +3,7 @@ const BaseService = require('./base.service');
 const AppError = require('../utils/app-error');
 const { validateParameters, generateCredentials } = require('../utils/utils');
 const { or, Op } = require('sequelize');
-const { ERROR_MESSAGES } = require('../utils/constants');
+const { ERROR_MESSAGES, GRADING_CATEGORIES } = require('../utils/constants');
 let _user = null;
 let _student = null;
 let _course = null;
@@ -44,7 +44,28 @@ module.exports = class StudentService extends BaseService {
     _studentGrades = StudentGrades.StudentGrades;
     _syllabus = Syllabus.Syllabus;
     _gradePercentages = GradePercentages.GradePercentages;
+    
+    this.categoryIds = null;
   }
+
+  getCategoryIds = catchServiceAsync(async () => {
+    if (this.categoryIds) {
+      return this.categoryIds;
+    }
+
+    const categories = await _sequelize.models.grading_category.findAll({
+      attributes: ['id', 'name'],
+      raw: true
+    });
+
+    this.categoryIds = {
+      assignment: categories.find(c => c.name === GRADING_CATEGORIES.ASSIGNMENT)?.id,
+      test: categories.find(c => c.name === GRADING_CATEGORIES.TEST)?.id,
+      exam: categories.find(c => c.name === GRADING_CATEGORIES.EXAM)?.id
+    };
+
+    return this.categoryIds;
+  });
 
   getAllStudents = async (query) => {
     const { page = 1, limit = 10, ...filters } = query;
@@ -410,11 +431,12 @@ module.exports = class StudentService extends BaseService {
       { where: { id: student.user_id } }
     );
 
-    return { message: 'Student hidden from frontend successfully' };
+    return { message: 'Student and associated user deleted successfully' };
   });
 
   getBestStudents = catchServiceAsync(async (query) => {
     const { course_id, level_id, limit = 10 } = query;
+    const categoryIds = await this.getCategoryIds();
 
     let studentWhereConditions = { status: 'active' };
     if (level_id) {
@@ -441,25 +463,25 @@ module.exports = class StudentService extends BaseService {
 
           const gradingItems = await _sequelize.models.grading_item.findAll({
             where: {
-              category_id: 1,
+              category_id: categoryIds.assignment,
               syllabus_id,
-              name: { [Op.notLike]: '%(eliminado)%' },
+              name: { [Op.notLike]: DELETED.DELETED_ITEM},
             },
           });
 
           const testItems = await _sequelize.models.grading_item.findAll({
             where: {
-              category_id: 2,
+              category_id: categoryIds.test,
               syllabus_id,
-              name: { [Op.notLike]: '%(eliminado)%' },
+              name: { [Op.notLike]: DELETED.DELETED_ITEM },
             },
           });
 
           const examItems = await _sequelize.models.grading_item.findAll({
             where: {
-              category_id: 3,
+              category_id: categoryIds.exam,
               syllabus_id,
-              name: { [Op.notLike]: '%(eliminado)%' },
+              name: { [Op.notLike]: DELETED.DELETED_ITEM},
             },
           });
 
@@ -467,7 +489,9 @@ module.exports = class StudentService extends BaseService {
           totalTestItemsCount = testItems.length;
           totalExamItemsCount = examItems.length;
         }
-      } catch (error) {}
+      } catch (error) {
+        console.error('Error fetching grading items:', error);
+      }
     }
 
     const students = await _student.findAll({
@@ -526,17 +550,17 @@ module.exports = class StudentService extends BaseService {
       const grades = dataStudent.student_grades_overall || [];
 
       const assignmentGrades = grades.filter(
-        (grade) => grade.grading_item?.category_id === 1
+        (grade) => grade.grading_item?.category_id === categoryIds.assignment
       );
       const testGrades = grades.filter(
-        (grade) => grade.grading_item?.category_id === 2
+        (grade) => grade.grading_item?.category_id === categoryIds.test
       );
       const examGrades = grades.filter(
-        (grade) => grade.grading_item?.category_id === 3
+        (grade) => grade.grading_item?.category_id === categoryIds.exam
       );
 
       const sumGrades = (list) =>
-        list.reduce((student, grade) => student + parseFloat(grade.grade || 0), 0);
+        list.reduce((sum, grade) => sum + parseFloat(grade.grade || 0), 0);
 
       const assignmentSum = sumGrades(assignmentGrades);
       const testSum = sumGrades(testGrades);
