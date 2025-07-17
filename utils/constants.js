@@ -111,7 +111,9 @@ const LEVEL_TO_EXAM_TYPE_BY_AGE = {
     adults: EXAMS_TYPE.FIRST
   }
 };
-
+const DELETED = {
+  DELETED_ITEM: 'DELETED',
+};
 const ERROR_MESSAGES = {
   STUDENT_NOT_FOUND: 'Student not found',
   TRANSFER_VALIDATION: 'Please provide either a course or a level to transfer students.',
@@ -136,5 +138,6 @@ module.exports = {
   LEVEL_TO_EXAM_TYPE,
   LEVEL_TO_EXAM_TYPE_BY_AGE,
   ERROR_MESSAGES,
-  GRADING_CATEGORIES
+  GRADING_CATEGORIES,
+  DELETED
 };

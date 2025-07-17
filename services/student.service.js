@@ -2,8 +2,8 @@ const catchServiceAsync = require('../utils/catch-service-async');
 const BaseService = require('./base.service');
 const AppError = require('../utils/app-error');
 const { validateParameters, generateCredentials } = require('../utils/utils');
-const { or, Op } = require('sequelize');
-const { ERROR_MESSAGES, GRADING_CATEGORIES } = require('../utils/constants');
+const { Op } = require('sequelize');
+const { ERROR_MESSAGES, GRADING_CATEGORIES, DELETED } = require('../utils/constants');
 let _user = null;
 let _student = null;
 let _course = null;
@@ -13,12 +13,13 @@ let _userService = null;
 let _professor = null;
 let _level = null;
 let _studentGrades = null;
-let _sequelize = null;
 let _syllabus = null;
 let _gradePercentages = null;
+let _gradingCategory = null;
+let _gradingItem = null;
+
 module.exports = class StudentService extends BaseService {
   constructor({
-    Sequelize,
     User,
     Student,
     Course,
@@ -30,9 +31,10 @@ module.exports = class StudentService extends BaseService {
     StudentGrades,
     Syllabus,
     GradePercentages,
+    GradingCategory,
+    GradingItem,
   }) {
     super(Student);
-    _sequelize = Sequelize;
     _user = User.User;
     _student = Student.Student;
     _course = Course.Course;
@@ -44,6 +46,8 @@ module.exports = class StudentService extends BaseService {
     _studentGrades = StudentGrades.StudentGrades;
     _syllabus = Syllabus.Syllabus;
     _gradePercentages = GradePercentages.GradePercentages;
+    _gradingCategory = GradingCategory.GradingCategory;
+    _gradingItem = GradingItem.GradingItem;
     
     this.categoryIds = null;
   }
@@ -53,7 +57,7 @@ module.exports = class StudentService extends BaseService {
       return this.categoryIds;
     }
 
-    const categories = await _sequelize.models.grading_category.findAll({
+    const categories = await _gradingCategory.findAll({
       attributes: ['id', 'name'],
       raw: true
     });
@@ -461,7 +465,7 @@ module.exports = class StudentService extends BaseService {
         if (courseData?.syllabus) {
           const syllabus_id = courseData.syllabus.id;
 
-          const gradingItems = await _sequelize.models.grading_item.findAll({
+          const gradingItems = await _gradingItem.findAll({
             where: {
               category_id: categoryIds.assignment,
               syllabus_id,
@@ -469,7 +473,7 @@ module.exports = class StudentService extends BaseService {
             },
           });
 
-          const testItems = await _sequelize.models.grading_item.findAll({
+          const testItems = await _gradingItem.findAll({
             where: {
               category_id: categoryIds.test,
               syllabus_id,
@@ -477,7 +481,7 @@ module.exports = class StudentService extends BaseService {
             },
           });
 
-          const examItems = await _sequelize.models.grading_item.findAll({
+          const examItems = await _gradingItem.findAll({
             where: {
               category_id: categoryIds.exam,
               syllabus_id,
@@ -525,12 +529,12 @@ module.exports = class StudentService extends BaseService {
           attributes: ['id', 'grade', 'grading_item_id', 'course_id'],
           include: [
             {
-              model: _sequelize.models.grading_item,
+              model: _gradingItem,
               as: 'grading_item',
               attributes: ['id', 'name', 'category_id'],
               include: [
                 {
-                  model: _sequelize.models.grading_category,
+                  model: _gradingCategory,
                   as: 'category',
                   attributes: ['id', 'name'],
                 },
