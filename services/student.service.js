@@ -469,7 +469,7 @@ module.exports = class StudentService extends BaseService {
             where: {
               category_id: categoryIds.assignment,
               syllabus_id,
-              name: { [Op.notLike]: DELETED.DELETED_ITEM},
+              name: { [Op.notLike]: `%${DELETED.DELETED_ITEM}%` },
             },
           });
 
@@ -477,7 +477,7 @@ module.exports = class StudentService extends BaseService {
             where: {
               category_id: categoryIds.test,
               syllabus_id,
-              name: { [Op.notLike]: DELETED.DELETED_ITEM },
+              name: { [Op.notLike]: `%${DELETED.DELETED_ITEM}%` },
             },
           });
 
@@ -485,7 +485,7 @@ module.exports = class StudentService extends BaseService {
             where: {
               category_id: categoryIds.exam,
               syllabus_id,
-              name: { [Op.notLike]: DELETED.DELETED_ITEM},
+              name: { [Op.notLike]: `%${DELETED.DELETED_ITEM}%` },
             },
           });
 

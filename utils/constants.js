@@ -122,9 +122,9 @@ const ERROR_MESSAGES = {
 };
 
 const GRADING_CATEGORIES = {
-  ASSIGNMENT: 'assignment',
-  TEST: 'test', 
-  EXAM: 'exam'
+  ASSIGNMENT: 'ASSIGNMENTS',
+  TEST: 'PROGRESS TESTS', 
+  EXAM: 'MOVERS EXAM'
 };
 
 module.exports = {
