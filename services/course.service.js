@@ -113,8 +113,10 @@ module.exports = class CourseService extends BaseService {
             {
               model: _user,
               as: 'user',
+              where: {isActive:1},
               attributes: ['id', 'name', 'status'],
             },
+            
           ],
           through: {
             attributes: ['enrollment_date', 'is_retired', 'observations'],
