@@ -111,6 +111,21 @@ const LEVEL_TO_EXAM_TYPE_BY_AGE = {
     adults: EXAMS_TYPE.FIRST
   }
 };
+const DELETED = {
+  DELETED_ITEM: 'DELETED',
+};
+const ERROR_MESSAGES = {
+  STUDENT_NOT_FOUND: 'Student not found',
+  TRANSFER_VALIDATION: 'Please provide either a course or a level to transfer students.',
+  TRANSFER_ERROR: 'Error requesting transfer for students',
+  PROGRESS_ERROR: 'Error transferring or progressing students'
+};
+
+const GRADING_CATEGORIES = {
+  ASSIGNMENT: 'ASSIGNMENTS',
+  TEST: 'PROGRESS TESTS', 
+  EXAM: 'MOVERS EXAM'
+};
 
 module.exports = {
   DAYS_OF_WEEK,
@@ -121,5 +136,8 @@ module.exports = {
   EXAM_MODULES,
   EXAM_TYPE_MODULES,
   LEVEL_TO_EXAM_TYPE,
-  LEVEL_TO_EXAM_TYPE_BY_AGE, 
+  LEVEL_TO_EXAM_TYPE_BY_AGE,
+  ERROR_MESSAGES,
+  GRADING_CATEGORIES,
+  DELETED
 };
