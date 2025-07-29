@@ -509,4 +509,96 @@ module.exports = class CourseService extends BaseService {
       await _courseSchedule.bulkCreate(scheduleCourse);
     }
   );
+
+  getAllCoursesForCalendar = catchServiceAsync(async () => {
+    const courses = await _course.findAll({
+      where: {
+        status: 'active'
+      },
+      attributes: ['id', 'course_name', 'start_date', 'schedule'],
+      include: [
+        {
+          model: _professor,
+          as: 'professor',
+          attributes: ['id'],
+          required: false,
+          include: [
+            {
+              model: _user,
+              as: 'user',
+              attributes: ['name'],
+              required: false
+            }
+          ]
+        },
+        {
+          model: _syllabus,
+          as: 'syllabus',
+          attributes: ['id', 'syllabus_name'],
+          required: false,
+          include: [
+            {
+              model: _level,
+              as: 'level',
+              attributes: ['id', 'full_level', 'short_level'],
+              required: false
+            }
+          ]
+        }
+      ]
+    });
+    
+    if (courses.length === 0) {
+      return { data: [] };
+    }
+
+    const calendarData = courses.map(course => {
+      let schedule_days = [];
+      let start_time = '';
+      let end_time = '';
+      
+      if (course.schedule) {
+        const scheduleData = scheduleStringToDates(course.schedule);
+        if (scheduleData && scheduleData.length > 0) {
+          schedule_days = scheduleData.map(item => item.day);
+          start_time = scheduleData[0].startTime;
+          end_time = scheduleData[0].endTime;
+        }
+      }
+
+      let end_date = null;
+      if (course.start_date) {
+        const startDate = new Date(course.start_date);
+        const endDate = new Date(startDate);
+        endDate.setMonth(endDate.getMonth() + 3);
+        end_date = endDate.toISOString().split('T')[0];
+      }
+
+      let professor_name = 'No asignado';
+      if (course.professor && course.professor.user) {
+        professor_name = course.professor.user.name;
+      }
+
+      let level_name = 'No asignado';
+      if (course.syllabus && course.syllabus.level) {
+        level_name = course.syllabus.level.full_level || course.syllabus.level.short_level || 'No asignado';
+      }
+
+      return {
+        id: course.id.toString(),
+        course_name: course.course_name,
+        start_date: course.start_date,
+        end_date: end_date,
+        schedule_days: schedule_days,
+        start_time: start_time,
+        end_time: end_time,
+        professor_name: professor_name,
+        level_name: level_name
+      };
+    });
+
+    return {
+      data: calendarData,
+    };
+  });
 };

@@ -55,5 +55,13 @@ module.exports = function ({
   router.post('/create', CourseController.createCourse);
   router.put('/update/:id', CourseController.updateCourse);
   router.put('/update-status/:id', CourseController.updateCourseStatus);
+  router.get(
+    '/get-calendar',
+    [
+      AuthMiddleware,
+      requireRoles(USER_TYPES.COORDINATOR, USER_TYPES.ADMIN, USER_TYPES.RECEPTIONIST)
+    ],
+    CourseController.getAllCoursesForCalendar
+  );
   return router;
 };
