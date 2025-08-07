@@ -158,14 +158,16 @@ module.exports = class SyllabusService extends BaseService {
     }
 
     const gradingItems = syllabus.grading_items || [];
+    const categoryMap = await this.getCategoryMap();
+
     const assignments = gradingItems
-      .filter((item) => item.category_id === 1)
+      .filter((item) => item.category_id === categoryMap['ASSIGNMENTS'])
       .map((item) => item.name);
     const progressTests = gradingItems
-      .filter((item) => item.category_id === 2)
+      .filter((item) => item.category_id === categoryMap['PROGRESS TESTS'])
       .map((item) => item.name);
     const examModules = gradingItems
-      .filter((item) => item.category_id === 3)
+      .filter((item) => item.category_id === categoryMap['MOVERS EXAM'])
       .map((item) => item.name);
 
     const formattedSyllabus = {
