@@ -9,6 +9,8 @@ let _attendance = null;
 let _courseSchedule = null;
 let _courseService = null;
 let _courseScheduleService = null;
+let _courseStudent = null;
+
 module.exports = class AttendanceService extends BaseService {
   constructor({
     Attendance,
@@ -18,6 +20,7 @@ module.exports = class AttendanceService extends BaseService {
     Student,
     CourseService,
     CourseScheduleService,
+    CourseStudent,
   }) {
     super(Attendance);
     _user = User.User;
@@ -27,6 +30,7 @@ module.exports = class AttendanceService extends BaseService {
     _courseSchedule = CourseSchedule.CourseSchedule;
     _courseService = CourseService;
     _courseScheduleService = CourseScheduleService;
+    _courseStudent = CourseStudent.CourseStudent;
   }
 
   initializeAttendanceStructure = (
@@ -76,19 +80,34 @@ module.exports = class AttendanceService extends BaseService {
   });
 
   getAttendanceByCourse = catchServiceAsync(async (courseId) => {
-    const courseAttendance = await this.getAttendanceByCourseId(courseId);
-    const students = await _courseService.getCourseWithStudents(courseId);
-    const courseSchedule = await _courseScheduleService.getCourseScheduleDates(
-      courseId
-    );
+    // Verificar el tipo de curso
+    const course = await _course.findByPk(courseId, {
+      attributes: ['course_type']
+    });
 
-    const attendance = this.buildAttendanceStructure(
-      courseSchedule?.data,
-      students?.data?.students,
-      courseAttendance?.data
-    );
+    if (!course) {
+      throw new Error('Curso no encontrado');
+    }
 
-    return { data: attendance ?? [] };
+    if (course.course_type === 'private') {
+      // Para clases privadas, redirigir a usar private_class_hours
+      throw new Error('Para clases privadas, usar el endpoint de private_class_hours');
+    } else {
+      // Para clases grupales, usar la lógica original
+      const courseAttendance = await this.getAttendanceByCourseId(courseId);
+      const students = await _courseService.getCourseWithStudents(courseId);
+      const courseSchedule = await _courseScheduleService.getCourseScheduleDates(
+        courseId
+      );
+
+      const attendance = this.buildAttendanceStructure(
+        courseSchedule?.data,
+        students?.data?.students,
+        courseAttendance?.data
+      );
+
+      return { data: attendance ?? [] };
+    }
   });
 
   getAttendanceByCourseAndStudent = catchServiceAsync(

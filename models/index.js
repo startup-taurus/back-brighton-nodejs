@@ -23,4 +23,5 @@ module.exports = {
   Level: require('./level.models'),
   StudentTransfer: require('./student-transfer.models'),
   TransferData: require('./transfer_data.models'),
+  PrivateClassHours: require('./private-class-hours.model'),
 };

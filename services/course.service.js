@@ -142,6 +142,7 @@ module.exports = class CourseService extends BaseService {
       data: {
         course_name: course.course_name,
         course_number: course.course_number,
+        course_type: course.course_type, 
         total_students: course.students.length,
         students: studentList,
         professor: { ...course.professor.user.dataValues },

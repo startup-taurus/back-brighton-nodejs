@@ -15,4 +15,5 @@ module.exports = {
   RegisteredStudentService: require('./registered-student.service'),
   TransferDataService: require('./transfer-data.service'),
   StudentTransferService: require('./student-transfer.service'),
+  PrivateClassHoursService: require('./private-class-hours.service'),
 };

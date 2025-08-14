@@ -14,4 +14,5 @@ module.exports = {
   RegisteredStudentRoutes: require('./v1.registered-student'),
   TransferDataRoutes: require('./v1.transfer-data'),
   StudentTransferRoutes: require('./v1.student-transfer'),
+  PrivateClassHoursRoutes: require('./v1.private-class-hours'),
 };

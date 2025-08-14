@@ -25,6 +25,8 @@ const {
   RegisteredStudentService,
   TransferDataService,
   StudentTransferService,
+  PrivateClassHoursService,
+
 } = require('../services');
 
 //Controllers
@@ -45,6 +47,8 @@ const {
   RegisteredStudentController,
   TransferDataController,
   StudentTransferController,
+  PrivateClassHoursController,
+
 } = require('../controllers');
 
 //Startup
@@ -67,6 +71,8 @@ const {
   RegisteredStudentRoutes,
   TransferDataRoutes,
   StudentTransferRoutes,
+  PrivateClassHoursRoutes, // <- AGREGAR ESTA LÍNEA
+
 } = require('../routes/api/index');
 
 //Models
@@ -95,6 +101,7 @@ const {
   RegisteredStudent,
   StudentTransfer,
   TransferData,
+  PrivateClassHours, 
 } = require('../models');
 
 const protect = require('../middleware/authMiddleware');
@@ -134,6 +141,8 @@ container
     LevelService: asClass(LevelService).singleton(),
     TransferDataService: asClass(TransferDataService).singleton(),
     StudentTransferService: asClass(StudentTransferService).singleton(),
+    PrivateClassHoursService: asClass(PrivateClassHoursService).singleton(),
+
   })
 
   .register({
@@ -170,6 +179,8 @@ container
     LevelController: asClass(LevelController).singleton(),
     TransferDataController: asClass(TransferDataController).singleton(),
     StudentTransferController: asClass(StudentTransferController).singleton(),
+    PrivateClassHoursController: asClass(PrivateClassHoursController).singleton(),
+
   })
   .register({
     //Configuración de rutas
@@ -188,6 +199,8 @@ container
     LevelRoutes: asFunction(LevelRoutes).singleton(),
     TransferDataRoutes: asFunction(TransferDataRoutes).singleton(),
     StudentTransferRoutes: asFunction(StudentTransferRoutes).singleton(),
+    PrivateClassHoursRoutes: asFunction(PrivateClassHoursRoutes).singleton(),
+
   })
   .register({
     //Configuración de las asociaciones
@@ -219,6 +232,7 @@ container
     Level: asClass(Level).singleton(),
     StudentTransfer: asClass(StudentTransfer).singleton(),
     TransferData: asClass(TransferData).singleton(),
+    PrivateClassHours: asClass(PrivateClassHours).singleton(), 
   })
   .register({
     //middlewares
