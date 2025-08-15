@@ -51,6 +51,10 @@ module.exports = class CourseModel {
           allowNull: true,
           defaultValue: null,
         },
+        total_hours: {
+          type: DataTypes.INTEGER,
+          allowNull: true,
+        },
         schedule: {
           type: DataTypes.TEXT,
           allowNull: true,

@@ -325,5 +325,24 @@ module.exports = class AuditModel {
       foreignKey: 'student_id',
       as: 'private_classes',
     });
+
+
+    _syllabus.hasMany(_gradingItem, {
+      foreignKey: 'syllabus_id',
+      as: 'grading_items',
+    });
+    _gradingItem.belongsTo(_syllabus, {
+      foreignKey: 'syllabus_id',
+      as: 'syllabus',
+    });
+
+    _syllabus.hasMany(_percentages, {
+      foreignKey: 'syllabus_id',
+      as: 'percentages_syllabus',
+    });
+    _percentages.belongsTo(_syllabus, {
+      foreignKey: 'syllabus_id',
+      as: 'syllabus',
+    });
   }
 };
