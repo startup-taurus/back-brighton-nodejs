@@ -24,9 +24,7 @@ module.exports = class PrivateClassHoursService extends BaseService {
     _courseStudent = CourseStudent.CourseStudent;
   }
 
-  // Obtener todas las clases privadas por curso
   getPrivateClassesByCourse = catchServiceAsync(async (courseId) => {
-    // Verificar que el curso sea privado
     const course = await _course.findByPk(courseId, {
       attributes: ['course_type']
     });
@@ -35,11 +33,11 @@ module.exports = class PrivateClassHoursService extends BaseService {
       throw new Error('Curso no encontrado');
     }
 
-    if (course.course_type !== 'private') {
-      throw new Error('Este endpoint es solo para clases privadas');
+    if (course.course_type !== 'private' && course.course_type !== 'private - online') {
+      throw new Error('Solo se pueden crear reportes para clases privadas');
+
     }
 
-    // Obtener el student_id del curso
     const courseStudent = await _courseStudent.findOne({
       where: { course_id: courseId },
       attributes: ['student_id']
@@ -49,7 +47,6 @@ module.exports = class PrivateClassHoursService extends BaseService {
       return { data: [] };
     }
 
-    // Obtener registros de clases privadas
     const privateClasses = await _privateClassHours.findAll({
       where: { 
         student_id: courseStudent.student_id,
@@ -63,7 +60,7 @@ module.exports = class PrivateClassHoursService extends BaseService {
           include: [
             {
               model: _user,
-              as: 'user',  // <- Cambiar de '_user' a 'user'
+              as: 'user',  
               attributes: ['name']
             }
           ]
@@ -75,7 +72,6 @@ module.exports = class PrivateClassHoursService extends BaseService {
     return { data: privateClasses };
   });
 
-  // Obtener clases privadas por estudiante
   getPrivateClassesByStudent = catchServiceAsync(async (studentId) => {
     const privateClasses = await _privateClassHours.findAll({
       where: { student_id: studentId },
@@ -92,7 +88,6 @@ module.exports = class PrivateClassHoursService extends BaseService {
     return { data: privateClasses };
   });
 
-  // Crear una nueva clase privada
   createPrivateClass = catchServiceAsync(async (body) => {
     const { 
       student_id, 
@@ -109,16 +104,15 @@ module.exports = class PrivateClassHoursService extends BaseService {
       lesson_date
     });
 
-    // Verificar que el curso sea privado
     const course = await _course.findByPk(course_id, {
       attributes: ['course_type']
     });
 
-    if (!course || course.course_type !== 'private') {
+    if (!course || course.course_type !== 'private' && course.course_type !== 'private - online') {
+
       throw new Error('Solo se pueden crear clases para cursos privados');
     }
 
-    // Verificar que el estudiante esté asociado al curso
     const courseStudent = await _courseStudent.findOne({
       where: { 
         course_id: course_id,
@@ -142,8 +136,6 @@ module.exports = class PrivateClassHoursService extends BaseService {
     return { data: privateClass };
   });
 
-  // Actualizar una clase privada
-  // Actualizar una clase privada
   updatePrivateClass = catchServiceAsync(async (classId, updateData, professorId = null) => {
     const privateClass = await _privateClassHours.findByPk(classId);
   
@@ -151,7 +143,6 @@ module.exports = class PrivateClassHoursService extends BaseService {
       throw new Error('Clase privada no encontrada');
     }
   
-    // Si se proporciona professorId, verificar que sea el profesor del curso
     if (professorId) {
       const course = await _course.findByPk(privateClass.course_id, {
         attributes: ['professor_id']
@@ -172,7 +163,6 @@ module.exports = class PrivateClassHoursService extends BaseService {
     return { data: updatedClass };
   });
 
-  // Eliminar una clase privada
   deletePrivateClass = catchServiceAsync(async (classId, professorId = null) => {
     const privateClass = await _privateClassHours.findByPk(classId);
 
@@ -180,7 +170,6 @@ module.exports = class PrivateClassHoursService extends BaseService {
       throw new Error('Clase privada no encontrada');
     }
 
-    // Si se proporciona professorId, verificar que sea el profesor del curso
     if (professorId) {
       const course = await _course.findByPk(privateClass.course_id, {
         attributes: ['professor_id']
@@ -195,9 +184,7 @@ module.exports = class PrivateClassHoursService extends BaseService {
     return { data: { message: 'Clase privada eliminada exitosamente' } };
   });
 
-  // Crear múltiples clases privadas (para reportes)
   createMultiplePrivateClasses = catchServiceAsync(async (courseId, entries, professorId = null) => {
-    // Verificar que el curso sea privado
     const course = await _course.findByPk(courseId, {
       attributes: ['course_type', 'professor_id']
     });
@@ -206,16 +193,15 @@ module.exports = class PrivateClassHoursService extends BaseService {
       throw new Error('Curso no encontrado');
     }
 
-    if (course.course_type !== 'private') {
+    if (course.course_type !== 'private' && course.course_type !== 'private - online') {
+
       throw new Error('Solo se pueden crear reportes para clases privadas');
     }
 
-    // Verificar que sea el profesor del curso
     if (professorId && course.professor_id !== professorId) {
       throw new Error('Solo el profesor asignado puede crear reportes para este curso');
     }
 
-    // Obtener el student_id del curso privado
     const courseStudent = await _courseStudent.findOne({
       where: { course_id: courseId },
       attributes: ['student_id']
@@ -225,8 +211,6 @@ module.exports = class PrivateClassHoursService extends BaseService {
       throw new Error('No se encontró estudiante asociado al curso privado');
     }
 
-    // Crear las entradas
-    // Crear las entradas
     const privateClassEntries = entries.map(entry => ({
       student_id: courseStudent.student_id,
       course_id: courseId,
