@@ -2,6 +2,7 @@ const catchServiceAsync = require('../utils/catch-service-async');
 const BaseService = require('./base.service');
 const AppError = require('../utils/app-error');
 const { Op, fn, col, literal } = require('sequelize');
+const { COURSE_TYPES } = require('../utils/constants');
 const {
   validateParameters,
   scheduleStringToDates,
@@ -142,6 +143,7 @@ module.exports = class CourseService extends BaseService {
       data: {
         course_name: course.course_name,
         course_number: course.course_number,
+        course_type: course.course_type, 
         total_students: course.students.length,
         students: studentList,
         professor: { ...course.professor.user.dataValues },
@@ -203,11 +205,13 @@ module.exports = class CourseService extends BaseService {
     const syllabusInclude = {
       model: _syllabus,
       as: 'syllabus',
+      required: false,
       attributes: ['id', 'syllabus_name', 'level_id'],
       include: [
         {
           model: _level,
           as: 'level',
+          required: false,
           attributes: ['id', 'full_level'],
         },
       ],
@@ -220,6 +224,7 @@ module.exports = class CourseService extends BaseService {
       include: [professorInclude, syllabusInclude],
       limit: limitNumber,
       offset: limitNumber * (pageNumber - 1),
+      order: [['id', 'DESC']],
     });
 
     return {
@@ -269,11 +274,13 @@ module.exports = class CourseService extends BaseService {
           {
             model: _syllabus,
             as: 'syllabus',
+            required: false, 
             attributes: ['id', 'syllabus_name'],
             include: [
               {
                 model: _level,
                 as: 'level',
+                required: false,
                 attributes: ['id', 'full_level'],
               },
             ],
@@ -397,56 +404,82 @@ module.exports = class CourseService extends BaseService {
       syllabus_id,
     } = body;
 
-    validateParameters({
-      course_name,
-      course_number,
-      start_date,
-      status,
-      course_type,
-      schedule,
-      professor_id,
-      syllabus_id,
-    });
+    if (course_type === COURSE_TYPES.PRIVATE || course_type === COURSE_TYPES.PRIVATE_ONLINE) {
+      validateParameters({
+        course_name,
+        course_number,
+        start_date,
+        status,
+        course_type,
+        professor_id,
+      });
+
+      body.syllabus_id = syllabus_id ? parseInt(syllabus_id) : null;
+      body.schedule = null;
+      body.classroom = null;
+    } else {
+      validateParameters({
+        course_name,
+        course_number,
+        start_date,
+        status,
+        course_type,
+        schedule,
+        professor_id,
+        syllabus_id,
+      });
+
+      body.syllabus_id = parseInt(syllabus_id);
+    }
 
     body.professor_id = parseInt(professor_id);
-    body.syllabus_id = parseInt(syllabus_id);
 
     const course = await _course.create(body);
 
-    await this.createCourseSchedule(start_date, schedule, syllabus_id, course);
+    if (course_type !== COURSE_TYPES.PRIVATE && course_type !== COURSE_TYPES.PRIVATE_ONLINE) {
+      await this.createCourseSchedule(start_date, schedule, syllabus_id, course);
+      
+      const gradingItems = await _gradingItem.findAll({
+        where: { syllabus_id },
+        attributes: ['id'],
+      });
 
-    const gradingItems = await _gradingItem.findAll({
-      where: { syllabus_id },
-      attributes: ['id'],
-    });
+      if (!gradingItems || gradingItems.length === 0) {
+        throw new AppError(
+          'No grading items found for the specified syllabus',
+          404
+        );
+      }
 
-    if (!gradingItems || gradingItems.length === 0) {
-      throw new AppError(
-        'No grading items found for the specified syllabus',
-        404
-      );
+      const courseGradingData = gradingItems.map((item) => ({
+        course_id: course.id,
+        grading_item_id: item.id,
+        weight: 0,
+      }));
+
+      await _courseGrading.bulkCreate(courseGradingData);
     }
-
-    const courseGradingData = gradingItems.map((item) => ({
-      course_id: course.id,
-      grading_item_id: item.id,
-      weight: 0,
-    }));
-
-    await _courseGrading.bulkCreate(courseGradingData);
 
     return { data: course };
   });
 
   updateCourse = catchServiceAsync(async (id, body) => {
     delete body.professor;
+    
     if (body.professor_id) {
       const professor = await _professor.findByPk(body.professor_id);
       if (!professor) {
         throw new AppError('Professor not found', 404);
       }
     }
-    if (body.syllabus_id) {
+
+    if (body.course_type === COURSE_TYPES.PRIVATE || body.course_type === COURSE_TYPES.PRIVATE_ONLINE) {
+      body.syllabus_id = null;
+      body.schedule = null;
+      body.classroom = null;
+      
+      await _courseGrading.destroy({ where: { course_id: id } });
+    } else if (body.syllabus_id) {
       await _courseGrading.destroy({ where: { course_id: id } });
 
       const gradingItems = await _gradingItem.findAll({
@@ -460,6 +493,7 @@ module.exports = class CourseService extends BaseService {
           404
         );
       }
+      
       const courseGradingData = gradingItems.map((item) => ({
         course_id: id,
         grading_item_id: item.id,
@@ -485,7 +519,10 @@ module.exports = class CourseService extends BaseService {
       let syllabus = await _syllabusService.getSyllabusById(syllabus_id);
       syllabus = syllabus.data;
 
-      if (!syllabus || !syllabus.items || syllabus.items.length === 0) {
+      if (!syllabus ) {
+        throw new AppError('Syllabus not found', 404);
+      }
+      if (!syllabus.items || syllabus.items.length === 0) {
         throw new AppError('Syllabus items not found', 404);
       }
 

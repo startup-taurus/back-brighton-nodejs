@@ -2,16 +2,21 @@ const catchServiceAsync = require('../utils/catch-service-async');
 const BaseService = require('./base.service');
 const { validateParameters } = require('../utils/utils');
 const AppError = require('../utils/app-error');
-const { LEVEL_TO_EXAM_TYPE, EXAMS_TYPE } = require('../utils/constants');
+const { LEVEL_TO_EXAM_TYPE, EXAMS_TYPE, DELETED } = require('../utils/constants');
+const { Op } = require('sequelize');
 let _course = null;
 let _syllabus = null;
 let _gradingItem = null;
+let _gradingCategory = null; 
 let _syllabusItems = null;
 let _gradePercentages = null;
 let _courseGrading = null;
 let _sequelize = null;
 let _percentages = null;
 let _level = null;
+let _courseSchedule = null;
+let _courseScheduleService = null;
+let _categoryMap = null;
 
 module.exports = class SyllabusService extends BaseService {
   constructor({
@@ -19,33 +24,83 @@ module.exports = class SyllabusService extends BaseService {
     SyllabusItems,
     GradePercentages,
     GradingItem,
+    GradingCategory, 
     Course,
     CourseGrading,
     Percentages,
     Sequelize,
     Level,
+    CourseSchedule,
+    CourseScheduleService,
   }) {
     super(Syllabus.Syllabus);
     _course = Course.Course;
     _syllabus = Syllabus.Syllabus;
     _gradingItem = GradingItem.GradingItem;
+    _gradingCategory = GradingCategory.GradingCategory;
     _syllabusItems = SyllabusItems.SyllabusItems;
     _gradePercentages = GradePercentages.GradePercentages;
     _courseGrading = CourseGrading.CourseGrading;
     _percentages = Percentages.Percentages;
     _sequelize = Sequelize;
     _level = Level.Level;
+    _courseSchedule = CourseSchedule.CourseSchedule;
+    _courseScheduleService = CourseScheduleService;
   }
 
-  getAllSyllabus = catchServiceAsync(async (page = 1, limit = 10) => {
-    const limitNumber = parseInt(limit);
-    const pageNumber = parseInt(page);
-    const offset = (pageNumber - 1) * limitNumber;
+  getCategoryMap = catchServiceAsync(async () => {
+    if (!_categoryMap) {
+      const categories = await _gradingCategory.findAll({
+        attributes: ['id', 'name'],
+        order: [['id', 'ASC']]
+      });
+      if (!categories?.length) {
+        throw new AppError('No grading categories found in database', 500);
+      }
+      _categoryMap = categories.reduce((map, category) => {
+        map[category.name] = category.id;
+        return map;
+      }, {});
+    }
+    return _categoryMap;
+  });
 
-    const totalSyllabus = await _syllabus.count();
+  getCategoryId = async (categoryName) => {
+    const categoryMap = await this.getCategoryMap();
+    const categoryId = categoryMap[categoryName];
+    
+    if (!categoryId) {
+      throw new AppError(`Category '${categoryName}' not found`, 404);
+    }
+    return categoryId;
+  };
+
+  getAllSyllabus = catchServiceAsync(async (query) => {
+    const { page = 1, limit = 10, ...filters } = query;
+    
+    let limitNumber = parseInt(limit);
+    let pageNumber = parseInt(page);
+    
+    const trimmedQuery = {
+      ...query,
+      syllabus_name: query.syllabus_name?.trim(),
+      level_id: query.level_id,
+    };
+    
+    const whereConditions = {
+      ...(filters.syllabus_name && {
+        syllabus_name: { [Op.like]: `%${trimmedQuery.syllabus_name}%` }
+      }),
+      ...(filters.level_id && {
+        level_id: trimmedQuery.level_id
+      }),
+    };
+    
+    const totalSyllabus = await _syllabus.count({ where: whereConditions });
     const syllabus = await _syllabus.findAndCountAll({
+      where: whereConditions,
       limit: limitNumber,
-      offset,
+      offset: limitNumber * (pageNumber - 1),
       include: [
         {
           model: _syllabusItems,
@@ -84,23 +139,26 @@ module.exports = class SyllabusService extends BaseService {
         [{ model: _gradingItem, as: 'grading_items' }, 'id', 'ASC']
       ],
     });
-
+  
     if (!syllabus || syllabus.rows.length === 0) {
-      throw new AppError('No syllabus found', 404);
+      return { data: { results: [], totalCount: 0 } };
     }
+    
+    const categoryMap = await this.getCategoryMap();
+    
     const data = syllabus.rows.map((syllabus) => {
       const gradingItems = syllabus.grading_items || [];
-
+  
       const assignments = gradingItems
-        .filter((item) => item.category_id === 1)
+        .filter((item) => item.category_id === categoryMap['ASSIGNMENTS'])
         .map((item) => item.name);
       const progressTests = gradingItems
-        .filter((item) => item.category_id === 2)
+        .filter((item) => item.category_id === categoryMap['PROGRESS TESTS'])
         .map((item) => item.name);
       const examModules = gradingItems
-        .filter((item) => item.category_id === 3)
+        .filter((item) => item.category_id === categoryMap['MOVERS EXAM'])
         .map((item) => item.name);
-
+  
       return {
         id: syllabus.id,
         syllabus_name: syllabus.syllabus_name,
@@ -115,7 +173,7 @@ module.exports = class SyllabusService extends BaseService {
         percentages_syllabus: syllabus.percentages_syllabus,
       };
     });
-
+  
     return { data: { results: data, totalCount: totalSyllabus } };
   });
 
@@ -126,6 +184,9 @@ module.exports = class SyllabusService extends BaseService {
           model: _syllabusItems,
           as: 'items',
           attributes: ['id', 'item_name'],
+          where: {
+            item_name: { [Op.notLike]: `%${DELETED.DELETED_ITEM}%` },
+          },
         },
         {
           model: _gradePercentages,
@@ -146,8 +207,13 @@ module.exports = class SyllabusService extends BaseService {
           as: 'percentages_syllabus',
           attributes: ['name', 'min', 'max'],
         },
+        {
+          model: _level,
+          as: 'level',
+          attributes: ['id', 'full_level'],
+        },
       ],
-      attributes: ['id', 'syllabus_name', 'exam_type'],
+      attributes: ['id', 'syllabus_name', 'exam_type', 'level_id'], 
       order: [
         [{ model: _syllabusItems, as: 'items' }, 'id', 'ASC'],
         [{ model: _gradingItem, as: 'grading_items' }, 'id', 'ASC']
@@ -157,21 +223,24 @@ module.exports = class SyllabusService extends BaseService {
       throw new AppError('Syllabus not found', 404);
     }
 
+    const categoryMap = await this.getCategoryMap();
+    
     const gradingItems = syllabus.grading_items || [];
     const assignments = gradingItems
-      .filter((item) => item.category_id === 1)
+      .filter((item) => item.category_id === categoryMap['ASSIGNMENTS'])
       .map((item) => item.name);
     const progressTests = gradingItems
-      .filter((item) => item.category_id === 2)
+      .filter((item) => item.category_id === categoryMap['PROGRESS TESTS'])
       .map((item) => item.name);
     const examModules = gradingItems
-      .filter((item) => item.category_id === 3)
+      .filter((item) => item.category_id === categoryMap['MOVERS EXAM'])
       .map((item) => item.name);
 
     const formattedSyllabus = {
       id: syllabus.id,
       syllabus_name: syllabus.syllabus_name,
       exam_type: syllabus.exam_type,
+      level: syllabus.level,
       items: syllabus.items,
       percentages: syllabus.percentages,
       assignments,
@@ -185,85 +254,172 @@ module.exports = class SyllabusService extends BaseService {
   });
 
   createSyllabus = catchServiceAsync(async (body) => {
-    const {
-      syllabus_name,
-      items,
-      assig_percentage,
-      test_percentage,
-      exam_percentage,
-      assignments,
-      progress_tests,
-      movers_exam,
-      percentages,
-      level_id,
-      exam_type,
-    } = body;
+  const {
+    syllabus_name,
+    items,
+    assig_percentage,
+    test_percentage,
+    exam_percentage,
+    assignments,
+    progress_tests,
+    movers_exam,
+    percentages,
+    level_id,
+    exam_type,
+  } = body;
 
-    validateParameters({
-      syllabus_name,
-      assig_percentage,
-      test_percentage,
-      exam_percentage,
-      percentages,
-      level_id,
-    });
+  validateParameters({
+    syllabus_name,
+    assig_percentage,
+    test_percentage,
+    exam_percentage,
+    percentages,
+    level_id,
+  });
 
-    const finalExamType = exam_type || LEVEL_TO_EXAM_TYPE[level_id] || 'PRELIM';
+  const finalExamType = exam_type || LEVEL_TO_EXAM_TYPE[level_id] || 'PRELIM';
 
-    const syllabus = await _syllabus.create({
-      syllabus_name,
-      level_id,
-      exam_type: finalExamType,
-    });
+  const syllabus = await _syllabus.create({
+    syllabus_name,
+    level_id,
+    exam_type: finalExamType,
+  });
 
-    if (items && items.length > 0) {
-      const itemsToCreate = items.map((item, index) => ({
-        syllabus_id: syllabus.id,
-        item_name: item
-      }));
+  if (items && items.length > 0) {
+    const itemsToCreate = items.map((item) => ({
+      syllabus_id: syllabus.id,
+      item_name: item.trim()
+    }));
+    if (itemsToCreate.length > 0) {
       await _syllabusItems.bulkCreate(itemsToCreate);
     }
+  }
 
-    await _gradePercentages.create({
+  await _gradePercentages.create({
+    syllabus_id: syllabus.id,
+    assig_percentage,
+    test_percentage,
+    exam_percentage,
+  });
+
+  const categoryMap = await this.getCategoryMap();
+
+  const gradingCategories = [
+    { categoryId: categoryMap['ASSIGNMENTS'], items: assignments },
+    { categoryId: categoryMap['PROGRESS TESTS'], items: progress_tests },
+  ];
+
+  const gradingItems = gradingCategories.flatMap(({ categoryId, items }) =>
+    (items || []).map((item) => ({
+      category_id: categoryId,
       syllabus_id: syllabus.id,
-      assig_percentage,
-      test_percentage,
-      exam_percentage,
+      name: item,
+    }))
+  );
+
+  if (gradingItems.length > 0) {
+    await _gradingItem.bulkCreate(gradingItems);
+  }
+
+  if (finalExamType) {
+    await this.createExamModulesByType(syllabus.id, finalExamType);
+  }
+
+  if (percentages && percentages.length > 0) {
+    const percentagesToCreate = percentages.map(({ name, min, max }) => ({
+      name,
+      min,
+      max,
+      syllabus_id: syllabus.id,
+    }));
+
+    await _percentages.bulkCreate(percentagesToCreate);
+  }
+
+  return { data: syllabus };
+});
+
+  syncSyllabusItemsWithCourseSchedules = catchServiceAsync(async (syllabusId, transaction) => {
+    const coursesWithSyllabus = await _course.findAll({
+      where: { syllabus_id: syllabusId },
+      attributes: ['id'],
+      transaction,
     });
 
-    const gradingCategories = [
-      { categoryId: 1, items: assignments },
-      { categoryId: 2, items: progress_tests },
-    ];
-
-    const gradingItems = gradingCategories.flatMap(({ categoryId, items }) =>
-      (items || []).map((item) => ({
-        category_id: categoryId,
-        syllabus_id: syllabus.id,
-        name: item,
-      }))
-    );
-
-    if (gradingItems.length > 0) {
-      await _gradingItem.bulkCreate(gradingItems);
+    if (coursesWithSyllabus.length === 0) {
+      return; 
     }
 
-    if (finalExamType) {
-      await this.createExamModulesByType(syllabus.id, finalExamType);
+    const syllabusItems = await _syllabusItems.findAll({
+      where: { 
+        syllabus_id: syllabusId,
+        item_name: { [Op.notLike]: `%${DELETED.DELETED_ITEM}%` },
+      },
+      order: [['id', 'ASC']],
+      transaction,
+    });
+
+    for (const course of coursesWithSyllabus) {
+      const existingSchedules = await _courseSchedule.findAll({
+        where: { course_id: course.id },
+        order: [['scheduled_date', 'ASC']],
+        transaction,
+      });
+
+      if (!existingSchedules?.length) {
+        continue;
+      }
+
+      const existingItemIds = new Set(existingSchedules.map(s => s.syllabus_item_id));
+      
+      const newItems = syllabusItems.filter(item => !existingItemIds.has(item.id));
+      
+      if (!newItems.length) {
+        continue;
+      }
+
+      try {
+        const lastSchedule = existingSchedules[existingSchedules.length - 1];
+        const lastDate = new Date(lastSchedule.scheduled_date);
+        
+        if (isNaN(lastDate.getTime())) {
+          console.error(`Invalid last scheduled date for course ${course.id}`);
+          continue;
+        }
+        
+        const courseInfo = await _course.findByPk(course.id, {
+          attributes: ['schedule'],
+          transaction,
+        });
+        
+        const newSchedules = [];
+        let currentDate = new Date(lastDate);
+        
+        for (let itemIndex = 0; itemIndex < newItems.length; itemIndex++) {
+          currentDate.setDate(currentDate.getDate() + 1);
+          
+          while (currentDate.getDay() === 0 || currentDate.getDay() === 6) {
+            currentDate.setDate(currentDate.getDate() + 1);
+          }
+          
+          newSchedules.push({
+            course_id: course.id,
+            syllabus_item_id: newItems[itemIndex].id,
+            scheduled_date: currentDate.toISOString().split('T')[0],
+            lesson_taught: null,
+          });
+          
+          currentDate = new Date(currentDate); 
+        }
+        
+        if (newSchedules.length > 0) {
+          await _courseSchedule.bulkCreate(newSchedules, { transaction });
+          console.info(`Added ${newSchedules.length} new schedule items for course ${course.id}`);
+        }
+      } catch (error) {
+        continue;
+      }
     }
-
-    if (percentages && percentages.length > 0) {
-      const percentagesToCreate = percentages.map(({ name, min, max }) => ({
-        name,
-        min,
-        max,
-        syllabus_id: syllabus.id,
-      }));
-
-      await _percentages.bulkCreate(percentagesToCreate);
-    }
-
-    return { data: syllabus };
   });
 
   updateSyllabus = catchServiceAsync(async (id, body) => {
@@ -294,11 +450,21 @@ module.exports = class SyllabusService extends BaseService {
       if (!syllabus) {
         throw new AppError('Syllabus not found', 404);
       }
-
+ 
       await syllabus.update(
         { syllabus_name, level_id, exam_type },
         { transaction }
       );
+
+      const previousItemsCount = await _syllabusItems.count({
+        where: { 
+          syllabus_id: id,
+          item_name: {
+            [Op.notLike]: DELETED.DELETED_ITEM
+          }
+        },
+        transaction,
+      });
 
       if (items && Array.isArray(items)) {
         const currentItems = await _syllabusItems.findAll({
@@ -306,26 +472,31 @@ module.exports = class SyllabusService extends BaseService {
           order: [['id', 'ASC']],
           transaction,
         });
-        for (let i = 0; i < items.length; i++) {
-          if (i < currentItems.length) {
-            await currentItems[i].update(
-              { item_name: items[i] },
+        
+        for (let itemIndex = 0; itemIndex < items.length; itemIndex++) {
+          if (itemIndex < currentItems.length) {
+            await currentItems[itemIndex].update(
+              { item_name: items[itemIndex].trim() },
               { transaction }
             );
           } else {
             await _syllabusItems.create(
-              { syllabus_id: id, item_name: items[i] },
+              { syllabus_id: id, item_name: items[itemIndex].trim() },
               { transaction }
             );
           }
         }
+        
         if (currentItems.length > items.length) {
-          for (let i = items.length; i < currentItems.length; i++) {
-            await currentItems[i].update(
-              { item_name: currentItems[i].item_name + ' (eliminado)' },
-              { transaction }
-            );
+          const itemsToDelete = currentItems.slice(items.length);
+          for (const item of itemsToDelete) {
+            await item.destroy({ transaction });
           }
+        }
+
+        const newItemsCount = items.length;
+        if (newItemsCount > previousItemsCount) {
+          await this.syncSyllabusItemsWithCourseSchedules(id, transaction);
         }
       }
 
@@ -370,14 +541,10 @@ module.exports = class SyllabusService extends BaseService {
             transaction,
           });
 
-          const validItems = categoryItems.filter(
-            (item) => item && item.trim() !== ''
-          );
-
-          for (let i = 0; i < validItems.length; i++) {
-            if (i < currentGradingItems.length) {
-              await currentGradingItems[i].update(
-                { name: validItems[i] },
+          for (let categoryItemIndex = 0; categoryItemIndex < categoryItems.length; categoryItemIndex++) {
+            if (categoryItemIndex < currentGradingItems.length) {
+              await currentGradingItems[categoryItemIndex].update(
+                { name: categoryItems[categoryItemIndex] },
                 { transaction }
               );
             } else {
@@ -385,7 +552,7 @@ module.exports = class SyllabusService extends BaseService {
                 {
                   syllabus_id: id,
                   category_id: categoryId,
-                  name: validItems[i],
+                  name: categoryItems[categoryItemIndex],
                 },
                 { transaction }
               );
@@ -412,8 +579,8 @@ module.exports = class SyllabusService extends BaseService {
             }
           }
 
-          if (currentGradingItems.length > validItems.length) {
-            const itemsToDelete = currentGradingItems.slice(validItems.length);
+          if (currentGradingItems.length > categoryItems.length) {
+            const itemsToDelete = currentGradingItems.slice(categoryItems.length);
             for (const item of itemsToDelete) {
               await _courseGrading.destroy({
                 where: { grading_item_id: item.id },
@@ -432,10 +599,11 @@ module.exports = class SyllabusService extends BaseService {
           order: [['id', 'ASC']],
           transaction,
         });
-        for (let i = 0; i < bodyPercentages.length; i++) {
-          const { name, min, max } = bodyPercentages[i];
-          if (i < currentPercentages.length) {
-            await currentPercentages[i].update(
+        
+        for (let percentageIndex = 0; percentageIndex < bodyPercentages.length; percentageIndex++) {
+          const { name, min, max } = bodyPercentages[percentageIndex];
+          if (percentageIndex < currentPercentages.length) {
+            await currentPercentages[percentageIndex].update(
               { name, min, max },
               { transaction }
             );
@@ -446,14 +614,15 @@ module.exports = class SyllabusService extends BaseService {
             );
           }
         }
+        
         if (currentPercentages.length > bodyPercentages.length) {
           for (
-            let i = bodyPercentages.length;
-            i < currentPercentages.length;
-            i++
+            let deletionIndex = bodyPercentages.length;
+            deletionIndex < currentPercentages.length;
+            deletionIndex++
           ) {
-            await currentPercentages[i].update(
-              { name: currentPercentages[i].name + ' (eliminado)' },
+            await currentPercentages[deletionIndex].update(
+              { name: currentPercentages[deletionIndex].name + DELETED.DELETED_ITEM },
               { transaction }
             );
           }
@@ -477,22 +646,23 @@ module.exports = class SyllabusService extends BaseService {
     return syllabus;
   });
 
-  createAssignmentGradingItem = catchServiceAsync(async (body) => {
+  creatAssignmentGradingItem = catchServiceAsync(async (body) => {
     const { syllabus_id, course_id, name } = body;
-
+  
     validateParameters({ syllabus_id, name });
-
-    const transaction = await _sequelize.transaction();
-    try {
+  
+    return await _sequelize.transaction(async (transaction) => {
+      const categoryMap = await this.getCategoryMap();
+      
       const response = await _gradingItem.create(
         {
-          category_id: 1,
+          category_id: categoryMap['ASSIGNMENTS'], 
           syllabus_id,
           name,
         },
         { transaction }
       );
-
+  
       await _courseGrading.create(
         {
           grading_item_id: response.id,
@@ -501,53 +671,48 @@ module.exports = class SyllabusService extends BaseService {
         },
         { transaction }
       );
-
+  
       await transaction.commit();
-
+  
       return { data: response };
-    } catch (e) {
-      await transaction.rollback();
-      throw new AppError('Error creating the field', 400);
-    }
+    });
   });
 
   updateAssignmentGradingItem = catchServiceAsync(async (body) => {
     const { name, id } = body;
-
+  
     validateParameters({ id });
-
+  
     const response = await _gradingItem.update(
       {
         name,
       },
       { where: { id } }
     );
-
+  
     return { data: response };
   });
 
   getFinalPercentageBySyllabusId = catchServiceAsync(async (syllabus_id) => {
     validateParameters({ 'Sylllabus id': syllabus_id });
-
+  
     const response = await _percentages.findAll({ where: { syllabus_id } });
-
+  
     return { data: response };
   });
 
   updateExamTypesByLevel = catchServiceAsync(async () => {
-    const transaction = await _sequelize.transaction();
-
-    try {
+    return await _sequelize.transaction(async (transaction) => {
       const syllabi = await _syllabus.findAll({
         attributes: ['id', 'level_id', 'exam_type'],
         transaction,
       });
-
+  
       const updates = [];
-
+  
       for (const syllabus of syllabi) {
         const correctExamType = LEVEL_TO_EXAM_TYPE[syllabus.level_id];
-
+  
         if (correctExamType && syllabus.exam_type !== correctExamType) {
           updates.push(
             _syllabus.update(
@@ -560,19 +725,15 @@ module.exports = class SyllabusService extends BaseService {
           );
         }
       }
-
+  
       await Promise.all(updates);
-      await transaction.commit();
-
+  
       return {
         success: true,
         message: `Updated ${updates.length} syllabi with correct exam types`,
         updatedCount: updates.length,
       };
-    } catch (error) {
-      await transaction.rollback();
-      throw new AppError('Error updating exam types', 500);
-    }
+    });
   });
 
   getExamTypeByLevel = (levelId) => {

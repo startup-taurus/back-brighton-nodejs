@@ -1,5 +1,7 @@
 const BaseService = require('./base.service');
+const AppError = require('../utils/app-error');
 const catchServiceAsync = require('../utils/catch-service-async');
+const { COURSE_TYPES } = require('../utils/constants');
 const { validateParameters, countAttendance } = require('../utils/utils');
 
 let _user = null;
@@ -9,6 +11,8 @@ let _attendance = null;
 let _courseSchedule = null;
 let _courseService = null;
 let _courseScheduleService = null;
+let _courseStudent = null;
+
 module.exports = class AttendanceService extends BaseService {
   constructor({
     Attendance,
@@ -18,6 +22,7 @@ module.exports = class AttendanceService extends BaseService {
     Student,
     CourseService,
     CourseScheduleService,
+    CourseStudent,
   }) {
     super(Attendance);
     _user = User.User;
@@ -27,6 +32,7 @@ module.exports = class AttendanceService extends BaseService {
     _courseSchedule = CourseSchedule.CourseSchedule;
     _courseService = CourseService;
     _courseScheduleService = CourseScheduleService;
+    _courseStudent = CourseStudent.CourseStudent;
   }
 
   initializeAttendanceStructure = (
@@ -76,19 +82,31 @@ module.exports = class AttendanceService extends BaseService {
   });
 
   getAttendanceByCourse = catchServiceAsync(async (courseId) => {
-    const courseAttendance = await this.getAttendanceByCourseId(courseId);
-    const students = await _courseService.getCourseWithStudents(courseId);
-    const courseSchedule = await _courseScheduleService.getCourseScheduleDates(
-      courseId
-    );
+    const course = await _course.findByPk(courseId, {
+      attributes: ['course_type']
+    });
 
-    const attendance = this.buildAttendanceStructure(
-      courseSchedule?.data,
-      students?.data?.students,
-      courseAttendance?.data
-    );
+    if (!course) {
+      throw new AppError('Course not found', 404);
+    }
 
-    return { data: attendance ?? [] };
+    if (course.course_type === COURSE_TYPES.PRIVATE || course.course_type === COURSE_TYPES.PRIVATE_ONLINE) {
+      throw new AppError('For private classes, use the private_class_hours endpoint', 400);
+    } else {
+      const courseAttendance = await this.getAttendanceByCourseId(courseId);
+      const students = await _courseService.getCourseWithStudents(courseId);
+      const courseSchedule = await _courseScheduleService.getCourseScheduleDates(
+        courseId
+      );
+
+      const attendance = this.buildAttendanceStructure(
+        courseSchedule?.data,
+        students?.data?.students,
+        courseAttendance?.data
+      );
+
+      return { data: attendance ?? [] };
+    }
   });
 
   getAttendanceByCourseAndStudent = catchServiceAsync(

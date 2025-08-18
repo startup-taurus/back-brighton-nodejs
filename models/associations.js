@@ -20,7 +20,7 @@ let _level = null;
 let _registeredStudent = null;
 let _studentTransfer = null;
 let _transferData = null;
-
+let _privateClassHours = null;
 module.exports = class AuditModel {
   constructor({
     User,
@@ -45,6 +45,8 @@ module.exports = class AuditModel {
     RegisteredStudent,
     StudentTransfer,
     TransferData,
+    PrivateClassHours,
+
   }) {
     _student = Student.Student;
     _registeredStudent = RegisteredStudent.RegisteredStudent;
@@ -68,6 +70,7 @@ module.exports = class AuditModel {
     _level = Level.Level;
     _studentTransfer = StudentTransfer.StudentTransfer;
     _transferData = TransferData.TransferData;
+    _privateClassHours = PrivateClassHours.PrivateClassHours;
 
     this.defineModel();
   }
@@ -383,6 +386,26 @@ module.exports = class AuditModel {
     _percentages.belongsTo(_syllabus, {
       foreignKey: 'syllabus_id',
       as: 'syllabus',
+    });
+    _course.hasMany(_privateClassHours, {
+      foreignKey: 'course_id',
+      as: 'private_classes',
+    });
+
+    _privateClassHours.belongsTo(_course, {
+      foreignKey: 'course_id',
+      as: 'private_classes',
+    });
+    
+    _student.hasMany(_privateClassHours, {
+      foreignKey: 'student_id',
+      as: '_student',
+
+    });
+
+    _privateClassHours.belongsTo(_student, {
+      foreignKey: 'student_id',
+      as: '_student',
     });
   }
 };
