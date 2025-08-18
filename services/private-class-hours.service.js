@@ -1,5 +1,7 @@
 const BaseService = require('./base.service');
+const AppError = require('../utils/app-error');
 const catchServiceAsync = require('../utils/catch-service-async');
+const { COURSE_TYPES } = require('../utils/constants');
 const { validateParameters } = require('../utils/utils');
 
 let _user = null;
@@ -30,12 +32,11 @@ module.exports = class PrivateClassHoursService extends BaseService {
     });
 
     if (!course) {
-      throw new Error('Curso no encontrado');
+      throw new AppError('Course not found', 404);
     }
 
-    if (course.course_type !== 'private' && course.course_type !== 'private - online') {
-      throw new Error('Solo se pueden crear reportes para clases privadas');
-
+    if (course.course_type !== COURSE_TYPES.PRIVATE && course.course_type !== COURSE_TYPES.PRIVATE_ONLINE) {
+      throw new AppError('This endpoint is only for private classes', 400);
     }
 
     const courseStudent = await _courseStudent.findOne({
@@ -108,9 +109,8 @@ module.exports = class PrivateClassHoursService extends BaseService {
       attributes: ['course_type']
     });
 
-    if (!course || course.course_type !== 'private' && course.course_type !== 'private - online') {
-
-      throw new Error('Solo se pueden crear clases para cursos privados');
+    if (!course || (course.course_type !== COURSE_TYPES.PRIVATE && course.course_type !== COURSE_TYPES.PRIVATE_ONLINE)) {
+      throw new AppError('Classes can only be created for private courses', 400);
     }
 
     const courseStudent = await _courseStudent.findOne({
@@ -163,39 +163,17 @@ module.exports = class PrivateClassHoursService extends BaseService {
     return { data: updatedClass };
   });
 
-  deletePrivateClass = catchServiceAsync(async (classId, professorId = null) => {
-    const privateClass = await _privateClassHours.findByPk(classId);
-
-    if (!privateClass) {
-      throw new Error('Clase privada no encontrada');
-    }
-
-    if (professorId) {
-      const course = await _course.findByPk(privateClass.course_id, {
-        attributes: ['professor_id']
-      });
-
-      if (!course || course.professor_id !== professorId) {
-        throw new Error('Solo el profesor asignado puede eliminar esta clase');
-      }
-    }
-
-    await privateClass.destroy();
-    return { data: { message: 'Clase privada eliminada exitosamente' } };
-  });
-
   createMultiplePrivateClasses = catchServiceAsync(async (courseId, entries, professorId = null) => {
     const course = await _course.findByPk(courseId, {
       attributes: ['course_type', 'professor_id']
     });
 
     if (!course) {
-      throw new Error('Curso no encontrado');
+      throw new AppError('Course not found', 404);
     }
 
-    if (course.course_type !== 'private' && course.course_type !== 'private - online') {
-
-      throw new Error('Solo se pueden crear reportes para clases privadas');
+    if (course.course_type !== COURSE_TYPES.PRIVATE && course.course_type !== COURSE_TYPES.PRIVATE_ONLINE) {
+      throw new AppError('Reports can only be created for private classes', 400);
     }
 
     if (professorId && course.professor_id !== professorId) {

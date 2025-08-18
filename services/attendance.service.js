@@ -1,5 +1,7 @@
 const BaseService = require('./base.service');
+const AppError = require('../utils/app-error');
 const catchServiceAsync = require('../utils/catch-service-async');
+const { COURSE_TYPES } = require('../utils/constants');
 const { validateParameters, countAttendance } = require('../utils/utils');
 
 let _user = null;
@@ -80,20 +82,17 @@ module.exports = class AttendanceService extends BaseService {
   });
 
   getAttendanceByCourse = catchServiceAsync(async (courseId) => {
-    // Verificar el tipo de curso
     const course = await _course.findByPk(courseId, {
       attributes: ['course_type']
     });
 
     if (!course) {
-      throw new Error('Curso no encontrado');
+      throw new AppError('Course not found', 404);
     }
 
-    if (course.course_type === 'private') {
-      // Para clases privadas, redirigir a usar private_class_hours
-      throw new Error('Para clases privadas, usar el endpoint de private_class_hours');
+    if (course.course_type === COURSE_TYPES.PRIVATE || course.course_type === COURSE_TYPES.PRIVATE_ONLINE) {
+      throw new AppError('For private classes, use the private_class_hours endpoint', 400);
     } else {
-      // Para clases grupales, usar la lógica original
       const courseAttendance = await this.getAttendanceByCourseId(courseId);
       const students = await _courseService.getCourseWithStudents(courseId);
       const courseSchedule = await _courseScheduleService.getCourseScheduleDates(

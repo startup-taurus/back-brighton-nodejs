@@ -70,7 +70,7 @@ module.exports = class AuditModel {
     _level = Level.Level;
     _studentTransfer = StudentTransfer.StudentTransfer;
     _transferData = TransferData.TransferData;
-    _privateClassHours = PrivateClassHours.PrivateClassHours; // <- AGREGAR ESTA LÍNEA AQUÍ
+    _privateClassHours = PrivateClassHours.PrivateClassHours; 
 
     this.defineModel();
   }

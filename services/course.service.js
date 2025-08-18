@@ -2,6 +2,7 @@ const catchServiceAsync = require('../utils/catch-service-async');
 const BaseService = require('./base.service');
 const AppError = require('../utils/app-error');
 const { Op, fn, col, literal } = require('sequelize');
+const { COURSE_TYPES } = require('../utils/constants');
 const {
   validateParameters,
   scheduleStringToDates,
@@ -472,7 +473,7 @@ module.exports = class CourseService extends BaseService {
       }
     }
 
-    if (body.course_type === 'private' || body.course_type === 'private - online') {
+    if (body.COURSE_TYPES.PRIVATE || courseType === COURSE_TYPES.PRIVATE_ONLINE) {
       body.syllabus_id = null;
       body.schedule = null;
       body.classroom = null;

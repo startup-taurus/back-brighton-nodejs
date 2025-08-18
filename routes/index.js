@@ -25,7 +25,7 @@ module.exports = function ({
   RegisteredStudentRoutes,
   TransferDataRoutes,
   StudentTransferRoutes,
-  PrivateClassHoursRoutes, // Agregar esta línea
+  PrivateClassHoursRoutes, 
 }) {
   const router = express.Router();
   const apiRouter = express.Router();
@@ -45,7 +45,7 @@ module.exports = function ({
   apiRouter.use('/syllabus', SyllabusRoutes);
   apiRouter.use('/professor', ProfessorRoutes);
   apiRouter.use('/attendance', AttendanceRoutes);
-  apiRouter.use('/private-class-hours', PrivateClassHoursRoutes); // Agregar esta línea
+  apiRouter.use('/private-class-hours', PrivateClassHoursRoutes);
   apiRouter.use('/transfer-data', TransferDataRoutes);
   apiRouter.use('/student-grades', StudentGradesRoutes);
   apiRouter.use('/course-schedule', CourseScheduleRoutes);

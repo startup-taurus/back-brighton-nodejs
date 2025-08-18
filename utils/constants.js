@@ -127,6 +127,15 @@ const GRADING_CATEGORIES = {
   EXAM: 'MOVERS EXAM'
 };
 
+const COURSE_TYPES = {
+  ONLINE: 'online',
+  ON_SITE: 'on-site',
+  PRIVATE: 'private',
+  PRIVATE_ONLINE: 'private - online'
+};
+
+
+
 module.exports = {
   DAYS_OF_WEEK,
   AGE_CATEGORY,
@@ -139,5 +148,6 @@ module.exports = {
   LEVEL_TO_EXAM_TYPE_BY_AGE,
   ERROR_MESSAGES,
   GRADING_CATEGORIES,
-  DELETED
+  DELETED,
+  COURSE_TYPES,
 };

@@ -32,7 +32,6 @@ module.exports = class CourseScheduleModel {
           },
           allowNull: false,
         },
-        // scheduled_date column removed - no longer used
         lesson_taught: {
           type: DataTypes.TEXT,
           allowNull: true,
