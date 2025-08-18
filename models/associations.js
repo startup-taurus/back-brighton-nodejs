@@ -20,8 +20,7 @@ let _level = null;
 let _registeredStudent = null;
 let _studentTransfer = null;
 let _transferData = null;
-let _privateClassHours = null; 
-
+let _privateClassHours = null;
 module.exports = class AuditModel {
   constructor({
     User,
@@ -47,6 +46,7 @@ module.exports = class AuditModel {
     StudentTransfer,
     TransferData,
     PrivateClassHours,
+
   }) {
     _student = Student.Student;
     _registeredStudent = RegisteredStudent.RegisteredStudent;
@@ -70,7 +70,7 @@ module.exports = class AuditModel {
     _level = Level.Level;
     _studentTransfer = StudentTransfer.StudentTransfer;
     _transferData = TransferData.TransferData;
-    _privateClassHours = PrivateClassHours.PrivateClassHours; 
+    _privateClassHours = PrivateClassHours.PrivateClassHours;
 
     this.defineModel();
   }
@@ -306,26 +306,14 @@ module.exports = class AuditModel {
       as: 'syllabus',
     });
 
-    _privateClassHours.belongsTo(_course, {
-      foreignKey: 'course_id',
-      as: '_course',
+    _syllabusItems.hasMany(_courseSchedule, {
+      foreignKey: 'syllabus_item_id',
+      as: 'course_schedule',
     });
-
-    _course.hasMany(_privateClassHours, {
-      foreignKey: 'course_id',
-      as: 'private_classes',
+    _courseSchedule.belongsTo(_syllabusItems, {
+      foreignKey: 'syllabus_item_id',
+      as: 'syllabusItem',
     });
-
-    _privateClassHours.belongsTo(_student, {
-      foreignKey: 'student_id',
-      as: '_student',
-    });
-
-    _student.hasMany(_privateClassHours, {
-      foreignKey: 'student_id',
-      as: 'private_classes',
-    });
-
 
     _syllabus.hasMany(_gradingItem, {
       foreignKey: 'syllabus_id',
@@ -336,13 +324,88 @@ module.exports = class AuditModel {
       as: 'syllabus',
     });
 
+    // GradingCategory -> GradingItem
+    _gradingCategory.hasMany(_gradingItem, {
+      foreignKey: 'category_id',
+      as: 'items',
+    });
+    _gradingItem.belongsTo(_gradingCategory, {
+      foreignKey: 'category_id',
+      as: 'category',
+    });
+
+    // GradingItem -> CourseGrading
+    _gradingItem.hasMany(_courseGrading, {
+      foreignKey: 'grading_item_id',
+      as: 'course_grades',
+    });
+    _courseGrading.belongsTo(_gradingItem, {
+      foreignKey: 'grading_item_id',
+      as: 'grading_item',
+    });
+
+    // Course -> CourseGrading
+    _course.hasMany(_courseGrading, {
+      foreignKey: 'course_id',
+      as: 'grading_items',
+    });
+    _courseGrading.belongsTo(_course, {
+      foreignKey: 'course_id',
+      as: 'course',
+    });
+
+    // StudentGrades -> GradingItem
+    _studentGrades.belongsTo(_gradingItem, {
+      foreignKey: 'grading_item_id',
+      as: 'grading_item', // This alias matches the service query
+    });
+
+    // GradingItem -> StudentGrades
+    _gradingItem.hasMany(_studentGrades, {
+      foreignKey: 'grading_item_id',
+      as: 'studentGradeEntries', // Using a distinct alias for clarity
+    });
+
+    // Student -> StudentGrades
+    _student.hasMany(_studentGrades, {
+      foreignKey: 'student_id',
+      as: 'student_grades_overall',
+    });
+    _studentGrades.belongsTo(_student, {
+      foreignKey: 'student_id',
+      as: 'student',
+    });
+
+    // SyllabusModel (o donde defines tu modelo syllabus)
     _syllabus.hasMany(_percentages, {
       foreignKey: 'syllabus_id',
       as: 'percentages_syllabus',
     });
+
+    // PercentagesModel
     _percentages.belongsTo(_syllabus, {
       foreignKey: 'syllabus_id',
       as: 'syllabus',
+    });
+    _course.hasMany(_privateClassHours, {
+      foreignKey: 'course_id',
+      as: 'private_classes',
+    });
+
+    _privateClassHours.belongsTo(_course, {
+      foreignKey: 'course_id',
+      as: 'private_classes',
+    });
+    
+    _student.hasMany(_privateClassHours, {
+      foreignKey: 'student_id',
+      as: '_student',
+
+    });
+
+    _privateClassHours.belongsTo(_student, {
+      foreignKey: 'student_id',
+      as: '_student',
     });
   }
 };

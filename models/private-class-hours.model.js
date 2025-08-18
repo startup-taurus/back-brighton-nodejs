@@ -46,7 +46,7 @@ module.exports = class PrivateClassHoursModel {
           allowNull: true,
         },
         lesson_status: {
-          type: DataTypes.ENUM('PENDING', 'COMPLETED', 'CANCELLED'),
+          type: DataTypes.ENUM('PENDING', 'DONE', 'CANCELLED'),
           defaultValue: 'PENDING',
           allowNull: false,
         },

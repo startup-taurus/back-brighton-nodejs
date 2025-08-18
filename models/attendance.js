@@ -31,10 +31,6 @@ module.exports = class AttendanceModel {
           type: DataTypes.ENUM('', 'present', 'absent', 'late', 'recovered'),
           allowNull: false,
         },
-        scheduled_date: {
-          type: DataTypes.DATEONLY,
-          allowNull: true,
-        },
       },
       {
         tableName: 'attendance',

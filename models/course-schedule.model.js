@@ -36,6 +36,10 @@ module.exports = class CourseScheduleModel {
           type: DataTypes.TEXT,
           allowNull: true,
         },
+        scheduled_date: {
+          type: DataTypes.DATE,
+          allowNull: false,
+        },
       },
       {
         tableName: 'course_schedule',
