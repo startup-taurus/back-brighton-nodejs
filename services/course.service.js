@@ -404,7 +404,7 @@ module.exports = class CourseService extends BaseService {
       syllabus_id,
     } = body;
 
-    if (course_type === 'private' || course_type === 'private - online') {
+    if (body.COURSE_TYPES.PRIVATE || courseType === COURSE_TYPES.PRIVATE_ONLINE) {
       validateParameters({
         course_name,
         course_number,
@@ -436,9 +436,9 @@ module.exports = class CourseService extends BaseService {
 
     const course = await _course.create(body);
 
-    if (course_type !== 'private' && course_type !== 'private - online') {
+    if (body.COURSE_TYPES.PRIVATE || courseType === COURSE_TYPES.PRIVATE_ONLINE) {
       await this.createCourseSchedule(start_date, schedule, syllabus_id, course);
-
+      
       const gradingItems = await _gradingItem.findAll({
         where: { syllabus_id },
         attributes: ['id'],
@@ -519,7 +519,10 @@ module.exports = class CourseService extends BaseService {
       let syllabus = await _syllabusService.getSyllabusById(syllabus_id);
       syllabus = syllabus.data;
 
-      if (!syllabus || !syllabus.items || syllabus.items.length === 0) {
+      if (!syllabus ) {
+        throw new AppError('Syllabus not found', 404);
+      }
+      if (!syllabus.items || syllabus.items.length === 0) {
         throw new AppError('Syllabus items not found', 404);
       }
 
