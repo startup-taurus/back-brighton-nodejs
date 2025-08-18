@@ -404,7 +404,7 @@ module.exports = class CourseService extends BaseService {
       syllabus_id,
     } = body;
 
-    if (body.COURSE_TYPES.PRIVATE || courseType === COURSE_TYPES.PRIVATE_ONLINE) {
+    if (course_type === 'private' || course_type === 'private - online') {
       validateParameters({
         course_name,
         course_number,
@@ -436,7 +436,7 @@ module.exports = class CourseService extends BaseService {
 
     const course = await _course.create(body);
 
-    if (body.COURSE_TYPES.PRIVATE || courseType === COURSE_TYPES.PRIVATE_ONLINE) {
+    if (course_type !== 'private' && course_type !== 'private - online') {
       await this.createCourseSchedule(start_date, schedule, syllabus_id, course);
       
       const gradingItems = await _gradingItem.findAll({
@@ -473,7 +473,7 @@ module.exports = class CourseService extends BaseService {
       }
     }
 
-    if (body.COURSE_TYPES.PRIVATE || courseType === COURSE_TYPES.PRIVATE_ONLINE) {
+    if (body.course_type === COURSE_TYPES.PRIVATE || body.course_type === COURSE_TYPES.PRIVATE_ONLINE) {
       body.syllabus_id = null;
       body.schedule = null;
       body.classroom = null;
