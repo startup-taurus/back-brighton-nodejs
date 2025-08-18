@@ -121,7 +121,7 @@ module.exports = class PrivateClassHoursService extends BaseService {
     });
 
     if (!courseStudent) {
-      throw new Error('El estudiante no está asociado a este curso');
+      throw new AppError('The student is not associated with this course', 400);
     }
 
     const privateClass = await _privateClassHours.create({
@@ -140,7 +140,7 @@ module.exports = class PrivateClassHoursService extends BaseService {
     const privateClass = await _privateClassHours.findByPk(classId);
   
     if (!privateClass) {
-      throw new Error('Clase privada no encontrada');
+      throw new AppError('Private class not found', 404);
     }
   
     if (professorId) {
@@ -149,7 +149,7 @@ module.exports = class PrivateClassHoursService extends BaseService {
       });
   
       if (!course || course.professor_id !== professorId) {
-        throw new Error('Solo el profesor asignado puede actualizar esta clase');
+        throw new AppError('Only the assigned professor can update this class', 403);
       }
     }
   
@@ -177,7 +177,7 @@ module.exports = class PrivateClassHoursService extends BaseService {
     }
 
     if (professorId && course.professor_id !== professorId) {
-      throw new Error('Solo el profesor asignado puede crear reportes para este curso');
+      throw new AppError('Only the assigned professor can create reports for this course', 403);
     }
 
     const courseStudent = await _courseStudent.findOne({
@@ -186,7 +186,7 @@ module.exports = class PrivateClassHoursService extends BaseService {
     });
 
     if (!courseStudent) {
-      throw new Error('No se encontró estudiante asociado al curso privado');
+      throw new AppError('No student associated with this private course', 400);
     }
 
     const privateClassEntries = entries.map(entry => ({

@@ -71,7 +71,7 @@ const {
   RegisteredStudentRoutes,
   TransferDataRoutes,
   StudentTransferRoutes,
-  PrivateClassHoursRoutes, // <- AGREGAR ESTA LÍNEA
+  PrivateClassHoursRoutes, 
 
 } = require('../routes/api/index');
 

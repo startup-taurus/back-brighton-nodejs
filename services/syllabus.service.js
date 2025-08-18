@@ -367,7 +367,6 @@ module.exports = class SyllabusService extends BaseService {
       });
 
       if (!existingSchedules?.length) {
-        console.warn(`Course ID ${course.id} has no existing schedule - skipping syllabus sync`);
         continue;
       }
 
@@ -418,7 +417,6 @@ module.exports = class SyllabusService extends BaseService {
           console.info(`Added ${newSchedules.length} new schedule items for course ${course.id}`);
         }
       } catch (error) {
-        console.error(`Error processing course ${course.id}:`, error.message);
         continue;
       }
     }
