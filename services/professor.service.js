@@ -152,9 +152,19 @@ module.exports = class ProfessorService extends BaseService {
       const schedule = course.schedule
         ? scheduleStringToDates(course.schedule)
         : null;
-      const hasClassToday = false;
-      const hasBeenTakenAttendance = false;
-      const courseDates = [];
+
+
+      const hasClassToday = course.course_schedules.some(
+        (schedule) => schedule.scheduled_date === today
+      );
+      const hasBeenTakenAttendance = course.course_schedules.some(
+        (schedule) =>
+          schedule.scheduled_date === today && schedule.attendances.length > 0
+      );
+
+      const courseDates = course.course_schedules.map(
+        (schedule) => new Date(schedule.scheduled_date)
+      );
 
       const lastCourseDate = courseDates.length
         ? new Date(Math.max(...courseDates.map((f) => f.getTime())))
