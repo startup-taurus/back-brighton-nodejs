@@ -289,7 +289,6 @@ module.exports = class UserService extends BaseService {
       })
     ];
 
-    // Agregar consulta para username si se proporciona
     if (username) {
       queries.push(
         _user.findOne({
@@ -318,7 +317,6 @@ module.exports = class UserService extends BaseService {
 
     const results = await Promise.all(queries);
     
-    // Ajustar la destructuración según las consultas realizadas
     let existingEmailUser, existingUsernameUser, existingCedulaProfessor;
     
     if (username && role === USER_TYPES.PROFESSOR) {
