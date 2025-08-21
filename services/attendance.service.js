@@ -278,7 +278,7 @@ module.exports = class AttendanceService extends BaseService {
         maxConsecutive = Math.max(maxConsecutive, currentConsecutive);
       }
       
-      if (maxConsecutive >= 2) {
+      if (maxConsecutive >= 4) {
         consecutiveAbsencesReport.push({
           course_code: studentCourse.courseCode,
           course_name: studentCourse.courseName,
