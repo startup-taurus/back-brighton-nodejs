@@ -2,19 +2,22 @@ const { Op } = require('sequelize');
 const BaseService = require('./base.service');
 const AppError = require('../utils/app-error');
 const { deleteFile } = require('../utils/upload');
-const { validateParameters } = require('../utils/utils');
+const { validateParameters, validateEmailFormat } = require('../utils/utils');
 const catchServiceAsync = require('../utils/catch-service-async');
+const { USER_TYPES, ERROR_MESSAGES } = require('../utils/constants');
 let _user = null;
 let _course = null;
 let _authUtils = null;
 let _professor = null;
+let _student = null;
 
 module.exports = class UserService extends BaseService {
-  constructor({ User, Course, AuthUtils, Professor }) {
+  constructor({ User, Course, AuthUtils, Professor, Student }) {
     super(User);
     _user = User.User;
     _course = Course.Course;
     _professor = Professor.Professor;
+    _student = Student.Student;
     _authUtils = AuthUtils;
   }
 
@@ -60,7 +63,8 @@ module.exports = class UserService extends BaseService {
       { where: { id: user.id } }
     );
 
-    if (user.role === 'professor') {
+    if (user.role === USER_TYPES.PROFESSOR) {
+
       let professor = await _professor.findOne({
         where: { user_id: user.id },
         attributes: ['report_link'],
@@ -197,5 +201,169 @@ module.exports = class UserService extends BaseService {
       },
     ];
     return { data: schoolCardData };
+  });
+
+
+  checkDuplicateUser = catchServiceAsync(async (email, username, excludeUserId = null) => {
+    validateParameters({ email, username });
+
+    const emailValidation = validateEmailFormat(email);
+    if (!emailValidation.isValid) {
+      return {
+        data: {
+          isValid: false,
+          message: emailValidation.message
+        }
+      };
+    }
+    const [existingEmailUser, existingUsernameUser] = await Promise.all([
+      _user.findOne({
+        where: {
+          email: email,
+          ...(excludeUserId && { id: { [Op.ne]: excludeUserId } })
+        },
+        attributes: ['id', 'email'],
+        raw: true
+      }),
+      _user.findOne({
+        where: {
+          username: username,
+          ...(excludeUserId && { id: { [Op.ne]: excludeUserId } })
+        },
+        attributes: ['id', 'username'],
+        raw: true
+      })
+    ]);
+
+    if (existingEmailUser) {
+      return {
+        data: {
+          isValid: false,
+          message: ERROR_MESSAGES.EMAIL_ALREADY_REGISTERED
+        }
+      };
+    }
+
+    if (existingUsernameUser) {
+      return {
+        data: {
+          isValid: false,
+          message: ERROR_MESSAGES.USERNAME_ALREADY_REGISTERED
+        }
+      };
+    }
+
+    return {
+      data: {
+        isValid: true,
+        message: ERROR_MESSAGES.USERNAME_EMAIL_ALREADY_REGISTERED
+      }
+    };
+  });
+
+  checkDuplicateByRole = catchServiceAsync(async (email, cedula, role, username = null, excludeUserId = null) => {
+
+    validateParameters({ email, cedula });
+
+    const emailValidation = validateEmailFormat(email);
+    if (!emailValidation.isValid) {
+      return {
+        data: {
+          isValid: false,
+          message: emailValidation.message,
+          duplicateEmail: false,
+          duplicateCedula: false,
+          duplicateUsername: false,
+        }
+      };
+    }
+
+    const queries = [
+      _user.findOne({
+        where: {
+          email: email,
+          ...(excludeUserId && { id: { [Op.ne]: excludeUserId } })
+        },
+        attributes: ['id', 'email'],
+        raw: true
+      })
+    ];
+
+    // Agregar consulta para username si se proporciona
+    if (username) {
+      queries.push(
+        _user.findOne({
+          where: {
+            username: username,
+            ...(excludeUserId && { id: { [Op.ne]: excludeUserId } })
+          },
+          attributes: ['id', 'username'],
+          raw: true
+        })
+      );
+    }
+
+    if (role === USER_TYPES.PROFESSOR) {
+      queries.push(
+        _professor.findOne({
+          where: {
+            cedula: cedula,
+            ...(excludeUserId && { user_id: { [Op.ne]: excludeUserId } })
+          },
+          attributes: ['id', 'cedula'],
+          raw: true
+        })
+      );
+    }
+
+    const results = await Promise.all(queries);
+    
+    // Ajustar la destructuración según las consultas realizadas
+    let existingEmailUser, existingUsernameUser, existingCedulaProfessor;
+    
+    if (username && role === USER_TYPES.PROFESSOR) {
+      [existingEmailUser, existingUsernameUser, existingCedulaProfessor] = results;
+    } else if (username) {
+      [existingEmailUser, existingUsernameUser] = results;
+    } else if (role === USER_TYPES.PROFESSOR) {
+      [existingEmailUser, existingCedulaProfessor] = results;
+    } else {
+      [existingEmailUser] = results;
+    }
+
+    const duplicateEmail = !!existingEmailUser;
+    const duplicateCedula = role === USER_TYPES.PROFESSOR ? !!existingCedulaProfessor : false;
+    const duplicateUsername = !!username && !!existingUsernameUser;
+
+    let message;
+    if (duplicateEmail && duplicateCedula && duplicateUsername) {
+      message = ERROR_MESSAGES.EMAIL_CEDULA_USERNAME_ALREADY_REGISTERED;
+    } else if (duplicateEmail && duplicateCedula) {
+      message = ERROR_MESSAGES.EMAIL_CEDULA_ALREADY_REGISTERED;
+    } else if (duplicateEmail && duplicateUsername) {
+      message = ERROR_MESSAGES.EMAIL_USERNAME_ALREADY_REGISTERED;
+    } else if (duplicateCedula && duplicateUsername) {
+      message = ERROR_MESSAGES.CEDULA_USERNAME_ALREADY_REGISTERED;
+    } else if (duplicateEmail) {
+      message = ERROR_MESSAGES.EMAIL_ALREADY_REGISTERED;
+    } else if (duplicateCedula) {
+      message = ERROR_MESSAGES.CEDULA_ALREADY_REGISTERED;
+    } else if (duplicateUsername) {
+      message = ERROR_MESSAGES.USERNAME_ALREADY_REGISTERED;
+    } else {
+      message = ERROR_MESSAGES.EMAIL_CEDULA_AVAILABLE;
+    }
+
+    const isValid = !duplicateEmail && !duplicateCedula && !duplicateUsername;
+
+    return {
+      data: {
+        isValid,
+        message,
+        duplicateEmail,
+        duplicateCedula,
+        duplicateUsername
+      }
+    };
   });
 };

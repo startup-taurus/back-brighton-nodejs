@@ -29,4 +29,9 @@ module.exports = class AttendanceController extends BaseController {
     const result = await _attendanceService.createAttendance(body);
     return appResponse(res, result);
   });
+
+  getConsecutiveAbsencesReport = catchControllerAsync(async (req, res) => {
+    const result = await _attendanceService.getConsecutiveAbsencesReport();
+    return appResponse(res, result);
+  });
 };

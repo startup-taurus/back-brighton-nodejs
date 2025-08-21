@@ -67,4 +67,16 @@ module.exports = class UserController extends BaseController {
     const result = await _userService.getDashboardData();
     return appResponse(res, result);
   });
+
+  checkDuplicateByRole = catchControllerAsync(async (req, res) => {
+    const { email, cedula, role, username, excludeUserId } = req.body;
+    const result = await _userService.checkDuplicateByRole(email, cedula, role, username, excludeUserId);
+    return appResponse(res, result);
+  });
+
+  checkDuplicateUser = catchControllerAsync(async (req, res) => {
+    const { email, username, excludeUserId } = req.body;
+    const result = await _userService.checkDuplicateUser(email, username, excludeUserId);
+    return appResponse(res, result);
+  });
 };

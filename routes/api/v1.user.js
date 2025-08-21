@@ -12,6 +12,8 @@ module.exports = function ({ UserController, AuthMiddleware }) {
     requireRoles(USER_TYPES.COORDINATOR, USER_TYPES.ADMIN, USER_TYPES.RECEPTIONIST),  UserController.getDashboardData);
   router.post("/login", UserController.signIn);
   router.post("/register", UserController.createUser);
+  router.post("/check-duplicate", UserController.checkDuplicateByRole);
+  router.post("/check-duplicate-user", UserController.checkDuplicateUser);
   router.put("/update/:id", UserController.updateUser);
   router.put("/update-status/:id", UserController.updateUserStatus);
   router.delete("/delete/:id", UserController.deleteUser);

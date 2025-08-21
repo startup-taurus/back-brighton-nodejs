@@ -114,12 +114,30 @@ module.exports = {
       return acc;
     }, 0);  
 
-    return attendanceTotal; // Removido Math.floor() para mantener decimales
+    return attendanceTotal;
   },
 
   hasClassToday(day) {
     const currentDay = new Date().getDay();
 
     return currentDay === DAYS_OF_WEEK[day];
+  },
+
+  validateEmailFormat(email) {
+    if (!email) {
+      return { isValid: false, message: 'Email is required' };
+    }
+  
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    
+    if (!emailRegex.test(email)) {
+      return { isValid: false, message: 'Email must contain @ and . in the correct format (e.g., user@domain.com)' };
+    }
+  
+    if (email.includes('@@@') || email.includes('...')) {
+      return { isValid: false, message: 'Invalid email format' };
+    }
+  
+    return { isValid: true };
   },
 };

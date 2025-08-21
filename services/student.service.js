@@ -1,7 +1,7 @@
 const catchServiceAsync = require('../utils/catch-service-async');
 const BaseService = require('./base.service');
 const AppError = require('../utils/app-error');
-const { validateParameters, generateCredentials } = require('../utils/utils');
+const { validateParameters, generateCredentials, validateEmailFormat } = require('../utils/utils');
 const { Op } = require('sequelize');
 const { ERROR_MESSAGES, GRADING_CATEGORIES, DELETED } = require('../utils/constants');
 let _user = null;
@@ -634,6 +634,83 @@ module.exports = class StudentService extends BaseService {
         result: sortedStudents,
         totalCount: sortedStudents.length,
       },
+    };
+  });
+
+  checkDuplicateByRole = catchServiceAsync(async (email, cedula) => {
+    validateParameters({ email, cedula });
+    const emailValidation = validateEmailFormat(email);
+    if (!emailValidation.isValid) {
+      return {
+        data: {
+          isValid: false,
+          message: emailValidation.message,
+          duplicateEmail: false,
+          duplicateCedula: false
+        }
+      };
+    }
+    
+    const [existingEmailUser, existingCedulaStudent] = await Promise.all([
+      _user.findOne({
+        where: { email },
+        attributes: ['id', 'email'],
+        raw: true
+      }),
+      _student.findOne({
+        where: { cedula },
+        attributes: ['id', 'cedula'],
+        raw: true
+      })
+    ]);
+    
+    const duplicateEmail = !!existingEmailUser;
+    const duplicateCedula = !!existingCedulaStudent;
+    
+    if (duplicateEmail && duplicateCedula) {
+      return {
+        data: {
+          isValid: false,
+          message: ERROR_MESSAGES.EMAIL_CEDULA_ALREADY_REGISTERED,
+          duplicateEmail: true,
+          duplicateCedula: true,
+          emailMessage: ERROR_MESSAGES.EMAIL_ALREADY_REGISTERED,
+          cedulaMessage: ERROR_MESSAGES.CEDULA_ALREADY_REGISTERED
+        }
+      };
+    }
+    
+    if (duplicateEmail) {
+      return {
+        data: {
+          isValid: false,
+          message: ERROR_MESSAGES.EMAIL_ALREADY_REGISTERED,
+          duplicateEmail: true,
+          duplicateCedula: false,
+          emailMessage: ERROR_MESSAGES.EMAIL_ALREADY_REGISTERED
+        }
+      };
+    }
+    
+    if (duplicateCedula) {
+      return {
+        data: {
+          isValid: false,
+          message: ERROR_MESSAGES.CEDULA_ALREADY_REGISTERED,
+          duplicateEmail: false,
+          duplicateCedula: true,
+          cedulaMessage: ERROR_MESSAGES.CEDULA_ALREADY_REGISTERED
+        }
+      };
+    }
+    
+    return {
+      data: {
+        isValid: true,
+        message: ERROR_MESSAGES.EMAIL_CEDULA_AVAILABLE,
+        duplicateEmail: false,
+        duplicateCedula: false
+      }
     };
   });
 };

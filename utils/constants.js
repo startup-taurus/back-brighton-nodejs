@@ -118,7 +118,18 @@ const ERROR_MESSAGES = {
   STUDENT_NOT_FOUND: 'Student not found',
   TRANSFER_VALIDATION: 'Please provide either a course or a level to transfer students.',
   TRANSFER_ERROR: 'Error requesting transfer for students',
-  PROGRESS_ERROR: 'Error transferring or progressing students'
+  PROGRESS_ERROR: 'Error transferring or progressing students',
+  EMAIL_CEDULA_REQUIRED: 'Email and cedula are required',
+  EMAIL_ALREADY_REGISTERED: 'This email is already registered',
+  CEDULA_ALREADY_REGISTERED: 'This cedula is already registered',
+  EMAIL_CEDULA_ALREADY_REGISTERED: 'Email and cedula are already registered',
+  EMAIL_CEDULA_AVAILABLE: 'Email and cedula are available',
+  USERNAME_ALREADY_REGISTERED: 'This username is already registered',
+  USERNAME_AVAILABLE: 'This username is available',
+  USERNAME_EMAIL_ALREADY_REGISTERED: 'This username and email are already registered',
+  EMAIL_CEDULA_USERNAME_ALREADY_REGISTERED: 'Email, cedula and username are already registered',
+  EMAIL_USERNAME_ALREADY_REGISTERED: 'Email and username are already registered',
+  CEDULA_USERNAME_ALREADY_REGISTERED: 'Cedula and username are already registered',
 };
 
 const GRADING_CATEGORIES = {
