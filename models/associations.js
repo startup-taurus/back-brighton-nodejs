@@ -194,6 +194,7 @@ module.exports = class AuditModel {
 
     _attendance.belongsTo(_courseSchedule, {
       foreignKey: 'course_schedule_id',
+      as: 'course_schedule'
     });
     _courseSchedule.hasMany(_attendance, {
       foreignKey: 'course_schedule_id',
@@ -201,6 +202,7 @@ module.exports = class AuditModel {
 
     _courseSchedule.belongsTo(_course, {
       foreignKey: 'course_id',
+      as: 'course'
     });
     _course.hasMany(_courseSchedule, {
       foreignKey: 'course_id',
@@ -209,6 +211,7 @@ module.exports = class AuditModel {
     // Relación de uno a muchos entre estudiante y asistencia
     _attendance.belongsTo(_student, {
       foreignKey: 'student_id',
+      as: 'student'
     });
     _student.hasMany(_attendance, {
       foreignKey: 'student_id',

@@ -6,9 +6,9 @@ const {
   scheduleStringToDates,
   hasClassToday,
 } = require('../utils/utils');
-const { Op, col, fn } = require('sequelize');
-const { DAYS_OF_WEEK } = require('../utils/constants');
-const { orderBy } = require('lodash');
+const {Op, col, fn} = require('sequelize');
+const {DAYS_OF_WEEK} = require('../utils/constants');
+const {orderBy} = require('lodash');
 
 let _user = null;
 let _course = null;
@@ -40,7 +40,7 @@ module.exports = class ProfessorService extends BaseService {
   }
 
   getAllProfessors = catchServiceAsync(async (query) => {
-    const { page = 1, limit = 10, ...filters } = query;
+    const {page = 1, limit = 10, ...filters} = query;
     let limitNumber = parseInt(limit);
     let pageNumber = parseInt(page);
 
@@ -62,7 +62,7 @@ module.exports = class ProfessorService extends BaseService {
           model: _user,
           where: {
             ...(trimmedQuery.name && {
-              name: { [Op.like]: `%${trimmedQuery.name}%` },
+              name: {[Op.like]: `%${trimmedQuery.name}%`},
             }),
           },
           as: 'user',
@@ -112,7 +112,7 @@ module.exports = class ProfessorService extends BaseService {
       throw new AppError('Professor not found', 404);
     }
 
-    return { data: professor };
+    return {data: professor};
   });
 
   getProfessorCourses = catchServiceAsync(async (professorId) => {
@@ -120,22 +120,22 @@ module.exports = class ProfessorService extends BaseService {
     const now = new Date();
 
     const professor = await _professor.findOne({
-      where: { user_id: professorId },
+      where: {user_id: professorId},
       include: [
         {
           model: _course,
           as: 'courses',
-          where: { status: 'active' },
+          where: {status: 'active'},
           include: [
             {
               model: _student,
               as: 'students',
-              through: { attributes: [] },
+              through: {attributes: []},
             },
             {
               model: _courseSchedule,
               as: 'course_schedules',
-              include: [{ model: _attendance }],
+              include: [{model: _attendance}],
             },
           ],
         },
@@ -152,9 +152,18 @@ module.exports = class ProfessorService extends BaseService {
       const schedule = course.schedule
         ? scheduleStringToDates(course.schedule)
         : null;
-      const hasClassToday = false;
-      const hasBeenTakenAttendance = false;
-      const courseDates = [];
+
+      const hasClassToday = course.course_schedules.some(
+        (schedule) => schedule.scheduled_date === today
+      );
+      const hasBeenTakenAttendance = course.course_schedules.some(
+        (schedule) =>
+          schedule.scheduled_date === today && schedule.attendances.length > 0
+      );
+
+      const courseDates = course.course_schedules.map(
+        (schedule) => new Date(schedule.scheduled_date)
+      );
 
       const lastCourseDate = courseDates.length
         ? new Date(Math.max(...courseDates.map((f) => f.getTime())))
@@ -244,16 +253,18 @@ module.exports = class ProfessorService extends BaseService {
       const professors = await _professor.findAll({
         where: {
           status: 'active',
-          ...(search && {
-            course_name: {
-              [Op.like]: `%${search}%`,
-            },
-          }),
         },
         include: [
           {
             model: _user,
             as: 'user',
+            where: {
+              ...(search && {
+                name: {
+                  [Op.like]: `%${search}%`,
+                },
+              }),
+            },
             attributes: ['id', 'name', 'email'],
           },
         ],
@@ -268,17 +279,17 @@ module.exports = class ProfessorService extends BaseService {
   );
 
   getProfessorsCourseAndStudentCount = catchServiceAsync(async (query) => {
-    const { page = 1, limit = 10 } = query;
+    const {page = 1, limit = 10} = query;
     const limitNumber = parseInt(limit, 10);
     const pageNumber = parseInt(page, 10);
     const offset = limitNumber * (pageNumber - 1);
 
     const totalCount = await _professor.count({
-      where: { status: 'active' },
+      where: {status: 'active'},
     });
 
     const professors = await _professor.findAll({
-      where: { status: 'active' },
+      where: {status: 'active'},
       include: [
         {
           model: _user,
@@ -295,13 +306,13 @@ module.exports = class ProfessorService extends BaseService {
               as: 'students',
               attributes: [],
               where: {
-                status: 'active' // Solo estudiantes activos
+                status: 'active', 
               },
-              through: { 
+              through: {
                 attributes: [],
                 where: {
-                  is_retired: 0 // Solo estudiantes no retirados
-                }
+                  is_retired: 0, 
+                },
               },
             },
           ],
@@ -323,7 +334,7 @@ module.exports = class ProfessorService extends BaseService {
       subQuery: false,
     });
 
-    const result = professors.map((professor) => professor.get({ plain: true }));
+    const result = professors.map((professor) => professor.get({plain: true}));
 
     return {
       data: {
@@ -359,7 +370,9 @@ module.exports = class ProfessorService extends BaseService {
       hourly_rate,
     });
 
-    const userResponse = await _userService.createUser(body);
+    await _userService.validateDuplicateByRole(email, cedula, 'professor', username);
+
+    const userResponse = await _userService.createUser(body, true); 
 
     const user = userResponse.data;
 
@@ -373,11 +386,11 @@ module.exports = class ProfessorService extends BaseService {
       report_link,
     });
 
-    return { data: professor };
+    return {data: professor};
   });
 
   updateProfessor = catchServiceAsync(async (id, body) => {
-    const { email, cedula, status, hourly_rate, phone } = body;
+    const {email, cedula, status, hourly_rate, phone} = body;
     const professor = await _professor.findByPk(id, {
       include: [
         {
@@ -392,7 +405,17 @@ module.exports = class ProfessorService extends BaseService {
       throw new AppError('Professor not found', 404);
     }
 
-    const { deleteFile } = require('../utils/upload');
+    if (email || cedula || body.username) {
+      await _userService.validateDuplicateByRole(
+        email || professor.email, 
+        cedula || professor.cedula, 
+        'professor', 
+        body.username || professor.user.username,
+        professor.user_id
+      );
+    }
+
+    const {deleteFile} = require('../utils/upload');
     if (
       body.image &&
       professor.user.image &&
@@ -410,7 +433,7 @@ module.exports = class ProfessorService extends BaseService {
         phone,
         hourly_rate,
       },
-      { where: { id } }
+      {where: {id}}
     );
 
     const updatedProfessor = await _professor.findByPk(id, {
@@ -423,14 +446,14 @@ module.exports = class ProfessorService extends BaseService {
       ],
     });
 
-    return { data: updatedProfessor };
+    return {data: updatedProfessor};
   });
 
   updateProfessorStatus = catchServiceAsync(async (id, body) => {
-    const { status } = body;
-    validateParameters({ id, status });
-    const professor = await _professor.update({ status }, { where: { id } });
-    return { data: professor };
+    const {status} = body;
+    validateParameters({id, status});
+    const professor = await _professor.update({status}, {where: {id}});
+    return {data: professor};
   });
 
   deleteProfessor = catchServiceAsync(async (id) => {
@@ -440,8 +463,8 @@ module.exports = class ProfessorService extends BaseService {
       throw new AppError('Professor not found', 404);
     }
 
-    await _professor.destroy({ where: { id } });
-    await _user.destroy({ where: { id: professor.user_id } });
+    await _professor.destroy({where: {id}});
+    await _user.destroy({where: {id: professor.user_id}});
 
     return {
       message: 'Professor and associated user deleted successfully',
@@ -455,7 +478,7 @@ module.exports = class ProfessorService extends BaseService {
     const twoWeeksFromNow = new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000);
 
     const professors = await _professor.findAll({
-      where: { status: 'active' },
+      where: {status: 'active'},
       include: [
         {
           model: _user,
@@ -465,17 +488,17 @@ module.exports = class ProfessorService extends BaseService {
         {
           model: _course,
           as: 'courses',
-          where: { status: 'active' },
+          where: {status: 'active'},
           include: [
             {
               model: _student,
               as: 'students',
-              through: { attributes: [] },
+              through: {attributes: []},
             },
             {
               model: _courseSchedule,
               as: 'course_schedules',
-              include: [{ model: _attendance }],
+              include: [{model: _attendance}],
             },
           ],
         },
@@ -483,7 +506,7 @@ module.exports = class ProfessorService extends BaseService {
     });
 
     if (!professors || professors.length === 0) {
-      return { data: { professors: [] } };
+      return {data: {professors: []}};
     }
 
     const professorsWithCourseDetails = professors.map((prof) => {
@@ -498,7 +521,8 @@ module.exports = class ProfessorService extends BaseService {
         );
 
         const hasBeenTakenAttendance = course.course_schedules.some(
-          (schedule) => schedule.scheduled_date === today && schedule.attendances.length > 0
+          (schedule) =>
+            schedule.scheduled_date === today && schedule.attendances.length > 0
         );
 
         const courseDates = course.course_schedules.map(
@@ -508,6 +532,14 @@ module.exports = class ProfessorService extends BaseService {
         const lastCourseDate = courseDates.length
           ? new Date(Math.max(...courseDates.map((date) => date.getTime())))
           : null;
+
+        const firstCourseDate = courseDates.length
+          ? new Date(Math.min(...courseDates.map((date) => date.getTime())))
+          : null;
+
+        const courseStartDate = course.start_date
+          ? new Date(course.start_date)
+          : firstCourseDate;
 
         let endThisMonth = false;
         if (lastCourseDate) {
@@ -524,6 +556,14 @@ module.exports = class ProfessorService extends BaseService {
           endsInTwoWeeks =
             lastCourseDateTime <= twoWeeksFromNow.getTime() &&
             lastCourseDateTime >= now.getTime();
+        }
+
+        let startsInTwoWeeks = false;
+        if (courseStartDate) {
+          const courseStartDateTime = courseStartDate.getTime();
+          startsInTwoWeeks =
+            courseStartDateTime <= twoWeeksFromNow.getTime() &&
+            courseStartDateTime >= now.getTime();
         }
 
         return {
@@ -563,6 +603,7 @@ module.exports = class ProfessorService extends BaseService {
               : false,
             endThisMonth,
             endsInTwoWeeks,
+            startsInTwoWeeks,
             isAlreadyEnd: lastCourseDate && lastCourseDate < now,
           },
         };

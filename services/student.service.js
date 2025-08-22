@@ -1,7 +1,7 @@
 const catchServiceAsync = require('../utils/catch-service-async');
 const BaseService = require('./base.service');
 const AppError = require('../utils/app-error');
-const { validateParameters, generateCredentials } = require('../utils/utils');
+const { validateParameters, generateCredentials, validateEmailFormat } = require('../utils/utils');
 const { Op } = require('sequelize');
 const { ERROR_MESSAGES, GRADING_CATEGORIES, DELETED } = require('../utils/constants');
 let _user = null;
@@ -309,12 +309,15 @@ module.exports = class StudentService extends BaseService {
       birth_date,
       phone_number,
     } = body;
+    
     validateParameters({
       name,
       cedula,
       status,
       course: courseId,
     });
+
+    await this.validateDuplicates(body.email, cedula);
 
     const { username, password } = generateCredentials(name, cedula);
     body.username = username;
@@ -635,5 +638,42 @@ module.exports = class StudentService extends BaseService {
         totalCount: sortedStudents.length,
       },
     };
+  });
+
+  validateDuplicates = catchServiceAsync(async (email, cedula) => {
+    validateParameters({ email, cedula });
+    
+    const emailValidation = validateEmailFormat(email);
+    if (!emailValidation.isValid) {
+      throw new AppError(emailValidation.message, 400);
+    }
+    
+    const [existingEmailUser, existingCedulaStudent] = await Promise.all([
+      _user.findOne({
+        where: { email },
+        attributes: ['id', 'email'],
+        raw: true
+      }),
+      _student.findOne({
+        where: { cedula },
+        attributes: ['id', 'cedula'],
+        raw: true
+      })
+    ]);
+    
+    const duplicateEmail = !!existingEmailUser;
+    const duplicateCedula = !!existingCedulaStudent;
+    
+    if (duplicateEmail && duplicateCedula) {
+      throw new AppError(ERROR_MESSAGES.EMAIL_CEDULA_ALREADY_REGISTERED, 400);
+    }
+    
+    if (duplicateEmail) {
+      throw new AppError(ERROR_MESSAGES.EMAIL_ALREADY_REGISTERED, 400);
+    }
+    
+    if (duplicateCedula) {
+      throw new AppError(ERROR_MESSAGES.CEDULA_ALREADY_REGISTERED, 400);
+    }
   });
 };

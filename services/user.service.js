@@ -2,19 +2,22 @@ const { Op } = require('sequelize');
 const BaseService = require('./base.service');
 const AppError = require('../utils/app-error');
 const { deleteFile } = require('../utils/upload');
-const { validateParameters } = require('../utils/utils');
+const { validateParameters, validateEmailFormat } = require('../utils/utils');
 const catchServiceAsync = require('../utils/catch-service-async');
+const { USER_TYPES, ERROR_MESSAGES } = require('../utils/constants');
 let _user = null;
 let _course = null;
 let _authUtils = null;
 let _professor = null;
+let _student = null;
 
 module.exports = class UserService extends BaseService {
-  constructor({ User, Course, AuthUtils, Professor }) {
+  constructor({ User, Course, AuthUtils, Professor, Student }) {
     super(User);
     _user = User.User;
     _course = Course.Course;
     _professor = Professor.Professor;
+    _student = Student.Student;
     _authUtils = AuthUtils;
   }
 
@@ -60,7 +63,7 @@ module.exports = class UserService extends BaseService {
       { where: { id: user.id } }
     );
 
-    if (user.role === 'professor') {
+    if (user.role === USER_TYPES.PROFESSOR) {
       let professor = await _professor.findOne({
         where: { user_id: user.id },
         attributes: ['report_link'],
@@ -120,14 +123,132 @@ module.exports = class UserService extends BaseService {
     return { data: user };
   });
 
-  createUser = catchServiceAsync(async (body) => {
+  validateDuplicateUser = catchServiceAsync(async (email, username, excludeUserId = null) => {
+    validateParameters({ email, username });
+
+    const emailValidation = validateEmailFormat(email);
+    if (!emailValidation.isValid) {
+      throw new AppError(emailValidation.message, 400);
+    }
+
+    const [existingEmailUser, existingUsernameUser] = await Promise.all([
+      _user.findOne({
+        where: {
+          email: email,
+          ...(excludeUserId && { id: { [Op.ne]: excludeUserId } })
+        },
+        attributes: ['id', 'email'],
+        raw: true
+      }),
+      _user.findOne({
+        where: {
+          username: username,
+          ...(excludeUserId && { id: { [Op.ne]: excludeUserId } })
+        },
+        attributes: ['id', 'username'],
+        raw: true
+      })
+    ]);
+
+    if (existingEmailUser) {
+      throw new AppError(ERROR_MESSAGES.EMAIL_ALREADY_REGISTERED, 400);
+    }
+
+    if (existingUsernameUser) {
+      throw new AppError(ERROR_MESSAGES.USERNAME_ALREADY_REGISTERED, 400);
+    }
+  });
+
+  validateDuplicateByRole = catchServiceAsync(async (email, cedula, role, username = null, excludeUserId = null) => {
+    validateParameters({ email, cedula });
+  
+    const emailValidation = validateEmailFormat(email);
+    if (!emailValidation.isValid) {
+      throw new AppError(emailValidation.message, 400);
+    }
+  
+    const validationConfig = {
+      email: {
+        query: () => _user.findOne({
+          where: {
+            email: email,
+            ...(excludeUserId && { id: { [Op.ne]: excludeUserId } })
+          },
+          attributes: ['id', 'email'],
+          raw: true
+        }),
+        errorKey: 'EMAIL_ALREADY_REGISTERED'
+      },
+      username: {
+        query: () => _user.findOne({
+          where: {
+            username: username,
+            ...(excludeUserId && { id: { [Op.ne]: excludeUserId } })
+          },
+          attributes: ['id', 'username'],
+          raw: true
+        }),
+        errorKey: 'USERNAME_ALREADY_REGISTERED',
+        condition: () => !!username
+      },
+      cedula: {
+        query: () => _professor.findOne({
+          where: {
+            cedula: cedula,
+            ...(excludeUserId && { user_id: { [Op.ne]: excludeUserId } })
+          },
+          attributes: ['id', 'cedula'],
+          raw: true
+        }),
+        errorKey: 'CEDULA_ALREADY_REGISTERED',
+        condition: () => role === USER_TYPES.PROFESSOR
+      }
+    };
+  
+    const activeValidations = Object.entries(validationConfig)
+      .filter(([key, config]) => !config.condition || config.condition())
+      .map(([key, config]) => ({ key, ...config }));
+  
+    const queries = activeValidations.map(validation => validation.query());
+    const results = await Promise.all(queries);
+  
+    const duplicates = activeValidations
+      .map((validation, index) => ({
+        key: validation.key,
+        errorKey: validation.errorKey,
+        isDuplicate: !!results[index]
+      }))
+      .filter(item => item.isDuplicate);
+  
+    if (duplicates.length > 0) {
+      const errorKeys = duplicates.map(d => d.errorKey).sort();
+      const errorKeyString = errorKeys.join('_');
+      
+      const errorMessageMap = {
+        'EMAIL_ALREADY_REGISTERED': ERROR_MESSAGES.EMAIL_ALREADY_REGISTERED,
+        'USERNAME_ALREADY_REGISTERED': ERROR_MESSAGES.USERNAME_ALREADY_REGISTERED,
+        'CEDULA_ALREADY_REGISTERED': ERROR_MESSAGES.CEDULA_ALREADY_REGISTERED,
+        'CEDULA_ALREADY_REGISTERED_EMAIL_ALREADY_REGISTERED': ERROR_MESSAGES.EMAIL_CEDULA_ALREADY_REGISTERED,
+        'EMAIL_ALREADY_REGISTERED_USERNAME_ALREADY_REGISTERED': ERROR_MESSAGES.EMAIL_USERNAME_ALREADY_REGISTERED,
+        'CEDULA_ALREADY_REGISTERED_USERNAME_ALREADY_REGISTERED': ERROR_MESSAGES.CEDULA_USERNAME_ALREADY_REGISTERED,
+        'CEDULA_ALREADY_REGISTERED_EMAIL_ALREADY_REGISTERED_USERNAME_ALREADY_REGISTERED': ERROR_MESSAGES.EMAIL_CEDULA_USERNAME_ALREADY_REGISTERED
+      };
+  
+      const message = errorMessageMap[errorKeyString] || ERROR_MESSAGES.DUPLICATE_DATA_FOUND;
+      throw new AppError(message, 400);
+    }
+  });
+
+  createUser = catchServiceAsync(async (body, skipValidation = false) => {
     const { name, username, email, password, role, status, image } = body;
     validateParameters({ name, role, status });
 
-    const hashedPassword = await _authUtils.hashPassword(body.password);
-    body.password = hashedPassword;
+    if (!skipValidation) {
+      await this.validateDuplicateUser(email, username);
+    }
 
-    const userData = { ...body };
+    const hashedPassword = await _authUtils.hashPassword(password);
+    const userData = { ...body, password: hashedPassword };
 
     const user = await _user.create(userData);
     return { data: user };
@@ -136,6 +257,8 @@ module.exports = class UserService extends BaseService {
   updateUser = catchServiceAsync(async (id, body) => {
     const { name, username, email, password, role, status, image } = body;
     validateParameters({ name, username, email, role, status });
+
+    await this.validateDuplicateUser(email, username, id);
 
     const currentUser = await _user.findByPk(id);
     if (!currentUser) {

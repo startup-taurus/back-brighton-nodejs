@@ -8,5 +8,6 @@ module.exports = function ({ AttendanceController }) {
     AttendanceController.getAttendanceByCourseAndStudent
   );
   router.post('/create', AttendanceController.createAttendance);
+  router.get('/consecutive-absences-report', AttendanceController.getConsecutiveAbsencesReport);
   return router;
 };
