@@ -64,7 +64,6 @@ module.exports = class UserService extends BaseService {
     );
 
     if (user.role === USER_TYPES.PROFESSOR) {
-
       let professor = await _professor.findOne({
         where: { user_id: user.id },
         attributes: ['report_link'],
@@ -124,14 +123,130 @@ module.exports = class UserService extends BaseService {
     return { data: user };
   });
 
+  validateDuplicateUser = catchServiceAsync(async (email, username, excludeUserId = null) => {
+    validateParameters({ email, username });
+
+    const emailValidation = validateEmailFormat(email);
+    if (!emailValidation.isValid) {
+      throw new AppError(emailValidation.message, 400);
+    }
+
+    const [existingEmailUser, existingUsernameUser] = await Promise.all([
+      _user.findOne({
+        where: {
+          email: email,
+          ...(excludeUserId && { id: { [Op.ne]: excludeUserId } })
+        },
+        attributes: ['id', 'email'],
+        raw: true
+      }),
+      _user.findOne({
+        where: {
+          username: username,
+          ...(excludeUserId && { id: { [Op.ne]: excludeUserId } })
+        },
+        attributes: ['id', 'username'],
+        raw: true
+      })
+    ]);
+
+    if (existingEmailUser) {
+      throw new AppError(ERROR_MESSAGES.EMAIL_ALREADY_REGISTERED, 400);
+    }
+
+    if (existingUsernameUser) {
+      throw new AppError(ERROR_MESSAGES.USERNAME_ALREADY_REGISTERED, 400);
+    }
+  });
+
+  validateDuplicateByRole = catchServiceAsync(async (email, cedula, role, username = null, excludeUserId = null) => {
+    validateParameters({ email, cedula });
+  
+    const emailValidation = validateEmailFormat(email);
+    if (!emailValidation.isValid) {
+      throw new AppError(emailValidation.message, 400);
+    }
+  
+    const validationConfig = {
+      email: {
+        query: () => _user.findOne({
+          where: {
+            email: email,
+            ...(excludeUserId && { id: { [Op.ne]: excludeUserId } })
+          },
+          attributes: ['id', 'email'],
+          raw: true
+        }),
+        errorKey: 'EMAIL_ALREADY_REGISTERED'
+      },
+      username: {
+        query: () => _user.findOne({
+          where: {
+            username: username,
+            ...(excludeUserId && { id: { [Op.ne]: excludeUserId } })
+          },
+          attributes: ['id', 'username'],
+          raw: true
+        }),
+        errorKey: 'USERNAME_ALREADY_REGISTERED',
+        condition: () => !!username
+      },
+      cedula: {
+        query: () => _professor.findOne({
+          where: {
+            cedula: cedula,
+            ...(excludeUserId && { user_id: { [Op.ne]: excludeUserId } })
+          },
+          attributes: ['id', 'cedula'],
+          raw: true
+        }),
+        errorKey: 'CEDULA_ALREADY_REGISTERED',
+        condition: () => role === USER_TYPES.PROFESSOR
+      }
+    };
+  
+    const activeValidations = Object.entries(validationConfig)
+      .filter(([key, config]) => !config.condition || config.condition())
+      .map(([key, config]) => ({ key, ...config }));
+  
+    const queries = activeValidations.map(validation => validation.query());
+    const results = await Promise.all(queries);
+  
+    const duplicates = activeValidations
+      .map((validation, index) => ({
+        key: validation.key,
+        errorKey: validation.errorKey,
+        isDuplicate: !!results[index]
+      }))
+      .filter(item => item.isDuplicate);
+  
+    if (duplicates.length > 0) {
+      const errorKeys = duplicates.map(d => d.errorKey).sort();
+      const errorKeyString = errorKeys.join('_');
+      
+      const errorMessageMap = {
+        'EMAIL_ALREADY_REGISTERED': ERROR_MESSAGES.EMAIL_ALREADY_REGISTERED,
+        'USERNAME_ALREADY_REGISTERED': ERROR_MESSAGES.USERNAME_ALREADY_REGISTERED,
+        'CEDULA_ALREADY_REGISTERED': ERROR_MESSAGES.CEDULA_ALREADY_REGISTERED,
+        'CEDULA_ALREADY_REGISTERED_EMAIL_ALREADY_REGISTERED': ERROR_MESSAGES.EMAIL_CEDULA_ALREADY_REGISTERED,
+        'EMAIL_ALREADY_REGISTERED_USERNAME_ALREADY_REGISTERED': ERROR_MESSAGES.EMAIL_USERNAME_ALREADY_REGISTERED,
+        'CEDULA_ALREADY_REGISTERED_USERNAME_ALREADY_REGISTERED': ERROR_MESSAGES.CEDULA_USERNAME_ALREADY_REGISTERED,
+        'CEDULA_ALREADY_REGISTERED_EMAIL_ALREADY_REGISTERED_USERNAME_ALREADY_REGISTERED': ERROR_MESSAGES.EMAIL_CEDULA_USERNAME_ALREADY_REGISTERED
+      };
+  
+      const message = errorMessageMap[errorKeyString] || ERROR_MESSAGES.DUPLICATE_DATA_FOUND;
+      throw new AppError(message, 400);
+    }
+  });
+
   createUser = catchServiceAsync(async (body) => {
     const { name, username, email, password, role, status, image } = body;
     validateParameters({ name, role, status });
 
-    const hashedPassword = await _authUtils.hashPassword(body.password);
-    body.password = hashedPassword;
+    await this.validateDuplicateUser(email, username);
 
-    const userData = { ...body };
+    const hashedPassword = await _authUtils.hashPassword(password);
+    const userData = { ...body, password: hashedPassword };
 
     const user = await _user.create(userData);
     return { data: user };
@@ -140,6 +255,8 @@ module.exports = class UserService extends BaseService {
   updateUser = catchServiceAsync(async (id, body) => {
     const { name, username, email, password, role, status, image } = body;
     validateParameters({ name, username, email, role, status });
+
+    await this.validateDuplicateUser(email, username, id);
 
     const currentUser = await _user.findByPk(id);
     if (!currentUser) {
@@ -201,167 +318,5 @@ module.exports = class UserService extends BaseService {
       },
     ];
     return { data: schoolCardData };
-  });
-
-
-  checkDuplicateUser = catchServiceAsync(async (email, username, excludeUserId = null) => {
-    validateParameters({ email, username });
-
-    const emailValidation = validateEmailFormat(email);
-    if (!emailValidation.isValid) {
-      return {
-        data: {
-          isValid: false,
-          message: emailValidation.message
-        }
-      };
-    }
-    const [existingEmailUser, existingUsernameUser] = await Promise.all([
-      _user.findOne({
-        where: {
-          email: email,
-          ...(excludeUserId && { id: { [Op.ne]: excludeUserId } })
-        },
-        attributes: ['id', 'email'],
-        raw: true
-      }),
-      _user.findOne({
-        where: {
-          username: username,
-          ...(excludeUserId && { id: { [Op.ne]: excludeUserId } })
-        },
-        attributes: ['id', 'username'],
-        raw: true
-      })
-    ]);
-
-    if (existingEmailUser) {
-      return {
-        data: {
-          isValid: false,
-          message: ERROR_MESSAGES.EMAIL_ALREADY_REGISTERED
-        }
-      };
-    }
-
-    if (existingUsernameUser) {
-      return {
-        data: {
-          isValid: false,
-          message: ERROR_MESSAGES.USERNAME_ALREADY_REGISTERED
-        }
-      };
-    }
-
-    return {
-      data: {
-        isValid: true,
-        message: ERROR_MESSAGES.USERNAME_EMAIL_ALREADY_REGISTERED
-      }
-    };
-  });
-
-  checkDuplicateByRole = catchServiceAsync(async (email, cedula, role, username = null, excludeUserId = null) => {
-
-    validateParameters({ email, cedula });
-
-    const emailValidation = validateEmailFormat(email);
-    if (!emailValidation.isValid) {
-      return {
-        data: {
-          isValid: false,
-          message: emailValidation.message,
-          duplicateEmail: false,
-          duplicateCedula: false,
-          duplicateUsername: false,
-        }
-      };
-    }
-
-    const queries = [
-      _user.findOne({
-        where: {
-          email: email,
-          ...(excludeUserId && { id: { [Op.ne]: excludeUserId } })
-        },
-        attributes: ['id', 'email'],
-        raw: true
-      })
-    ];
-
-    if (username) {
-      queries.push(
-        _user.findOne({
-          where: {
-            username: username,
-            ...(excludeUserId && { id: { [Op.ne]: excludeUserId } })
-          },
-          attributes: ['id', 'username'],
-          raw: true
-        })
-      );
-    }
-
-    if (role === USER_TYPES.PROFESSOR) {
-      queries.push(
-        _professor.findOne({
-          where: {
-            cedula: cedula,
-            ...(excludeUserId && { user_id: { [Op.ne]: excludeUserId } })
-          },
-          attributes: ['id', 'cedula'],
-          raw: true
-        })
-      );
-    }
-
-    const results = await Promise.all(queries);
-    
-    let existingEmailUser, existingUsernameUser, existingCedulaProfessor;
-    
-    if (username && role === USER_TYPES.PROFESSOR) {
-      [existingEmailUser, existingUsernameUser, existingCedulaProfessor] = results;
-    } else if (username) {
-      [existingEmailUser, existingUsernameUser] = results;
-    } else if (role === USER_TYPES.PROFESSOR) {
-      [existingEmailUser, existingCedulaProfessor] = results;
-    } else {
-      [existingEmailUser] = results;
-    }
-
-    const duplicateEmail = !!existingEmailUser;
-    const duplicateCedula = role === USER_TYPES.PROFESSOR ? !!existingCedulaProfessor : false;
-    const duplicateUsername = !!username && !!existingUsernameUser;
-
-    let message;
-    if (duplicateEmail && duplicateCedula && duplicateUsername) {
-      message = ERROR_MESSAGES.EMAIL_CEDULA_USERNAME_ALREADY_REGISTERED;
-    } else if (duplicateEmail && duplicateCedula) {
-      message = ERROR_MESSAGES.EMAIL_CEDULA_ALREADY_REGISTERED;
-    } else if (duplicateEmail && duplicateUsername) {
-      message = ERROR_MESSAGES.EMAIL_USERNAME_ALREADY_REGISTERED;
-    } else if (duplicateCedula && duplicateUsername) {
-      message = ERROR_MESSAGES.CEDULA_USERNAME_ALREADY_REGISTERED;
-    } else if (duplicateEmail) {
-      message = ERROR_MESSAGES.EMAIL_ALREADY_REGISTERED;
-    } else if (duplicateCedula) {
-      message = ERROR_MESSAGES.CEDULA_ALREADY_REGISTERED;
-    } else if (duplicateUsername) {
-      message = ERROR_MESSAGES.USERNAME_ALREADY_REGISTERED;
-    } else {
-      message = ERROR_MESSAGES.EMAIL_CEDULA_AVAILABLE;
-    }
-
-    const isValid = !duplicateEmail && !duplicateCedula && !duplicateUsername;
-
-    return {
-      data: {
-        isValid,
-        message,
-        duplicateEmail,
-        duplicateCedula,
-        duplicateUsername
-      }
-    };
   });
 };

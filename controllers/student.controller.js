@@ -53,10 +53,4 @@ module.exports = class StudentController extends BaseController {
     });
     return appResponse(res, result);
   });
-
-  checkDuplicateByRole = catchControllerAsync(async (req, res) => {
-    const { email, cedula } = req.body;
-    const result = await _studentService.checkDuplicateByRole(email, cedula);
-    return appResponse(res, result);
-  });
 };

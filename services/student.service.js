@@ -309,12 +309,15 @@ module.exports = class StudentService extends BaseService {
       birth_date,
       phone_number,
     } = body;
+    
     validateParameters({
       name,
       cedula,
       status,
       course: courseId,
     });
+
+    await this.validateDuplicates(body.email, cedula);
 
     const { username, password } = generateCredentials(name, cedula);
     body.username = username;
@@ -637,18 +640,12 @@ module.exports = class StudentService extends BaseService {
     };
   });
 
-  checkDuplicateByRole = catchServiceAsync(async (email, cedula) => {
+  validateDuplicates = catchServiceAsync(async (email, cedula) => {
     validateParameters({ email, cedula });
+    
     const emailValidation = validateEmailFormat(email);
     if (!emailValidation.isValid) {
-      return {
-        data: {
-          isValid: false,
-          message: emailValidation.message,
-          duplicateEmail: false,
-          duplicateCedula: false
-        }
-      };
+      throw new AppError(emailValidation.message, 400);
     }
     
     const [existingEmailUser, existingCedulaStudent] = await Promise.all([
@@ -668,49 +665,15 @@ module.exports = class StudentService extends BaseService {
     const duplicateCedula = !!existingCedulaStudent;
     
     if (duplicateEmail && duplicateCedula) {
-      return {
-        data: {
-          isValid: false,
-          message: ERROR_MESSAGES.EMAIL_CEDULA_ALREADY_REGISTERED,
-          duplicateEmail: true,
-          duplicateCedula: true,
-          emailMessage: ERROR_MESSAGES.EMAIL_ALREADY_REGISTERED,
-          cedulaMessage: ERROR_MESSAGES.CEDULA_ALREADY_REGISTERED
-        }
-      };
+      throw new AppError(ERROR_MESSAGES.EMAIL_CEDULA_ALREADY_REGISTERED, 400);
     }
     
     if (duplicateEmail) {
-      return {
-        data: {
-          isValid: false,
-          message: ERROR_MESSAGES.EMAIL_ALREADY_REGISTERED,
-          duplicateEmail: true,
-          duplicateCedula: false,
-          emailMessage: ERROR_MESSAGES.EMAIL_ALREADY_REGISTERED
-        }
-      };
+      throw new AppError(ERROR_MESSAGES.EMAIL_ALREADY_REGISTERED, 400);
     }
     
     if (duplicateCedula) {
-      return {
-        data: {
-          isValid: false,
-          message: ERROR_MESSAGES.CEDULA_ALREADY_REGISTERED,
-          duplicateEmail: false,
-          duplicateCedula: true,
-          cedulaMessage: ERROR_MESSAGES.CEDULA_ALREADY_REGISTERED
-        }
-      };
+      throw new AppError(ERROR_MESSAGES.CEDULA_ALREADY_REGISTERED, 400);
     }
-    
-    return {
-      data: {
-        isValid: true,
-        message: ERROR_MESSAGES.EMAIL_CEDULA_AVAILABLE,
-        duplicateEmail: false,
-        duplicateCedula: false
-      }
-    };
   });
 };

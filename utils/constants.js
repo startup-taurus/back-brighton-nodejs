@@ -20,6 +20,10 @@ const ALLOWED_STATUS = {
   N_A: 'n/a',
 };
 
+const ATTENDANCE_THRESHOLDS = {
+  MIN_CONSECUTIVE_ABSENCES: 4,
+};
+
 const USER_TYPES = {
   ADMIN: 'admin_staff',
   PROFESSOR: 'professor',
@@ -161,4 +165,5 @@ module.exports = {
   GRADING_CATEGORIES,
   DELETED,
   COURSE_TYPES,
+  ATTENDANCE_THRESHOLDS, // Agregar al export
 };

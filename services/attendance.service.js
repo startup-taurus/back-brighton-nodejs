@@ -1,7 +1,7 @@
 const BaseService = require('./base.service');
 const AppError = require('../utils/app-error');
 const catchServiceAsync = require('../utils/catch-service-async');
-const { COURSE_TYPES } = require('../utils/constants');
+const { COURSE_TYPES, ATTENDANCE_THRESHOLDS } = require('../utils/constants');
 const { validateParameters, countAttendance } = require('../utils/utils');
 
 let _user = null;
@@ -278,7 +278,7 @@ module.exports = class AttendanceService extends BaseService {
         maxConsecutive = Math.max(maxConsecutive, currentConsecutive);
       }
       
-      if (maxConsecutive >= 4) {
+      if (maxConsecutive >= ATTENDANCE_THRESHOLDS.MIN_CONSECUTIVE_ABSENCES) {
         consecutiveAbsencesReport.push({
           course_code: studentCourse.courseCode,
           course_name: studentCourse.courseName,
