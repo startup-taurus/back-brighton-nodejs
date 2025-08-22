@@ -239,11 +239,13 @@ module.exports = class UserService extends BaseService {
     }
   });
 
-  createUser = catchServiceAsync(async (body) => {
+  createUser = catchServiceAsync(async (body, skipValidation = false) => {
     const { name, username, email, password, role, status, image } = body;
     validateParameters({ name, role, status });
 
-    await this.validateDuplicateUser(email, username);
+    if (!skipValidation) {
+      await this.validateDuplicateUser(email, username);
+    }
 
     const hashedPassword = await _authUtils.hashPassword(password);
     const userData = { ...body, password: hashedPassword };

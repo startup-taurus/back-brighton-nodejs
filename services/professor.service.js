@@ -370,7 +370,9 @@ module.exports = class ProfessorService extends BaseService {
       hourly_rate,
     });
 
-    const userResponse = await _userService.createUser(body);
+    await _userService.validateDuplicateByRole(email, cedula, 'professor', username);
+
+    const userResponse = await _userService.createUser(body, true); 
 
     const user = userResponse.data;
 
@@ -401,6 +403,16 @@ module.exports = class ProfessorService extends BaseService {
 
     if (!professor) {
       throw new AppError('Professor not found', 404);
+    }
+
+    if (email || cedula || body.username) {
+      await _userService.validateDuplicateByRole(
+        email || professor.email, 
+        cedula || professor.cedula, 
+        'professor', 
+        body.username || professor.user.username,
+        professor.user_id
+      );
     }
 
     const {deleteFile} = require('../utils/upload');
