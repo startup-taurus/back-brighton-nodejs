@@ -373,21 +373,27 @@ module.exports = class StudentService extends BaseService {
       birth_date,
       courseId,
     } = body;
-
+  
+    // Primero eliminar la relación curso-estudiante existente
+    await _courseStudent.destroy({
+      where: { student_id: id }
+    });
+  
+    // Luego crear la nueva relación con el curso actualizado
     await _courseStudent.create({
       course_id: parseInt(courseId),
       student_id: id,
       enrollment_date: new Date(),
     });
-
+  
     const student = await _student.findByPk(id);
-
+  
     if (!student) {
       throw new AppError('Student not found', 404);
     }
-
+  
     await _userService.updateUser(student.user_id, body);
-
+  
     await _student.update(
       {
         cedula,
@@ -405,7 +411,8 @@ module.exports = class StudentService extends BaseService {
       },
       { where: { id } }
     );
-
+  
+    // Obtener el estudiante actualizado con la relación de curso incluida
     const updatedStudent = await _student.findByPk(id, {
       include: [
         {
@@ -413,9 +420,27 @@ module.exports = class StudentService extends BaseService {
           as: 'user',
           attributes: ['name', 'username', 'email', 'status'],
         },
+        {
+          model: _course,
+          as: 'course',
+          through: { attributes: [] },
+          include: [
+            {
+              model: _professor,
+              as: 'professor',
+              include: [
+                {
+                  model: _user,
+                  as: 'user',
+                  attributes: ['name']
+                }
+              ]
+            }
+          ]
+        }
       ],
     });
-
+  
     return { data: updatedStudent };
   });
 

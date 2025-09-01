@@ -277,6 +277,16 @@ module.exports = class SyllabusService extends BaseService {
     level_id,
   });
 
+  const existingSyllabus = await _syllabus.findOne({
+    where: {
+      syllabus_name: syllabus_name.trim()
+    }
+  });
+
+  if (existingSyllabus) {
+    throw new AppError('A syllabus with this name already exists. Please choose a different name.', 400);
+  }
+
   const finalExamType = exam_type || LEVEL_TO_EXAM_TYPE[level_id] || 'PRELIM';
 
   const syllabus = await _syllabus.create({
