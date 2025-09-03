@@ -17,6 +17,8 @@ let _syllabus = null;
 let _gradePercentages = null;
 let _gradingCategory = null;
 let _gradingItem = null;
+let _studentTransfer = null;
+let _transferData = null;
 
 module.exports = class StudentService extends BaseService {
   constructor({
@@ -33,6 +35,8 @@ module.exports = class StudentService extends BaseService {
     GradePercentages,
     GradingCategory,
     GradingItem,
+    StudentTransfer,
+    TransferData,
   }) {
     super(Student);
     _user = User.User;
@@ -48,6 +52,8 @@ module.exports = class StudentService extends BaseService {
     _gradePercentages = GradePercentages.GradePercentages;
     _gradingCategory = GradingCategory.GradingCategory;
     _gradingItem = GradingItem.GradingItem;
+    _studentTransfer = StudentTransfer.StudentTransfer;
+    _transferData = TransferData.TransferData;
     
     this.categoryIds = null;
   }
@@ -323,8 +329,8 @@ module.exports = class StudentService extends BaseService {
     body.username = username;
     body.password = password;
 
-    const userResponse = await _userService.createUser(body);
-
+    const userResponse = await _userService.createUser(body, null, false, true);
+    
     const user = userResponse.data;
 
     const student = await _student.create({
@@ -374,12 +380,10 @@ module.exports = class StudentService extends BaseService {
       courseId,
     } = body;
   
-    // Primero eliminar la relación curso-estudiante existente
     await _courseStudent.destroy({
       where: { student_id: id }
     });
   
-    // Luego crear la nueva relación con el curso actualizado
     await _courseStudent.create({
       course_id: parseInt(courseId),
       student_id: id,
@@ -412,7 +416,6 @@ module.exports = class StudentService extends BaseService {
       { where: { id } }
     );
   
-    // Obtener el estudiante actualizado con la relación de curso incluida
     const updatedStudent = await _student.findByPk(id, {
       include: [
         {

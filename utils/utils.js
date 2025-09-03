@@ -45,7 +45,7 @@ module.exports = {
     }));
   },
 
-  calculateClassDates(startDate, syllabusItems, hourlyRate, holidays) {
+  calculateClassDates(startDate, syllabusItems, schedule, holidays) {
     const daysMap = {
       Sun: 0,
       Mon: 1,
@@ -55,19 +55,19 @@ module.exports = {
       Fri: 5,
       Sat: 6,
     };
-
-    const [days, timeRange] = hourlyRate.split(' ');
+  
+    const [days, timeRange] = schedule.split(' ');
     const [startTime] = timeRange.split('-');
-
+  
     const classDays = days.split('-').map((day) => daysMap[day]);
-
+  
     const [year, month, day] = startDate
       .split('-')
       .map((num) => parseInt(num, 10));
-
+  
     let currentDate = new Date(year, month - 1, day);
     const dates = [];
-
+  
     syllabusItems.forEach(() => {
       while (
         !classDays.includes(currentDate.getDay()) ||
@@ -83,12 +83,12 @@ module.exports = {
         String(currentDate.getDate()).padStart(2, '0') +
         'T' +
         startTime;
-
+  
       const classDate = new Date(dateStr);
       dates.push(classDate);
       currentDate.setDate(currentDate.getDate() + 1);
     });
-
+  
     return dates;
   },
 

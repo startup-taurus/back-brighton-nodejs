@@ -372,8 +372,8 @@ module.exports = class ProfessorService extends BaseService {
 
     await _userService.validateDuplicateByRole(email, cedula, 'professor', username);
 
-    const userResponse = await _userService.createUser(body, true); 
-
+    const userResponse = await _userService.createUser(body, null, false, true);
+    
     const user = userResponse.data;
 
     const professor = await _professor.create({
@@ -484,6 +484,7 @@ module.exports = class ProfessorService extends BaseService {
           model: _user,
           as: 'user',
           attributes: ['id', 'name', 'email'],
+          where: { status: 'active' }
         },
         {
           model: _course,
@@ -493,7 +494,17 @@ module.exports = class ProfessorService extends BaseService {
             {
               model: _student,
               as: 'students',
-              through: {attributes: []},
+              through: {
+                attributes: [],
+                where: {
+                  is_retired: false
+                }
+              },
+              include: [{
+                model: _user,
+                as: 'user',
+                where: { status: 'active' }
+              }]
             },
             {
               model: _courseSchedule,
@@ -511,7 +522,19 @@ module.exports = class ProfessorService extends BaseService {
 
     const professorsWithCourseDetails = professors.map((prof) => {
       const currentProfessor = prof.toJSON();
-      const coursesWithDetails = currentProfessor.courses.map((course) => {
+      
+      const activeCourses = currentProfessor.courses.filter((course) => {
+        const courseDates = course.course_schedules.map(
+          (schedule) => new Date(schedule.scheduled_date)
+        );
+        const lastCourseDate = courseDates.length
+          ? new Date(Math.max(...courseDates.map((date) => date.getTime())))
+          : null;
+        
+        return !lastCourseDate || lastCourseDate >= now;
+      });
+      
+      const coursesWithDetails = activeCourses.map((course) => {
         const schedule = course.schedule
           ? scheduleStringToDates(course.schedule)
           : null;
@@ -573,6 +596,7 @@ module.exports = class ProfessorService extends BaseService {
           student_count: course.students.length,
           classSchedule: course.schedule,
           schedule,
+          end_date: lastCourseDate ? lastCourseDate.toISOString().split('T')[0] : null,
           options: {
             hasClassToday,
             hasBeenTakenAttendance: hasClassToday
@@ -609,9 +633,12 @@ module.exports = class ProfessorService extends BaseService {
         };
       });
 
-      const totalCourses = currentProfessor.courses.length;
-      const totalStudents = currentProfessor.courses.reduce(
-        (acc, course) => acc + course.students.length,
+      const totalCourses = activeCourses.length;
+      const totalStudents = activeCourses.reduce(
+        (acc, course) => acc + course.students.filter(student => 
+          !student.courseStudent?.is_retired && 
+          student.user?.status === 'active'
+        ).length,
         0
       );
 
