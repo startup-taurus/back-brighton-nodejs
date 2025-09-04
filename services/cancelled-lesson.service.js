@@ -22,14 +22,18 @@ module.exports = class CancelledLessonService extends BaseService {
   }
 
   valideIfDayOfClassExist = catchServiceAsync(async (body) => {
+    const scheduleDate = body.cancel_date;
     const dayOfClass = await _courseSchedule.count({
       where: {
         course_id: body.course_id,
-        scheduled_date: body.cancel_date,
+        scheduled_date: _sequelize.where(
+          _sequelize.fn('DATE', _sequelize.col('scheduled_date')),
+          '=',
+          scheduleDate
+        ),
       },
       raw: true,
     });
-
     if (dayOfClass === 0) {
       throw new AppError("You don't have classes this day", 404);
     }
