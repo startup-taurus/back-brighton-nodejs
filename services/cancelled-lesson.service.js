@@ -58,13 +58,12 @@ module.exports = class CancelledLessonService extends BaseService {
       }
     }
   );
-
   create = catchServiceAsync(async (body) => {
     await this.valideIfDayOfClassExist(body);
     await this.validateIfCancelledLessonExist(body);
 
     return await _sequelize.transaction(async (transaction) => {
-      await _cancelledLeasson.create(body, { transaction });
+      await _cancelledLeasson.create(body, {transaction});
       await _courseScheduleService.updateScheduleDaysOfClasess(
         body,
         transaction
@@ -78,7 +77,7 @@ module.exports = class CancelledLessonService extends BaseService {
 
   getCancelledLessonsByCourse = catchServiceAsync(async (courseId) => {
     const cancelledLessons = await _cancelledLeasson.findAll({
-      where: { course_id: courseId },
+      where: {course_id: courseId},
       raw: true,
     });
 
@@ -97,12 +96,12 @@ module.exports = class CancelledLessonService extends BaseService {
     await this.validateIfCancelledLessonExist(body, false);
 
     return await _sequelize.transaction(async (transaction) => {
-      await _courseScheduleService.deleteScheduleDaysOfClasess(
+      await _courseScheduleService.recalculateScheduleDaysOfClasess(
         body,
         transaction
       );
       return await _cancelledLeasson.destroy({
-        where: { id: body.id },
+        where: {id: body.id},
         transaction,
       });
     });
