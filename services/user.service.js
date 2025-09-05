@@ -242,7 +242,7 @@ module.exports = class UserService extends BaseService {
   createUser = catchServiceAsync(async (body, file, skipValidation = false, skipRoleSpecificCreation = false) => {
     const { name, username, email, password, role, status } = body;
     
-    if (role === 'student' || role === 'professor') {
+    if (role === USER_TYPES.STUDENT || role === USER_TYPES.PROFESSOR) {
       validateParameters({ name, username, email, role, status });
     } else {
       validateParameters({ name, role, status });
@@ -286,7 +286,7 @@ module.exports = class UserService extends BaseService {
           phone_number: body.phone_number || '',
           observations: body.observations || '',
           status: status,
-          promotion: body.promotion || 'regular',
+          promotion: body.promotion || '',
           pending_payments: false,
           emergency_contact_name: body.emergency_contact_name || '',
           emergency_contact_phone: body.emergency_contact_phone || '',
