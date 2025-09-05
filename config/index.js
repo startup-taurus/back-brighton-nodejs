@@ -18,7 +18,6 @@ module.exports = {
     host: process.env.DB_HOST,
     dialect: 'mysql',
     logging: false,
-    timezone: '-05:00',
   },
   // SWAGGER_PATH: __dirname.concat("/swagger/swaggerDEV.json"),
 };

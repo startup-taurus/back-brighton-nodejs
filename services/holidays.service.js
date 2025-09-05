@@ -28,7 +28,7 @@ module.exports = class HolidaysService extends BaseService {
 
   getAllActiveHolidays = catchServiceAsync(async () => {
     const data = await _holidays.findAll({
-      status: 'active',
+      where: { status: 'active' },  
       order: [['holiday_date', 'ASC']],
     });
 

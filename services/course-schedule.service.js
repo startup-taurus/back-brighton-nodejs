@@ -6,16 +6,25 @@ const BaseService = require('./base.service');
 let _courseSchedule = null;
 let _syllabusItems = null;
 let _course = null;
+let _holidays = null;
+let _cancelledLesson = null;
 
 module.exports = class CourseScheduleService extends BaseService {
-  constructor({ CourseSchedule, SyllabusItems, Course }) {
+  constructor({ CourseSchedule, SyllabusItems, Course, Holidays, CancelledLesson }) {
     super(CourseSchedule.CourseSchedule);
     _courseSchedule = CourseSchedule.CourseSchedule;
     _syllabusItems = SyllabusItems.SyllabusItems;
     _course = Course.Course;
+    _holidays = Holidays.Holidays;
+    _cancelledLesson = CancelledLesson.CancelledLesson;
   }
 
   getCourseScheduleDates = catchServiceAsync(async (courseId) => {
+    const cancelledLessons = await _cancelledLesson.findAll({
+      where: { course_id: courseId },
+      raw: true,
+    });
+    
     const response = await _courseSchedule.findAll({
       where: { course_id: courseId },
       order: [['scheduled_date', 'ASC']],
@@ -27,8 +36,15 @@ module.exports = class CourseScheduleService extends BaseService {
         },
       ],
     });
+    
+    const filteredResponse = response.filter(schedule => {
+      const scheduleDate = schedule.scheduled_date.split('T')[0];
+      return !cancelledLessons.some(cancelled => 
+        cancelled.cancel_date === scheduleDate
+      );
+    });
 
-    return { data: response };
+    return { data: filteredResponse };
   });
 
   updateLessonTaught = catchServiceAsync(async (id, data) => {
@@ -124,6 +140,73 @@ module.exports = class CourseScheduleService extends BaseService {
         }
       );
 
+      await _courseSchedule.bulkCreate(scheduledDatesToUpdate, {
+        updateOnDuplicate: ['scheduled_date'],
+        transaction,
+      });
+    }
+  );
+  recalculateScheduleDaysOfClasess = catchServiceAsync(
+    async (cancelledDate, transaction) => {
+      const scheduledDates = await _courseSchedule.findAll({
+        where: { course_id: cancelledDate.course_id },
+        order: [['scheduled_date', 'ASC']],
+        raw: true,
+        transaction,
+        include: [
+          {
+            model: _syllabusItems,
+            as: 'syllabusItem',
+          },
+        ],
+      });
+      
+      const course = await _course.findByPk(cancelledDate.course_id, {
+        raw: true,
+      });
+      
+      const activeHolidays = await _holidays.findAll({
+        where: { status: 'active' },
+        raw: true,
+      });
+      
+      const formattedHolidays = activeHolidays.map(holiday => ({
+        ...holiday,
+        holiday_date: new Date(holiday.holiday_date)
+      }));
+      const cancelledLessons = await _cancelledLesson.findAll({
+        where: { course_id: cancelledDate.course_id },
+        raw: true,
+      });
+      
+      cancelledLessons.forEach(cancelledLesson => {
+        const cancelledDateObj = new Date(cancelledLesson.cancel_date);
+        formattedHolidays.push({
+          holiday_date: cancelledDateObj,
+          holiday_name: 'Cancelled Class',
+          status: 'active'
+        });
+      });
+      
+      const originalStartDate = scheduledDates[0].scheduled_date;
+      
+      const allItems = Array(scheduledDates.length).fill(1);
+      
+      const newClassDates = calculateClassDates(
+        originalStartDate,
+        allItems,
+        course.schedule,
+        formattedHolidays
+      );
+      
+      const scheduledDatesToUpdate = scheduledDates.map((scheduledDate, index) => {
+        return {
+          ...scheduledDate,
+          id: scheduledDate.id,
+          scheduled_date: newClassDates[index].toISOString().split('T')[0],
+        };
+      });
+      
       await _courseSchedule.bulkCreate(scheduledDatesToUpdate, {
         updateOnDuplicate: ['scheduled_date'],
         transaction,

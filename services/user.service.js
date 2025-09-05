@@ -239,23 +239,67 @@ module.exports = class UserService extends BaseService {
     }
   });
 
-  createUser = catchServiceAsync(async (body, skipValidation = false) => {
-    const { name, username, email, password, role, status, image } = body;
-    validateParameters({ name, role, status });
-
+  createUser = catchServiceAsync(async (body, file, skipValidation = false, skipRoleSpecificCreation = false) => {
+    const { name, username, email, password, role, status } = body;
+    
+    if (role === USER_TYPES.STUDENT || role === USER_TYPES.PROFESSOR) {
+      validateParameters({ name, username, email, role, status });
+    } else {
+      validateParameters({ name, role, status });
+    }
+  
     if (!skipValidation) {
       await this.validateDuplicateUser(email, username);
     }
-
+  
     const hashedPassword = await _authUtils.hashPassword(password);
     const userData = { ...body, password: hashedPassword };
-
+    
+    if (file) {
+      userData.image = file.filename;
+    }
+  
     const user = await _user.create(userData);
+    
+    if (!skipRoleSpecificCreation) {
+      if (role === USER_TYPES.PROFESSOR) {
+        await _professor.create({
+          user_id: user.id,
+          cedula: body.cedula || '',
+          status: status || 'active',
+          email: email,
+          phone: body.phone || '',
+          hourly_rate: 0,
+          report_link: body.report_link || '',
+        });
+      }
+      
+      if (role === USER_TYPES.STUDENT) {
+        await _student.create({
+          user_id: user.id,
+          cedula: body.cedula || '',
+          level_id: body.level_id || 1,
+          profession: body.profession || '',
+          book_given: false,
+          age_category: body.age_category || '',
+          birth_date: body.birth_date || null,
+          phone_number: body.phone_number || '',
+          observations: body.observations || '',
+          status: status,
+          promotion: body.promotion || '',
+          pending_payments: false,
+          emergency_contact_name: body.emergency_contact_name || '',
+          emergency_contact_phone: body.emergency_contact_phone || '',
+          emergency_contact_relationship: body.emergency_contact_relationship || '',
+        });
+      }
+    }
+    
     return { data: user };
   });
 
-  updateUser = catchServiceAsync(async (id, body) => {
-    const { name, username, email, password, role, status, image } = body;
+  updateUser = catchServiceAsync(async (id, body, file) => {
+    const { name, username, email, password, role, status } = body;
     validateParameters({ name, username, email, role, status });
 
     await this.validateDuplicateUser(email, username, id);
@@ -267,11 +311,11 @@ module.exports = class UserService extends BaseService {
 
     const updateData = { name, username, email, role, status };
 
-    if (image) {
-      if (currentUser.image && image !== currentUser.image) {
+    if (file) {
+      if (currentUser.image) {
         deleteFile(currentUser.image);
       }
-      updateData.image = image;
+      updateData.image = file.filename;
     }
 
     if (password) {
@@ -296,9 +340,59 @@ module.exports = class UserService extends BaseService {
   });
 
   getDashboardData = catchServiceAsync(async () => {
-    const professors = await _user.count({ where: { role: 'professor' } });
-    const students = await _user.count({ where: { role: 'student' } });
-    const courses = await _course.count();
+    const professors = await _professor.count({ 
+      where: { 
+        status: 'active'
+      },
+      include: [
+        {
+          model: _user,
+          as: 'user',
+          required: true,
+          where: {
+            status: 'active',
+            role: 'professor'
+          }
+        }
+      ] 
+    });
+    
+    const students = await _student.count({
+      where: {
+        status: 'active'
+      },
+      include: [
+        {
+          model: _user,
+          as: 'user',
+          required: true,
+          where: {
+            status: 'active'
+          }
+        },
+        {
+          model: _course,
+          as: 'courses',
+          required: true,
+          where: {
+            status: 'active'
+          },
+          through: {
+            where: {
+              is_retired: false
+            }
+          }
+        }
+      ],
+      distinct: true
+    });
+    
+    const courses = await _course.count({
+      where: {
+        status: 'active'
+      }
+    });
+    
     const schoolCardData = [
       {
         header: 'Total Teachers',

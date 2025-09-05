@@ -552,7 +552,7 @@ module.exports = class CourseService extends BaseService {
       where: {
         status: 'active'
       },
-      attributes: ['id', 'course_name', 'start_date', 'schedule'],
+      attributes: ['id', 'course_name', 'course_number', 'start_date', 'schedule'],
       include: [
         {
           model: _professor,
@@ -624,6 +624,7 @@ module.exports = class CourseService extends BaseService {
       return {
         id: course.id.toString(),
         course_name: course.course_name,
+        course_number: course.course_number,
         start_date: course.start_date,
         end_date: end_date,
         schedule_days: schedule_days,

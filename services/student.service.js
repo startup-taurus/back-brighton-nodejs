@@ -17,6 +17,8 @@ let _syllabus = null;
 let _gradePercentages = null;
 let _gradingCategory = null;
 let _gradingItem = null;
+let _studentTransfer = null;
+let _transferData = null;
 
 module.exports = class StudentService extends BaseService {
   constructor({
@@ -33,6 +35,8 @@ module.exports = class StudentService extends BaseService {
     GradePercentages,
     GradingCategory,
     GradingItem,
+    StudentTransfer,
+    TransferData,
   }) {
     super(Student);
     _user = User.User;
@@ -48,6 +52,8 @@ module.exports = class StudentService extends BaseService {
     _gradePercentages = GradePercentages.GradePercentages;
     _gradingCategory = GradingCategory.GradingCategory;
     _gradingItem = GradingItem.GradingItem;
+    _studentTransfer = StudentTransfer.StudentTransfer;
+    _transferData = TransferData.TransferData;
     
     this.categoryIds = null;
   }
@@ -323,8 +329,8 @@ module.exports = class StudentService extends BaseService {
     body.username = username;
     body.password = password;
 
-    const userResponse = await _userService.createUser(body);
-
+    const userResponse = await _userService.createUser(body, null, false, true);
+    
     const user = userResponse.data;
 
     const student = await _student.create({
@@ -373,21 +379,25 @@ module.exports = class StudentService extends BaseService {
       birth_date,
       courseId,
     } = body;
-
+  
+    await _courseStudent.destroy({
+      where: { student_id: id }
+    });
+  
     await _courseStudent.create({
       course_id: parseInt(courseId),
       student_id: id,
       enrollment_date: new Date(),
     });
-
+  
     const student = await _student.findByPk(id);
-
+  
     if (!student) {
       throw new AppError('Student not found', 404);
     }
-
+  
     await _userService.updateUser(student.user_id, body);
-
+  
     await _student.update(
       {
         cedula,
@@ -405,7 +415,7 @@ module.exports = class StudentService extends BaseService {
       },
       { where: { id } }
     );
-
+  
     const updatedStudent = await _student.findByPk(id, {
       include: [
         {
@@ -413,9 +423,27 @@ module.exports = class StudentService extends BaseService {
           as: 'user',
           attributes: ['name', 'username', 'email', 'status'],
         },
+        {
+          model: _course,
+          as: 'course',
+          through: { attributes: [] },
+          include: [
+            {
+              model: _professor,
+              as: 'professor',
+              include: [
+                {
+                  model: _user,
+                  as: 'user',
+                  attributes: ['name']
+                }
+              ]
+            }
+          ]
+        }
       ],
     });
-
+  
     return { data: updatedStudent };
   });
 
