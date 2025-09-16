@@ -170,10 +170,21 @@ module.exports = class CourseScheduleService extends BaseService {
         raw: true,
       });
       
-      const formattedHolidays = activeHolidays.map(holiday => ({
-        ...holiday,
-        holiday_date: new Date(holiday.holiday_date)
-      }));
+      const formattedHolidays = activeHolidays.map(holiday => {
+        let dateStr;
+        if (holiday.holiday_date instanceof Date) {
+          dateStr = holiday.holiday_date.toISOString().split('T')[0];
+        } else {
+          dateStr = holiday.holiday_date.toString().split('T')[0];
+        }
+        
+        const [year, month, day] = dateStr.split('-').map(num => parseInt(num, 10));
+        
+        return {
+          ...holiday,
+          holiday_date: new Date(year, month - 1, day) 
+        };
+      });
       const cancelledLessons = await _cancelledLesson.findAll({
         where: { course_id: cancelledDate.course_id },
         raw: true,
@@ -188,16 +199,40 @@ module.exports = class CourseScheduleService extends BaseService {
         });
       });
       
-      const originalStartDate = scheduledDates[0].scheduled_date;
+      const originalStartDate = course.start_date;
+      
+      let startDateString;
+      if (originalStartDate instanceof Date) {
+        startDateString = originalStartDate.toISOString().split('T')[0];
+      } else if (typeof originalStartDate === 'string') {
+        if (originalStartDate.includes('/')) {
+          const [day, month, year] = originalStartDate.split('/');
+          startDateString = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+        } else {
+          startDateString = originalStartDate.split('T')[0];
+        }
+      } else {
+        console.error('Invalid originalStartDate format:', originalStartDate);
+        throw new Error('Invalid date format for recalculation');
+      }
+      
+      console.log(`Recalculating dates for course ${cancelledDate.course_id} starting from original date: ${startDateString}`);
       
       const allItems = Array(scheduledDates.length).fill(1);
       
       const newClassDates = calculateClassDates(
-        originalStartDate,
+        startDateString,
         allItems,
         course.schedule,
         formattedHolidays
       );
+      
+      if (newClassDates.length < scheduledDates.length) {
+        console.error(`Not enough dates generated. Expected: ${scheduledDates.length}, Got: ${newClassDates.length}`);
+        throw new Error('Failed to generate enough class dates for recalculation');
+      }
+      
+      console.log(`Generated ${newClassDates.length} new class dates starting from ${startDateString}`);
       
       const scheduledDatesToUpdate = scheduledDates.map((scheduledDate, index) => {
         return {

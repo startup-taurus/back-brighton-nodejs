@@ -2,8 +2,27 @@ const AppError = require('./app-error');
 const { DAYS_OF_WEEK } = require('./constants');
 
 function isHoliday(dateToCheck, holidays = []) {
+  if (!dateToCheck || isNaN(dateToCheck.getTime())) {
+    return false;
+  }
+
   return holidays.some((holiday) => {
-    const holidayDate = new Date(holiday.holiday_date);
+    if (!holiday || !holiday.holiday_date) {
+      return false;
+    }
+
+    let holidayDate;
+    if (holiday.holiday_date instanceof Date) {
+      holidayDate = holiday.holiday_date;
+    } else {
+      const dateStr = holiday.holiday_date.toString().split('T')[0];
+      const [year, month, day] = dateStr.split('-').map(num => parseInt(num, 10));
+      holidayDate = new Date(year, month - 1, day);
+    }
+    
+    if (isNaN(holidayDate.getTime())) {
+      return false;
+    }
     return (
       holidayDate.getFullYear() === dateToCheck.getFullYear() &&
       holidayDate.getMonth() === dateToCheck.getMonth() &&
@@ -45,7 +64,7 @@ module.exports = {
     }));
   },
 
-  calculateClassDates(startDate, syllabusItems, schedule, holidays) {
+  calculateClassDates(startDate, syllabusItems, hourlyRate, holidays) {
     const daysMap = {
       Sun: 0,
       Mon: 1,
@@ -56,18 +75,56 @@ module.exports = {
       Sat: 6,
     };
   
-    const [days, timeRange] = schedule.split(' ');
-    const [startTime] = timeRange.split('-');
+    if (!hourlyRate || typeof hourlyRate !== 'string') {
+      return [];
+    }
   
-    const classDays = days.split('-').map((day) => daysMap[day]);
+    const parts = hourlyRate.split(' ');
+    if (parts.length < 2) {
+      return [];
+    }
   
-    const [year, month, day] = startDate
-      .split('-')
-      .map((num) => parseInt(num, 10));
+    const [days] = parts;
+  
+    const classDays = days.split('-').map((day) => daysMap[day]).filter(day => day !== undefined);
+    
+    if (classDays.length === 0) {
+      return [];
+    }
+  
+    let year, month, day;
+    
+    if (typeof startDate === 'string') {
+      if (startDate.includes('/')) {
+        const [dayStr, monthStr, yearStr] = startDate.split('/');
+        day = parseInt(dayStr, 10);
+        month = parseInt(monthStr, 10);
+        year = parseInt(yearStr, 10);
+      }
+      else if (startDate.includes('-')) {
+        const [yearStr, monthStr, dayStr] = startDate.split('-');
+        year = parseInt(yearStr, 10);
+        month = parseInt(monthStr, 10);
+        day = parseInt(dayStr, 10);
+      }
+      else {
+        return [];
+      }
+    } else {
+      return [];
+    }
+    if (!year || !month || !day || month < 1 || month > 12 || day < 1 || day > 31) {
+      return [];
+    }
   
     let currentDate = new Date(year, month - 1, day);
-    const dates = [];
+    
+    if (isNaN(currentDate.getTime())) {
+      return [];
+    }
   
+    const dates = [];
+
     syllabusItems.forEach(() => {
       while (
         !classDays.includes(currentDate.getDay()) ||
@@ -75,16 +132,12 @@ module.exports = {
       ) {
         currentDate.setDate(currentDate.getDate() + 1);
       }
-      const dateStr =
-        currentDate.getFullYear() +
-        '-' +
-        String(currentDate.getMonth() + 1).padStart(2, '0') +
-        '-' +
-        String(currentDate.getDate()).padStart(2, '0') +
-        'T' +
-        startTime;
-  
-      const classDate = new Date(dateStr);
+      const classDate = new Date(
+        currentDate.getFullYear(),
+        currentDate.getMonth(),
+        currentDate.getDate()
+      );
+      
       dates.push(classDate);
       currentDate.setDate(currentDate.getDate() + 1);
     });
@@ -109,35 +162,17 @@ module.exports = {
   countAttendance(attendances = []) {
     const attendanceTotal = attendances.reduce((acc, attendance) => {
       if (attendance.status === 'present' || attendance.status === 'recovered')
-        return acc + 1;
+        return acc++;
       if (attendance.status === 'late') return acc + 0.5;
       return acc;
-    }, 0);  
+    }, 0);
 
-    return attendanceTotal;
+    return Math.floor(attendanceTotal);
   },
 
   hasClassToday(day) {
     const currentDay = new Date().getDay();
 
     return currentDay === DAYS_OF_WEEK[day];
-  },
-
-  validateEmailFormat(email) {
-    if (!email) {
-      return { isValid: false, message: 'Email is required' };
-    }
-  
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    
-    if (!emailRegex.test(email)) {
-      return { isValid: false, message: 'Email must contain @ and . in the correct format (e.g., user@domain.com)' };
-    }
-  
-    if (email.includes('@@@') || email.includes('...')) {
-      return { isValid: false, message: 'Invalid email format' };
-    }
-  
-    return { isValid: true };
   },
 };
