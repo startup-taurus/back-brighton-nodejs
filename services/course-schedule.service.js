@@ -212,11 +212,9 @@ module.exports = class CourseScheduleService extends BaseService {
           startDateString = originalStartDate.split('T')[0];
         }
       } else {
-        console.error('Invalid originalStartDate format:', originalStartDate);
         throw new Error('Invalid date format for recalculation');
       }
       
-      console.log(`Recalculating dates for course ${cancelledDate.course_id} starting from original date: ${startDateString}`);
       
       const allItems = Array(scheduledDates.length).fill(1);
       
@@ -228,11 +226,9 @@ module.exports = class CourseScheduleService extends BaseService {
       );
       
       if (newClassDates.length < scheduledDates.length) {
-        console.error(`Not enough dates generated. Expected: ${scheduledDates.length}, Got: ${newClassDates.length}`);
         throw new Error('Failed to generate enough class dates for recalculation');
       }
       
-      console.log(`Generated ${newClassDates.length} new class dates starting from ${startDateString}`);
       
       const scheduledDatesToUpdate = scheduledDates.map((scheduledDate, index) => {
         return {
