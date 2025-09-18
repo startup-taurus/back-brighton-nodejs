@@ -148,7 +148,10 @@ const COURSE_TYPES = {
   PRIVATE: 'private',
   PRIVATE_ONLINE: 'private - online'
 };
-
+const HOLIDAY_TYPE ={
+  NATIONAL: 'national',
+  LOCAL: 'local',
+}
 
 
 module.exports = {
@@ -165,5 +168,6 @@ module.exports = {
   GRADING_CATEGORIES,
   DELETED,
   COURSE_TYPES,
-  ATTENDANCE_THRESHOLDS, // Agregar al export
+  ATTENDANCE_THRESHOLDS,
+  HOLIDAY_TYPE ,
 };

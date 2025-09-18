@@ -175,4 +175,27 @@ module.exports = {
 
     return currentDay === DAYS_OF_WEEK[day];
   },
+
+  validateEmailFormat(email) {
+    if (!email || typeof email !== 'string') {
+      return {
+        isValid: false,
+        message: 'Email is required and must be a string'
+      };
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    
+    if (!emailRegex.test(email)) {
+      return {
+        isValid: false,
+        message: 'Invalid email format'
+      };
+    }
+
+    return {
+      isValid: true,
+      message: 'Valid email format'
+    };
+  },
 };

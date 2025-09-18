@@ -50,4 +50,21 @@ module.exports = class HolidaysController extends BaseController {
     const result = await _holidayService.deleteHoliday(id);
     return appResponse(res, result);
   });
+
+  recalculateAllSchedules = catchControllerAsync(async (req, res) => {
+    const { sequelize } = require('../models');
+    const transaction = await sequelize.transaction();
+    
+    try {
+      await _holidayService.recalculateAllCourseSchedules(transaction);
+      await transaction.commit();
+      
+      return appResponse(res, {
+        data: { message: 'All course schedules recalculated successfully' }
+      });
+    } catch (error) {
+      await transaction.rollback();
+      throw error;
+    }
+  });
 };

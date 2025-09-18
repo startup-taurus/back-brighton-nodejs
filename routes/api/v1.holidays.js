@@ -12,5 +12,8 @@ module.exports = function ({ HolidaysController, AuthMiddleware }) {
   router.put('/update/:id', HolidaysController.updateHoliday);
   router.put('/update-status/:id', HolidaysController.updateHolidayStatus);
   router.delete('/delete/:id', HolidaysController.deleteHoliday);
+  router.post('/recalculate-schedules', [AuthMiddleware,
+    requireRoles(USER_TYPES.ADMIN)], HolidaysController.recalculateAllSchedules);
+  
   return router;
 };
