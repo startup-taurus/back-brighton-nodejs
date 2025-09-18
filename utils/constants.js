@@ -152,7 +152,16 @@ const HOLIDAY_TYPE ={
   NATIONAL: 'national',
   LOCAL: 'local',
 }
-
+const STATUS={
+  ACTIVE: 'active',
+  INACTIVE: 'inactive',
+}
+const ATTENDANCE_STATUS = {
+  PRESENT: 'present',
+  ABSENT: 'absent',
+  LATE: 'late',
+  EXCUSED: 'excused',
+}
 
 module.exports = {
   DAYS_OF_WEEK,
@@ -170,4 +179,6 @@ module.exports = {
   COURSE_TYPES,
   ATTENDANCE_THRESHOLDS,
   HOLIDAY_TYPE ,
+  STATUS,
+  ATTENDANCE_STATUS
 };

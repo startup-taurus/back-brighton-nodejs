@@ -1,8 +1,8 @@
 const BaseService = require('./base.service');
 const catchServiceAsync = require('../utils/catch-service-async');
-const { validateParameters, calculateClassDates } = require('../utils/utils');
+const { validateParameters, calculateClassDates, formatHolidaysWithDates } = require('../utils/utils');
 const AppError = require('../utils/app-error');
-const { HOLIDAY_TYPE } = require('../utils/constants');
+const { HOLIDAY_TYPE, STATUS } = require('../utils/constants');
 
 let _holidays = null;
 let _course = null;
@@ -21,39 +21,20 @@ module.exports = class HolidaysService extends BaseService {
   }
 
   recalculateAllCourseSchedules = catchServiceAsync(async (transaction) => {
-    console.log('Starting recalculation of all course schedules due to holiday changes...');
     
     const activeCourses = await _course.findAll({
-      where: { status: 'active' },
+      where: { status: STATUS.ACTIVE },
       raw: true,
       transaction,
     });
-
-    console.log(`Found ${activeCourses.length} active courses to recalculate`);
 
     const activeHolidays = await _holidays.findAll({
-      where: { status: 'active' },
+      where: { status: STATUS.ACTIVE },
       raw: true,
       transaction,
     });
 
-    const formattedHolidays = activeHolidays.map(holiday => {
-      let dateStr;
-      if (holiday.holiday_date instanceof Date) {
-        dateStr = holiday.holiday_date.toISOString().split('T')[0];
-      } else {
-        dateStr = holiday.holiday_date.toString().split('T')[0];
-      }
-      
-      const [year, month, day] = dateStr.split('-').map(num => parseInt(num, 10));
-      
-      return {
-        ...holiday,
-        holiday_date: new Date(year, month - 1, day) 
-      };
-    });
-
-    console.log(`Using ${formattedHolidays.length} active holidays for recalculation`);
+    const formattedHolidays = formatHolidaysWithDates(activeHolidays);
 
     for (const course of activeCourses) {
       try {
@@ -65,7 +46,6 @@ module.exports = class HolidaysService extends BaseService {
         });
 
         if (scheduledDates.length === 0) {
-          console.log(`Course ${course.id} has no scheduled dates, skipping`);
           continue;
         }
 
@@ -80,7 +60,6 @@ module.exports = class HolidaysService extends BaseService {
             startDateString = course.start_date.split('T')[0];
           }
         } else {
-          console.log(`Course ${course.id} has invalid start_date format, skipping`);
           continue;
         }
 
@@ -94,7 +73,6 @@ module.exports = class HolidaysService extends BaseService {
         );
 
         if (newClassDates.length < scheduledDates.length) {
-          console.error(`Failed to generate enough class dates for course ${course.id}`);
           continue;
         }
 
@@ -111,13 +89,10 @@ module.exports = class HolidaysService extends BaseService {
           transaction,
         });
 
-        console.log(`Successfully recalculated schedule for course ${course.id} (${course.course_number})`);
       } catch (error) {
-        console.error(`Error recalculating schedule for course ${course.id}:`, error);
       }
     }
     
-    console.log('Completed recalculation of all course schedules');
   });
 
   getAllHolidays = catchServiceAsync(async (page = 1, limit = 10) => {
@@ -139,7 +114,7 @@ module.exports = class HolidaysService extends BaseService {
 
   getAllActiveHolidays = catchServiceAsync(async () => {
     const data = await _holidays.findAll({
-      where: { status: 'active' },  
+      where: { status: STATUS.ACTIVE },  
       order: [['holiday_date', 'ASC']],
     });
 
@@ -163,98 +138,70 @@ module.exports = class HolidaysService extends BaseService {
       throw new AppError('Missing required parameters: holiday_name, holiday_date, holiday_type, and status are required', 400);
     }
 
-    const transaction = await _sequelize.transaction();
-    try {
-      const holidayData = {
-        holiday_name: body.holiday_name,
-        holiday_date: body.holiday_date,
-        holiday_type: body.holiday_type,
-        status: body.status,
-        description: body.description || null
-      };
-
-      const newHoliday = await _holidays.create(holidayData, { transaction });
-
-      if (body.holiday_type === HOLIDAY_TYPE.NATIONAL && body.status === 'active') {
+    return await _sequelize.transaction(async (transaction) => {
+      const holiday = await _holidays.create(body, { transaction });
+      if (body.holiday_type === HOLIDAY_TYPE.NATIONAL && body.status === STATUS.ACTIVE) {
         await this.recalculateAllCourseSchedules(transaction);
       }
-
-      await transaction.commit();
-      return newHoliday;
-    } catch (error) {
-      await transaction.rollback();
-      throw error;
-    }
+      return holiday;
+    });
   });
 
-  updateHoliday = catchServiceAsync(async (id, body) => {
-    const transaction = await _sequelize.transaction();
-    try {
-      const holiday = await _holidays.findByPk(id);
-      if (!holiday) {
-        throw new AppError('Holiday not found', 404);
-      }
+updateHoliday = catchServiceAsync(async (id, body) => {
+  return await _sequelize.transaction(async (transaction) => {
+    const holiday = await _holidays.findByPk(id, { transaction });
+    if (!holiday) {
+      throw new AppError('Holiday not found', 404);
+    }
 
-      const updatedHoliday = await holiday.update(body, { transaction });
+    const updatedHoliday = await holiday.update(body, { transaction });
 
-      if (body.holiday_type === HOLIDAY_TYPE.NATIONAL && body.status === 'active') {
+    if (body.holiday_type === HOLIDAY_TYPE.NATIONAL && body.status === STATUS.ACTIVE) {
+      await this.recalculateAllCourseSchedules(transaction);
+    }
+
+    return updatedHoliday;
+  });
+});
+
+updateHolidayStatus = catchServiceAsync(async (id, body) => {
+  return await _sequelize.transaction(async (transaction) => {
+    const holiday = await _holidays.findByPk(id, { transaction });
+    if (!holiday) {
+      throw new AppError('Holiday not found', 404);
+    }
+
+    const previousStatus = holiday.status;
+    const newStatus = body.status;
+
+    const updatedHoliday = await holiday.update({ status: newStatus }, { transaction });
+
+    if (holiday.holiday_type === HOLIDAY_TYPE.NATIONAL) {
+      if (previousStatus === STATUS.ACTIVE && newStatus === STATUS.INACTIVE) {
         await this.recalculateAllCourseSchedules(transaction);
       }
-
-      await transaction.commit();
-      return updatedHoliday;
-    } catch (error) {
-      await transaction.rollback();
-      throw error;
-    }
-  });
-
-  updateHolidayStatus = catchServiceAsync(async (id, body) => {
-    const transaction = await _sequelize.transaction();
-    try {
-      const holiday = await _holidays.findByPk(id);
-      if (!holiday) {
-        throw new AppError('Holiday not found', 404);
+      else if (previousStatus === STATUS.INACTIVE && newStatus === STATUS.ACTIVE) {
+        await this.recalculateAllCourseSchedules(transaction);
       }
-
-      const previousStatus = holiday.status;
-      const newStatus = body.status;
-
-      const updatedHoliday = await holiday.update({ status: newStatus }, { transaction });
-
-      if (holiday.holiday_type === 'national') {
-        if (previousStatus === 'active' && newStatus === 'inactive') {
-          console.log(`Holiday "${holiday.holiday_name}" deactivated. Regenerating attendance for ${holiday.holiday_date}...`);
-          await this.recalculateAllCourseSchedules(transaction);
-        }
-        else if (previousStatus === 'inactive' && newStatus === 'active') {
-          console.log(`Holiday "${holiday.holiday_name}" activated. Removing attendance for ${holiday.holiday_date}...`);
-          await this.recalculateAllCourseSchedules(transaction);
-        }
-      }
-
-      await transaction.commit();
-      return updatedHoliday;
-    } catch (error) {
-      await transaction.rollback();
-      throw error;
     }
-  });
 
+    return updatedHoliday;
+  });
+});
   deleteHoliday = catchServiceAsync(async (id) => {
-    const transaction = await _sequelize.transaction();
-    try {
-      const holiday = await _holidays.findByPk(id);
+    return await _sequelize.transaction(async (transaction) => {
+      const holiday = await _holidays.findByPk(id, { transaction });
       if (!holiday) {
         throw new AppError('Holiday not found', 404);
       }
 
       await holiday.destroy({ transaction });
-      await transaction.commit();
+      
+      if (holiday.holiday_type === HOLIDAY_TYPE.NATIONAL && holiday.status === STATUS.ACTIVE) {
+        await this.recalculateAllCourseSchedules(transaction);
+      }
+      
       return { message: 'Holiday deleted successfully' };
-    } catch (error) {
-      await transaction.rollback();
-      throw error;
-    }
+    });
   });
-};
+}; 

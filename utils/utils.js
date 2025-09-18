@@ -1,5 +1,5 @@
 const AppError = require('./app-error');
-const { DAYS_OF_WEEK } = require('./constants');
+const { DAYS_OF_WEEK, ATTENDANCE_STATUS } = require('./constants');
 
 function isHoliday(dateToCheck, holidays = []) {
   if (!dateToCheck || isNaN(dateToCheck.getTime())) {
@@ -161,9 +161,9 @@ module.exports = {
 
   countAttendance(attendances = []) {
     const attendanceTotal = attendances.reduce((acc, attendance) => {
-      if (attendance.status === 'present' || attendance.status === 'recovered')
+      if (attendance.status === ATTENDANCE_STATUS.PRESENT || attendance.status === 'recovered')
         return acc++;
-      if (attendance.status === 'late') return acc + 0.5;
+      if (attendance.status === ATTENDANCE_STATUS.LATE) return acc + 0.5;
       return acc;
     }, 0);
 
@@ -177,13 +177,6 @@ module.exports = {
   },
 
   validateEmailFormat(email) {
-    if (!email || typeof email !== 'string') {
-      return {
-        isValid: false,
-        message: 'Email is required and must be a string'
-      };
-    }
-
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     
     if (!emailRegex.test(email)) {
@@ -197,5 +190,31 @@ module.exports = {
       isValid: true,
       message: 'Valid email format'
     };
+  },
+
+  formatHolidaysWithDates(holidays) {
+    if (!Array.isArray(holidays)) {
+      return [];
+    }
+
+    return holidays.map(holiday => {
+      if (!holiday || !holiday.holiday_date) {
+        return holiday;
+      }
+
+      let dateStr;
+      if (holiday.holiday_date instanceof Date) {
+        dateStr = holiday.holiday_date.toISOString().split('T')[0];
+      } else {
+        dateStr = holiday.holiday_date.toString().split('T')[0];
+      }
+      
+      const [year, month, day] = dateStr.split('-').map(num => parseInt(num, 10));
+      
+      return {
+        ...holiday,
+        holiday_date: new Date(year, month - 1, day)
+      };
+    });
   },
 };
