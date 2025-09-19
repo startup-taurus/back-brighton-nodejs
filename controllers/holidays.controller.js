@@ -1,6 +1,7 @@
 const BaseController = require('./base.controller');
 const catchControllerAsync = require('../utils/catch-controller-async');
 const { appResponse } = require('../utils/app-response');
+
 let _holidayService = null;
 module.exports = class HolidaysController extends BaseController {
   constructor({ HolidaysService }) {
@@ -26,22 +27,19 @@ module.exports = class HolidaysController extends BaseController {
   });
 
   createHoliday = catchControllerAsync(async (req, res) => {
-    const body = req.body;
-    const result = await _holidayService.createHoliday(body);
+    const result = await _holidayService.createHoliday(req.body);
     return appResponse(res, result);
   });
 
   updateHoliday = catchControllerAsync(async (req, res) => {
-    const body = req.body;
     const { id } = req.params;
-    const result = await _holidayService.updateHoliday(id, body);
+    const result = await _holidayService.updateHoliday(id, req.body);
     return appResponse(res, result);
   });
 
   updateHolidayStatus = catchControllerAsync(async (req, res) => {
-    const body = req.body;
     const { id } = req.params;
-    const result = await _holidayService.updateHolidayStatus(id, body);
+    const result = await _holidayService.updateHolidayStatus(id, req.body);
     return appResponse(res, result);
   });
 

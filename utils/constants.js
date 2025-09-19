@@ -148,8 +148,21 @@ const COURSE_TYPES = {
   PRIVATE: 'private',
   PRIVATE_ONLINE: 'private - online'
 };
-
-
+const HOLIDAY_TYPE ={
+  NATIONAL: 'national',
+  LOCAL: 'local',
+}
+const STATUS={
+  ACTIVE: 'active',
+  INACTIVE: 'inactive',
+}
+const ATTENDANCE_STATUS = {
+  PRESENT: 'present',
+  ABSENT: 'absent',
+  LATE: 'late',
+  EXCUSED: 'excused',
+  RECOVERED: 'recovered',
+}
 
 module.exports = {
   DAYS_OF_WEEK,
@@ -165,5 +178,8 @@ module.exports = {
   GRADING_CATEGORIES,
   DELETED,
   COURSE_TYPES,
-  ATTENDANCE_THRESHOLDS, // Agregar al export
+  ATTENDANCE_THRESHOLDS,
+  HOLIDAY_TYPE ,
+  STATUS,
+  ATTENDANCE_STATUS
 };
