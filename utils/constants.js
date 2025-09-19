@@ -161,6 +161,7 @@ const ATTENDANCE_STATUS = {
   ABSENT: 'absent',
   LATE: 'late',
   EXCUSED: 'excused',
+  RECOVERED: 'recovered',
 }
 
 module.exports = {

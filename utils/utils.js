@@ -161,7 +161,7 @@ module.exports = {
 
   countAttendance(attendances = []) {
     const attendanceTotal = attendances.reduce((acc, attendance) => {
-      if (attendance.status === ATTENDANCE_STATUS.PRESENT || attendance.status === 'recovered')
+      if (attendance.status === ATTENDANCE_STATUS.PRESENT || attendance.status === ATTENDANCE_STATUS.RECOVERED)
         return acc++;
       if (attendance.status === ATTENDANCE_STATUS.LATE) return acc + 0.5;
       return acc;
