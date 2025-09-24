@@ -299,7 +299,7 @@ module.exports = class UserService extends BaseService {
   });
 
   updateUser = catchServiceAsync(async (id, body, file) => {
-    const { name, username, email, password, role, status } = body;
+    const { name, first_name, middle_name, last_name, second_last_name, username, email, password, role, status } = body;
     validateParameters({ name, username, email, role, status });
 
     await this.validateDuplicateUser(email, username, id);
@@ -310,6 +310,11 @@ module.exports = class UserService extends BaseService {
     }
 
     const updateData = { name, username, email, role, status };
+
+    if (first_name !== undefined) updateData.first_name = first_name;
+    if (middle_name !== undefined) updateData.middle_name = middle_name;
+    if (last_name !== undefined) updateData.last_name = last_name;
+    if (second_last_name !== undefined) updateData.second_last_name = second_last_name;
 
     if (file) {
       if (currentUser.image) {

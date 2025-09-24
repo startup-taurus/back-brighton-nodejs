@@ -13,6 +13,22 @@ module.exports = class UserModel {
           type: DataTypes.STRING,
           allowNull: false,
         },
+        first_name: {
+          type: DataTypes.STRING,
+          allowNull: true,
+        },
+        middle_name: {
+          type: DataTypes.STRING,
+          allowNull: true,
+        },
+        last_name: {
+          type: DataTypes.STRING,
+          allowNull: true,
+        },
+        second_last_name: {
+          type: DataTypes.STRING,
+          allowNull: true,
+        },
         username: {
           type: DataTypes.STRING,
           allowNull: false,
