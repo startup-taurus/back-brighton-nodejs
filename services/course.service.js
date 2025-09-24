@@ -563,7 +563,7 @@ module.exports = class CourseService extends BaseService {
             {
               model: _user,
               as: 'user',
-              attributes: ['name'],
+              attributes: ['name', 'image'],
               required: false
             }
           ]
@@ -581,6 +581,25 @@ module.exports = class CourseService extends BaseService {
               required: false
             }
           ]
+        },
+        {
+          model: _student,
+          as: 'students',
+          attributes: ['id'],
+          required: false,
+          include: [
+            {
+              model: _user,
+              as: 'user',
+              attributes: ['id'],
+              where: { isActive: 1 },
+              required: false
+            }
+          ],
+          through: {
+            attributes: [],
+            where: { is_retired: 0 }
+          }
         }
       ]
     });
@@ -612,13 +631,23 @@ module.exports = class CourseService extends BaseService {
       }
 
       let professor_name = 'No asignado';
+      let professor_image = null;
       if (course.professor && course.professor.user) {
         professor_name = course.professor.user.name;
+        professor_image = course.professor.user.image;
       }
 
       let level_name = 'No asignado';
       if (course.syllabus && course.syllabus.level) {
         level_name = course.syllabus.level.full_level || course.syllabus.level.short_level || 'No asignado';
+      }
+
+      // Count active students (not retired and with active user accounts)
+      let student_count = 0;
+      if (course.students && course.students.length > 0) {
+        student_count = course.students.filter(student => 
+          student.user && student.user.id
+        ).length;
       }
 
       return {
@@ -631,7 +660,9 @@ module.exports = class CourseService extends BaseService {
         start_time: start_time,
         end_time: end_time,
         professor_name: professor_name,
-        level_name: level_name
+        professor_image: professor_image,
+        level_name: level_name,
+        student_count: student_count
       };
     });
 

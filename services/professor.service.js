@@ -358,6 +358,7 @@ module.exports = class ProfessorService extends BaseService {
       hourly_rate,
       phone,
       report_link,
+      image,
     } = body;
 
     validateParameters({
@@ -371,8 +372,8 @@ module.exports = class ProfessorService extends BaseService {
     });
 
     await _userService.validateDuplicateByRole(email, cedula, 'professor', username);
-
-    const userResponse = await _userService.createUser(body, null, false, true);
+    const file = image ? { filename: image } : null;
+    const userResponse = await _userService.createUser(body, file, false, true);
     
     const user = userResponse.data;
 
@@ -390,7 +391,7 @@ module.exports = class ProfessorService extends BaseService {
   });
 
   updateProfessor = catchServiceAsync(async (id, body) => {
-    const {email, cedula, status, hourly_rate, phone} = body;
+    const {email, cedula, status, hourly_rate, phone, image} = body;
     const professor = await _professor.findByPk(id, {
       include: [
         {
@@ -423,8 +424,8 @@ module.exports = class ProfessorService extends BaseService {
     ) {
       deleteFile(professor.user.image);
     }
-
-    await _userService.updateUser(professor.user_id, body);
+    const file = image ? { filename: image } : null;
+    await _userService.updateUser(professor.user_id, body, file);
     await _professor.update(
       {
         cedula,
@@ -596,6 +597,7 @@ module.exports = class ProfessorService extends BaseService {
           student_count: course.students.length,
           classSchedule: course.schedule,
           schedule,
+          start_date: courseStartDate ? courseStartDate.toISOString().split('T')[0] : null,
           end_date: lastCourseDate ? lastCourseDate.toISOString().split('T')[0] : null,
           options: {
             hasClassToday,
