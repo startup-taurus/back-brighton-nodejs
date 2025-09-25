@@ -642,7 +642,6 @@ module.exports = class CourseService extends BaseService {
         level_name = course.syllabus.level.full_level || course.syllabus.level.short_level || 'No asignado';
       }
 
-      // Count active students (not retired and with active user accounts)
       let student_count = 0;
       if (course.students && course.students.length > 0) {
         student_count = course.students.filter(student => 
