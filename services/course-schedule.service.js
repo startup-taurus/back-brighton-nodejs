@@ -149,33 +149,54 @@ module.exports = class CourseScheduleService extends BaseService {
       });
     }
   );
+  _getSyllabusItemsByCourse = async (syllabusId) => {
+    return await _syllabusItems.findAll({
+      where: { 
+        syllabus_id: syllabusId,
+        item_name: { [Op.notLike]: '%DELETED%' }
+      },
+      order: [['id', 'ASC']],
+      raw: true,
+    });
+  };
+
+  _getCourseSchedules = async (courseId, transaction) => {
+    return await _courseSchedule.findAll({
+      where: { course_id: courseId },
+      order: [['scheduled_date', 'ASC']],
+      raw: true,
+      transaction,
+    });
+  };
+
+  _getActiveHolidays = async () => {
+    return await _holidays.findAll({ 
+      where: { status: 'active' }, 
+      raw: true 
+    });
+  };
+
+  _getCancelledLessonsForCourse = async (courseId, excludeCancelledId = null, transaction) => {
+    const whereCondition = excludeCancelledId 
+      ? { course_id: courseId, id: { [Op.ne]: excludeCancelledId } }
+      : { course_id: courseId };
+    
+    return await _cancelledLesson.findAll({
+      where: whereCondition,
+      raw: true,
+      transaction,
+    });
+  };
+
   recalculateScheduleDaysOfClasess = catchServiceAsync(
     async (cancelledDate, transaction, excludeCancelledId = null) => {
       const course = await _course.findByPk(cancelledDate.course_id, { raw: true });
       
       const [syllabusItems, existingSchedules, activeHolidays, cancelledLessons] = await Promise.all([
-        _syllabusItems.findAll({
-          where: { 
-            syllabus_id: course.syllabus_id,
-            item_name: { [Op.notLike]: '%DELETED%' }
-          },
-          order: [['id', 'ASC']],
-          raw: true,
-        }),
-        _courseSchedule.findAll({
-          where: { course_id: cancelledDate.course_id },
-          order: [['scheduled_date', 'ASC']],
-          raw: true,
-          transaction,
-        }),
-        _holidays.findAll({ where: { status: 'active' }, raw: true }),
-        _cancelledLesson.findAll({
-          where: excludeCancelledId 
-            ? { course_id: cancelledDate.course_id, id: { [Op.ne]: excludeCancelledId } }
-            : { course_id: cancelledDate.course_id },
-          raw: true,
-          transaction,
-        })
+        this._getSyllabusItemsByCourse(course.syllabus_id),
+        this._getCourseSchedules(cancelledDate.course_id, transaction),
+        this._getActiveHolidays(),
+        this._getCancelledLessonsForCourse(cancelledDate.course_id, excludeCancelledId, transaction)
       ]);
       const parseDate = (date) => {
         const dateStr = date instanceof Date ? date.toISOString().split('T')[0] : date.toString().split('T')[0];
