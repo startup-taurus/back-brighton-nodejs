@@ -138,7 +138,7 @@ module.exports = class StudentService extends BaseService {
               name: { [Op.like]: `%${trimmedQuery.name}%` },
             }),
           },
-          attributes: ['id', 'name', 'email', 'status', 'username', 'password'],
+          attributes: ['id', 'name', 'email', 'status', 'username', 'password', 'first_name', 'middle_name', 'last_name', 'second_last_name'],
         },
         {
           model: _payment,
@@ -245,7 +245,7 @@ module.exports = class StudentService extends BaseService {
         totalCount: data.count,
       },
     };
-  };
+  }
 
   getStudent = catchServiceAsync(async (id) => {
     const student = await _student.findByPk(id, {
@@ -253,7 +253,7 @@ module.exports = class StudentService extends BaseService {
         {
           model: _user,
           as: 'user',
-          attributes: ['id', 'name', 'email', 'status', 'username'],
+          attributes: ['id', 'name', 'email', 'status', 'username', 'password', 'first_name', 'middle_name', 'last_name', 'second_last_name'],
         },
         {
           model: _level,
@@ -266,6 +266,48 @@ module.exports = class StudentService extends BaseService {
     if (!student) {
       throw new AppError('Student not found', 404);
     }
+
+    const courseStudents = await _courseStudent.findAll({
+      where: {
+        student_id: student.id,
+      },
+      limit: 2,
+      include: [
+        {
+          model: _course,
+          as: 'course',
+          required: true,
+          include: [
+            {
+              model: _professor,
+              as: 'professor',
+              include: [
+                {
+                  model: _user,
+                  as: 'user',
+                  attributes: ['id', 'name'],
+                },
+              ],
+            },
+          ],
+        },
+      ],
+      order: [['enrollment_date', 'DESC']],
+    });
+
+    const courses = courseStudents
+      .map((cs) => {
+        const courseJson = cs.toJSON();
+        return {
+          id: courseJson.course?.id,
+          course_student_id: courseJson.id,
+          course_name: courseJson.course?.course_name,
+          course_number: courseJson.course?.course_number,
+          professor: courseJson.course?.professor?.user?.name,
+          enrollment_date: courseJson.enrollment_date,
+        };
+      })
+      .filter((c) => c.id);
 
     return {
       data: {
@@ -286,10 +328,18 @@ module.exports = class StudentService extends BaseService {
         emergency_contact_relationship: student.emergency_contact_relationship,
         age_category: student.age_category,
         birth_date: student.birth_date,
+        pending_payments: student.pending_payments,
+        promotion: student.promotion,
+        book_given: student.book_given,
+        course: courses, 
         user: {
           id: student.user.id,
           name: student.user.name,
           email: student.user.email,
+          first_name: student.user.first_name,
+          middle_name: student.user.middle_name,
+          last_name: student.user.last_name,
+          second_last_name: student.user.second_last_name,
         },
       },
     };
@@ -363,8 +413,13 @@ module.exports = class StudentService extends BaseService {
   });
 
   updateStudent = catchServiceAsync(async (id, body) => {
-    body.role = 'student';
     const {
+      name,
+      first_name,
+      middle_name,
+      last_name,
+      second_last_name,
+      email,
       cedula,
       phone_number,
       level_id,
@@ -390,13 +445,35 @@ module.exports = class StudentService extends BaseService {
       enrollment_date: new Date(),
     });
   
-    const student = await _student.findByPk(id);
+    const student = await _student.findByPk(id, {
+      include: [
+        {
+          model: _user,
+          as: 'user',
+          attributes: ['id', 'name', 'username', 'email', 'role', 'status', 'first_name', 'middle_name', 'last_name', 'second_last_name'],
+        },
+      ],
+    });
   
     if (!student) {
       throw new AppError('Student not found', 404);
     }
-  
-    await _userService.updateUser(student.user_id, body);
+
+    if (name || email || first_name || middle_name || last_name || second_last_name) {
+      const userUpdateData = {
+        name: name || student.user.name,
+        first_name: first_name || student.user.first_name,
+        middle_name: middle_name || student.user.middle_name,
+        last_name: last_name || student.user.last_name,
+        second_last_name: second_last_name || student.user.second_last_name,
+        username: student.user.username, 
+        email: email || student.user.email,
+        role: student.user.role, 
+        status: student.user.status,
+      };
+      
+      await _userService.updateUser(student.user_id, userUpdateData);
+    }
   
     await _student.update(
       {
@@ -421,7 +498,7 @@ module.exports = class StudentService extends BaseService {
         {
           model: _user,
           as: 'user',
-          attributes: ['name', 'username', 'email', 'status'],
+          attributes: ['name', 'username', 'email', 'status', 'first_name', 'middle_name', 'last_name', 'second_last_name'],
         },
         {
           model: _course,

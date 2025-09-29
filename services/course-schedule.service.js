@@ -1,4 +1,5 @@
 const { isWithinInterval, isBefore } = require('date-fns');
+const { Op } = require('sequelize');
 const catchServiceAsync = require('../utils/catch-service-async');
 const { calculateClassDates } = require('../utils/utils');
 const BaseService = require('./base.service');
@@ -8,15 +9,17 @@ let _syllabusItems = null;
 let _course = null;
 let _holidays = null;
 let _cancelledLesson = null;
+let _attendance = null;
 
 module.exports = class CourseScheduleService extends BaseService {
-  constructor({ CourseSchedule, SyllabusItems, Course, Holidays, CancelledLesson }) {
+  constructor({ CourseSchedule, SyllabusItems, Course, Holidays, CancelledLesson, Attendance }) {
     super(CourseSchedule.CourseSchedule);
     _courseSchedule = CourseSchedule.CourseSchedule;
     _syllabusItems = SyllabusItems.SyllabusItems;
     _course = Course.Course;
     _holidays = Holidays.Holidays;
     _cancelledLesson = CancelledLesson.CancelledLesson;
+    _attendance = Attendance.Attendance;
   }
 
   getCourseScheduleDates = catchServiceAsync(async (courseId) => {
@@ -146,102 +149,92 @@ module.exports = class CourseScheduleService extends BaseService {
       });
     }
   );
+  getSyllabusItemsByCourse = async (syllabusId) => {
+    return await _syllabusItems.findAll({
+      where: { 
+        syllabus_id: syllabusId,
+        item_name: { [Op.notLike]: '%DELETED%' }
+      },
+      order: [['id', 'ASC']],
+      raw: true,
+    });
+  };
+
+  getCourseSchedules = async (courseId, transaction) => {
+    return await _courseSchedule.findAll({
+      where: { course_id: courseId },
+      order: [['scheduled_date', 'ASC']],
+      raw: true,
+      transaction,
+    });
+  };
+
+  getActiveHolidays = async () => {
+    return await _holidays.findAll({ 
+      where: { status: 'active' }, 
+      raw: true 
+    });
+  };
+
+  getCancelledLessonsForCourse = async (courseId, excludeCancelledId = null, transaction) => {
+    const whereCondition = excludeCancelledId 
+      ? { course_id: courseId, id: { [Op.ne]: excludeCancelledId } }
+      : { course_id: courseId };
+    
+    return await _cancelledLesson.findAll({
+      where: whereCondition,
+      raw: true,
+      transaction,
+    });
+  };
+
   recalculateScheduleDaysOfClasess = catchServiceAsync(
-    async (cancelledDate, transaction) => {
-      const scheduledDates = await _courseSchedule.findAll({
-        where: { course_id: cancelledDate.course_id },
-        order: [['scheduled_date', 'ASC']],
-        raw: true,
-        transaction,
-        include: [
-          {
-            model: _syllabusItems,
-            as: 'syllabusItem',
-          },
-        ],
-      });
+    async (cancelledDate, transaction, excludeCancelledId = null) => {
+      const course = await _course.findByPk(cancelledDate.course_id, { raw: true });
       
-      const course = await _course.findByPk(cancelledDate.course_id, {
-        raw: true,
-      });
-      
-      const activeHolidays = await _holidays.findAll({
-        where: { status: 'active' },
-        raw: true,
-      });
-      
-      const formattedHolidays = activeHolidays.map(holiday => {
-        let dateStr;
-        if (holiday.holiday_date instanceof Date) {
-          dateStr = holiday.holiday_date.toISOString().split('T')[0];
-        } else {
-          dateStr = holiday.holiday_date.toString().split('T')[0];
-        }
-        
-        const [year, month, day] = dateStr.split('-').map(num => parseInt(num, 10));
-        
-        return {
-          ...holiday,
-          holiday_date: new Date(year, month - 1, day) 
-        };
-      });
-      const cancelledLessons = await _cancelledLesson.findAll({
-        where: { course_id: cancelledDate.course_id },
-        raw: true,
-      });
-      
-      cancelledLessons.forEach(cancelledLesson => {
-        const cancelledDateObj = new Date(cancelledLesson.cancel_date);
-        formattedHolidays.push({
-          holiday_date: cancelledDateObj,
-          holiday_name: 'Cancelled Class',
-          status: 'active'
-        });
-      });
-      
-      const originalStartDate = course.start_date;
-      
-      let startDateString;
-      if (originalStartDate instanceof Date) {
-        startDateString = originalStartDate.toISOString().split('T')[0];
-      } else if (typeof originalStartDate === 'string') {
-        if (originalStartDate.includes('/')) {
-          const [day, month, year] = originalStartDate.split('/');
-          startDateString = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
-        } else {
-          startDateString = originalStartDate.split('T')[0];
-        }
-      } else {
-        throw new Error('Invalid date format for recalculation');
-      }
-      
-      
-      const allItems = Array(scheduledDates.length).fill(1);
-      
+      const [syllabusItems, existingSchedules, activeHolidays, cancelledLessons] = await Promise.all([
+        this.getSyllabusItemsByCourse(course.syllabus_id),
+        this.getCourseSchedules(cancelledDate.course_id, transaction),
+        this.getActiveHolidays(),
+        this.getCancelledLessonsForCourse(cancelledDate.course_id, excludeCancelledId, transaction)
+      ]);
+      const parseDate = (date) => {
+        const dateStr = date instanceof Date ? date.toISOString().split('T')[0] : date.toString().split('T')[0];
+        const [year, month, day] = dateStr.split('-').map(Number);
+        return new Date(year, month - 1, day);
+      };
+
+      const holidays = [
+        ...activeHolidays.map(h => ({ ...h, holiday_date: parseDate(h.holiday_date) })),
+        ...cancelledLessons.map(l => ({ 
+          holiday_date: parseDate(l.cancel_date), 
+          holiday_name: 'Cancelled Class' 
+        }))
+      ];
+
       const newClassDates = calculateClassDates(
-        startDateString,
-        allItems,
+        course.start_date,
+        syllabusItems,
         course.schedule,
-        formattedHolidays
-      );
+        holidays
+      ).slice(0, syllabusItems.length);
+
+      const updatePromises = [];
       
-      if (newClassDates.length < scheduledDates.length) {
-        throw new Error('Failed to generate enough class dates for recalculation');
+      for (let i = 0; i < Math.min(existingSchedules.length, newClassDates.length); i++) {
+        const newDate = newClassDates[i].toISOString().split('T')[0];
+        if (existingSchedules[i].scheduled_date !== newDate) {
+          updatePromises.push(
+            _courseSchedule.update(
+              { scheduled_date: newDate },
+              { where: { id: existingSchedules[i].id }, transaction }
+            )
+          );
+        }
       }
-      
-      
-      const scheduledDatesToUpdate = scheduledDates.map((scheduledDate, index) => {
-        return {
-          ...scheduledDate,
-          id: scheduledDate.id,
-          scheduled_date: newClassDates[index].toISOString().split('T')[0],
-        };
-      });
-      
-      await _courseSchedule.bulkCreate(scheduledDatesToUpdate, {
-        updateOnDuplicate: ['scheduled_date'],
-        transaction,
-      });
+
+      await Promise.all(updatePromises);
     }
   );
+
 };

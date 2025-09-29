@@ -98,8 +98,10 @@ module.exports = class CancelledLessonService extends BaseService {
     return await _sequelize.transaction(async (transaction) => {
       await _courseScheduleService.recalculateScheduleDaysOfClasess(
         body,
-        transaction
+        transaction,
+        body.id 
       );
+      
       return await _cancelledLeasson.destroy({
         where: {id: body.id},
         transaction,

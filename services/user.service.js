@@ -299,30 +299,37 @@ module.exports = class UserService extends BaseService {
   });
 
   updateUser = catchServiceAsync(async (id, body, file) => {
-    const { name, username, email, password, role, status } = body;
+    const { name, first_name, middle_name, last_name, second_last_name, username, email, password, role, status } = body;
     validateParameters({ name, username, email, role, status });
-
+  
     await this.validateDuplicateUser(email, username, id);
-
+  
     const currentUser = await _user.findByPk(id);
     if (!currentUser) {
       throw new AppError('Usuario no encontrado', 404);
     }
-
+  
     const updateData = { name, username, email, role, status };
-
+  
+    const nameFields = { first_name, middle_name, last_name, second_last_name };
+    Object.entries(nameFields).forEach(([key, value]) => {
+      if (value !== undefined) {
+        updateData[key] = value;
+      }
+    });
+  
     if (file) {
       if (currentUser.image) {
         deleteFile(currentUser.image);
       }
       updateData.image = file.filename;
     }
-
+  
     if (password) {
       const hashedPassword = await _authUtils.hashPassword(password);
       updateData.password = hashedPassword;
     }
-
+  
     const user = await _user.update(updateData, { where: { id } });
     return { data: user };
   });
