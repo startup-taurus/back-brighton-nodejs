@@ -149,7 +149,7 @@ module.exports = class CourseScheduleService extends BaseService {
       });
     }
   );
-  _getSyllabusItemsByCourse = async (syllabusId) => {
+  getSyllabusItemsByCourse = async (syllabusId) => {
     return await _syllabusItems.findAll({
       where: { 
         syllabus_id: syllabusId,
@@ -160,7 +160,7 @@ module.exports = class CourseScheduleService extends BaseService {
     });
   };
 
-  _getCourseSchedules = async (courseId, transaction) => {
+  getCourseSchedules = async (courseId, transaction) => {
     return await _courseSchedule.findAll({
       where: { course_id: courseId },
       order: [['scheduled_date', 'ASC']],
@@ -169,14 +169,14 @@ module.exports = class CourseScheduleService extends BaseService {
     });
   };
 
-  _getActiveHolidays = async () => {
+  getActiveHolidays = async () => {
     return await _holidays.findAll({ 
       where: { status: 'active' }, 
       raw: true 
     });
   };
 
-  _getCancelledLessonsForCourse = async (courseId, excludeCancelledId = null, transaction) => {
+  getCancelledLessonsForCourse = async (courseId, excludeCancelledId = null, transaction) => {
     const whereCondition = excludeCancelledId 
       ? { course_id: courseId, id: { [Op.ne]: excludeCancelledId } }
       : { course_id: courseId };
@@ -193,10 +193,10 @@ module.exports = class CourseScheduleService extends BaseService {
       const course = await _course.findByPk(cancelledDate.course_id, { raw: true });
       
       const [syllabusItems, existingSchedules, activeHolidays, cancelledLessons] = await Promise.all([
-        this._getSyllabusItemsByCourse(course.syllabus_id),
-        this._getCourseSchedules(cancelledDate.course_id, transaction),
-        this._getActiveHolidays(),
-        this._getCancelledLessonsForCourse(cancelledDate.course_id, excludeCancelledId, transaction)
+        this.getSyllabusItemsByCourse(course.syllabus_id),
+        this.getCourseSchedules(cancelledDate.course_id, transaction),
+        this.getActiveHolidays(),
+        this.getCancelledLessonsForCourse(cancelledDate.course_id, excludeCancelledId, transaction)
       ]);
       const parseDate = (date) => {
         const dateStr = date instanceof Date ? date.toISOString().split('T')[0] : date.toString().split('T')[0];
