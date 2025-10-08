@@ -10,15 +10,17 @@ let _course = null;
 let _authUtils = null;
 let _professor = null;
 let _student = null;
+let _sequelize = null;
 
 module.exports = class UserService extends BaseService {
-  constructor({ User, Course, AuthUtils, Professor, Student }) {
+  constructor({ User, Course, AuthUtils, Professor, Student, Sequelize }) {
     super(User);
     _user = User.User;
     _course = Course.Course;
     _professor = Professor.Professor;
     _student = Student.Student;
     _authUtils = AuthUtils;
+    _sequelize = Sequelize;
   }
 
   login = catchServiceAsync(async (username, password) => {
@@ -26,7 +28,10 @@ module.exports = class UserService extends BaseService {
 
     let user = await _user.findOne({
       where: {
-        [Op.or]: [{ username: username }, { email: username }],
+        [Op.or]: [
+          _sequelize.where(_sequelize.fn('BINARY', _sequelize.col('username')), username),
+          _sequelize.where(_sequelize.fn('BINARY', _sequelize.col('email')), username)
+        ],
       },
       raw: true,
     });
@@ -36,7 +41,7 @@ module.exports = class UserService extends BaseService {
 
     if (user.failed_attempts >= 5) {
       throw new AppError(
-        'Account is locked due to too many failed login attempts',
+        'Account has been locked due to 5 failed login attempts. Please contact support to unlock your account.',
         403
       );
     }
@@ -48,10 +53,21 @@ module.exports = class UserService extends BaseService {
     delete user.password;
 
     if (!isPasswordValid) {
-      await _user.update(
-        { failed_attempts: user.failed_attempts + 1 },
-        { where: { id: user.id } }
-      );
+      const newFailedAttempts = user.failed_attempts + 1;
+      const updateData = { failed_attempts: newFailedAttempts };
+      if (newFailedAttempts >= 5) {
+        updateData.status = 'inactive';
+      }
+      
+      await _user.update(updateData, { where: { id: user.id } });
+      
+      if (newFailedAttempts >= 5) {
+        throw new AppError(
+          'Account has been locked due to 5 failed login attempts. Please contact support to unlock your account.',
+          403
+        );
+      }
+      
       throw new AppError('Password incorrect', 400);
     }
 
@@ -134,16 +150,20 @@ module.exports = class UserService extends BaseService {
     const [existingEmailUser, existingUsernameUser] = await Promise.all([
       _user.findOne({
         where: {
-          email: email,
-          ...(excludeUserId && { id: { [Op.ne]: excludeUserId } })
+          [Op.and]: [
+            _sequelize.where(_sequelize.fn('BINARY', _sequelize.col('email')), email),
+            ...(excludeUserId ? [{ id: { [Op.ne]: excludeUserId } }] : [])
+          ]
         },
         attributes: ['id', 'email'],
         raw: true
       }),
       _user.findOne({
         where: {
-          username: username,
-          ...(excludeUserId && { id: { [Op.ne]: excludeUserId } })
+          [Op.and]: [
+            _sequelize.where(_sequelize.fn('BINARY', _sequelize.col('username')), username),
+            ...(excludeUserId ? [{ id: { [Op.ne]: excludeUserId } }] : [])
+          ]
         },
         attributes: ['id', 'username'],
         raw: true
@@ -171,8 +191,10 @@ module.exports = class UserService extends BaseService {
       email: {
         query: () => _user.findOne({
           where: {
-            email: email,
-            ...(excludeUserId && { id: { [Op.ne]: excludeUserId } })
+            [Op.and]: [
+              _sequelize.where(_sequelize.fn('BINARY', _sequelize.col('email')), email),
+              ...(excludeUserId ? [{ id: { [Op.ne]: excludeUserId } }] : [])
+            ]
           },
           attributes: ['id', 'email'],
           raw: true
@@ -182,8 +204,10 @@ module.exports = class UserService extends BaseService {
       username: {
         query: () => _user.findOne({
           where: {
-            username: username,
-            ...(excludeUserId && { id: { [Op.ne]: excludeUserId } })
+            [Op.and]: [
+              _sequelize.where(_sequelize.fn('BINARY', _sequelize.col('username')), username),
+              ...(excludeUserId ? [{ id: { [Op.ne]: excludeUserId } }] : [])
+            ]
           },
           attributes: ['id', 'username'],
           raw: true
@@ -339,6 +363,24 @@ module.exports = class UserService extends BaseService {
     validateParameters({ id, status });
     const user = await _user.update({ status }, { where: { id } });
     return { data: user };
+  });
+
+  resetFailedAttempts = catchServiceAsync(async (id) => {
+    validateParameters({ id });
+    
+    const user = await _user.findByPk(id);
+    if (!user) {
+      throw new AppError('User not found', 404);
+    }
+    
+    const result = await _user.update(
+      { 
+        failed_attempts: 0,
+        status: 'active'
+      }, 
+      { where: { id } }
+    );
+    return { data: result, message: 'User activated and failed attempts reset successfully' };
   });
 
   deleteUser = catchServiceAsync(async (id) => {

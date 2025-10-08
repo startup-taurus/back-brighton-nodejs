@@ -53,6 +53,12 @@ module.exports = class UserController extends BaseController {
     return appResponse(res, result);
   });
 
+  resetFailedAttempts = catchControllerAsync(async (req, res) => {
+    const { id } = req.params;
+    const result = await _userService.resetFailedAttempts(id);
+    return appResponse(res, result);
+  });
+
   deleteUser = catchControllerAsync(async (req, res) => {
     const { id } = req.params;
     const result = await _userService.deleteUser(id);

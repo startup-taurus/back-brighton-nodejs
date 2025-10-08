@@ -178,6 +178,7 @@ module.exports = class CourseService extends BaseService {
     const professorInclude = {
       model: _professor,
       as: 'professor',
+      attributes: ['id', 'user_id'],
       ...(trimmedQuery.teacher_name && { required: true }),
       include: [
         {
