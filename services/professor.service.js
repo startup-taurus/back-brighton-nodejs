@@ -1,6 +1,7 @@
 const catchServiceAsync = require('../utils/catch-service-async');
 const BaseService = require('./base.service');
 const AppError = require('../utils/app-error');
+const { deleteFile } = require('../utils/upload');
 const {
   validateParameters,
   scheduleStringToDates,
@@ -416,7 +417,7 @@ module.exports = class ProfessorService extends BaseService {
       );
     }
 
-    const {deleteFile} = require('../utils/upload');
+   
     if (
       body.image &&
       professor.user.image &&

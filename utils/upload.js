@@ -40,7 +40,7 @@ const storage = multer.diskStorage({
 const upload = multer({
   storage,
   fileFilter: (req, file, callback) => {
-    const filetypes = /jpeg|jpg|png/;
+    const filetypes = /jpeg|jpg|png|webp/;
     const mimetype = filetypes.test(file.mimetype);
     const extname = filetypes.test(
       path.extname(file.originalname).toLowerCase()
@@ -49,7 +49,7 @@ const upload = multer({
     if (mimetype && extname) {
       return callback(null, true);
     }
-    callback(new Error('Only images (jpeg, jpg, png) are allowed'));
+    callback(new Error('Only images (jpeg, jpg, png, webp) are allowed'));
   },
 });
 

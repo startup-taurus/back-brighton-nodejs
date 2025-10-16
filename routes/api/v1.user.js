@@ -15,6 +15,7 @@ module.exports = function ({ UserController, AuthMiddleware }) {
   router.post("/register", upload.single('image'), UserController.createUser);
   router.put("/update/:id",  upload.single('image'), UserController.updateUser);
   router.put("/update-status/:id", UserController.updateUserStatus);
+  router.put("/reset-failed-attempts/:id", [AuthMiddleware, requireRoles(USER_TYPES.ADMIN)], UserController.resetFailedAttempts);
   router.delete("/delete/:id", UserController.deleteUser);
   return router;
 };

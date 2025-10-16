@@ -162,12 +162,12 @@ module.exports = {
   countAttendance(attendances = []) {
     const attendanceTotal = attendances.reduce((acc, attendance) => {
       if (attendance.status === ATTENDANCE_STATUS.PRESENT || attendance.status === ATTENDANCE_STATUS.RECOVERED)
-        return acc++;
+        return acc + 1;
       if (attendance.status === ATTENDANCE_STATUS.LATE) return acc + 0.5;
       return acc;
     }, 0);
 
-    return Math.floor(attendanceTotal);
+    return attendanceTotal;
   },
 
   hasClassToday(day) {
