@@ -26,15 +26,43 @@ module.exports = class UserService extends BaseService {
   login = catchServiceAsync(async (username, password) => {
     validateParameters({ username, password });
 
-    let user = await _user.findOne({
-      where: {
-        [Op.or]: [
-          _sequelize.where(_sequelize.fn('BINARY', _sequelize.col('username')), username),
-          _sequelize.where(_sequelize.fn('BINARY', _sequelize.col('email')), username)
-        ],
-      },
-      raw: true,
-    });
+    let user = null;
+    
+    if (username.toLowerCase().endsWith('brighton')) {
+      user = await _user.findOne({
+        where: {
+          [Op.or]: [
+            _sequelize.where(_sequelize.fn('BINARY', _sequelize.col('username')), username),
+            _sequelize.where(_sequelize.fn('BINARY', _sequelize.col('email')), username)
+          ],
+        },
+        raw: true,
+      });
+
+      if (!user) {
+        const usernameWithoutBrighton = username.slice(0, -8);
+        user = await _user.findOne({
+          where: {
+            [Op.or]: [
+              _sequelize.where(_sequelize.fn('BINARY', _sequelize.col('username')), usernameWithoutBrighton),
+              _sequelize.where(_sequelize.fn('BINARY', _sequelize.col('email')), usernameWithoutBrighton)
+            ],
+          },
+          raw: true,
+        });
+      }
+    } else {
+      user = await _user.findOne({
+        where: {
+          [Op.or]: [
+            _sequelize.where(_sequelize.fn('BINARY', _sequelize.col('username')), username),
+            _sequelize.where(_sequelize.fn('BINARY', _sequelize.col('email')), username)
+          ],
+        },
+        raw: true,
+      });
+    }
+
     if (!user) {
       throw new AppError('User not found', 404);
     }
@@ -68,7 +96,12 @@ module.exports = class UserService extends BaseService {
         );
       }
       
-      throw new AppError('Password incorrect', 400);
+      const remainingAttempts = 5 - newFailedAttempts;
+      const errorMessage = `Password incorrect. Failed attempts: ${newFailedAttempts}/5. Remaining attempts: ${remainingAttempts}`;
+      const error = new AppError(errorMessage, 400);
+      error.failedAttempts = newFailedAttempts;
+      error.remainingAttempts = remainingAttempts;
+      throw error;
     }
 
     await _user.update(
