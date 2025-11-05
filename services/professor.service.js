@@ -98,6 +98,114 @@ module.exports = class ProfessorService extends BaseService {
     };
   });
 
+  getProfessorActiveCoursesForCalendar = catchServiceAsync(async (professorId) => {
+    const professor = await this.findProfessorWithActiveCourses(professorId);
+    const activeCourses = this.filterActiveCoursesForCalendar(professor.courses);
+    
+    return {
+      data: {
+        courses: activeCourses.map(this.mapCourseForCalendar),
+      },
+    };
+  });
+
+  findProfessorWithActiveCourses = async (professorId) => {
+    const professor = await _professor.findOne({
+      where: { user_id: professorId },
+      include: [{
+        model: _course,
+        as: 'courses',
+        where: { status: 'active' },
+        include: [
+          {
+            model: _student,
+            as: 'students',
+            attributes: ['id'],
+            required: false,
+            through: { attributes: [], where: { is_retired: 0 } },
+          },
+          {
+            model: _courseSchedule,
+            as: 'course_schedules',
+            attributes: ['id', 'scheduled_date'],
+            required: false,
+          },
+        ],
+        required: false,
+      }],
+    });
+
+    if (!professor) {
+      throw new AppError('Professor not found', 404);
+    }
+
+    return professor.toJSON();
+  };
+
+  filterActiveCoursesForCalendar = (courses) => {
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    tomorrow.setHours(0, 0, 0, 0);
+
+    return courses.filter(course => {
+      if (course.course_number?.includes('COPY')) return false;
+      
+      const futureDates = this.getFutureScheduleDates(course.course_schedules, tomorrow);
+      const daysSinceLastClass = this.getDaysSinceLastClass(course.course_schedules);
+      
+        return this._shouldIncludeCourseshouldIncludeCourse(course, futureDates, daysSinceLastClass);
+    });
+  };
+
+  getFutureScheduleDates = (schedules, fromDate) => {
+    return schedules?.filter(schedule => {
+      const scheduleDate = new Date(schedule.scheduled_date);
+      scheduleDate.setHours(0, 0, 0, 0);
+      return scheduleDate >= fromDate;
+    }) || [];
+  };
+
+  getDaysSinceLastClass = (schedules) => {
+    if (!schedules?.length) return null;
+    
+    const lastClassDate = new Date(Math.max(...schedules.map(s => new Date(s.scheduled_date))));
+    const currentDate = new Date();
+    currentDate.setHours(0, 0, 0, 0);
+    
+    return Math.floor((currentDate - lastClassDate) / (1000 * 60 * 60 * 24));
+  };
+
+  shouldIncludeCourse = (course, futureDates, daysSinceLastClass) => {
+    const hasFutureClasses = futureDates.length > 0;
+    const isStale = daysSinceLastClass > 7 && !hasFutureClasses;
+    const isPastEndDate = course.end_date && new Date(course.end_date) < new Date() && !hasFutureClasses;
+    
+    return hasFutureClasses && !isStale && !isPastEndDate;
+  };
+
+  mapCourseForCalendar = (course) => {
+    const today = new Date().toISOString().split('T')[0];
+    const hasClassToday = course.course_schedules?.some(s => s.scheduled_date === today) || false;
+    
+    return {
+      course_id: course.id,
+      course_name: course.course_name,
+      course_number: course.course_number,
+      student_count: course.students?.length || 0,
+      classSchedule: course.schedule,
+      schedule: course.schedule ? scheduleStringToDates(course.schedule) : null,
+      end_date: this.calculateEndDate(course),
+      options: { hasClassToday },
+    };
+  };
+  calculateEndDate = (course) => {
+    if (!course.course_schedules?.length) {
+      return course.start_date ? new Date(new Date(course.start_date).setMonth(new Date(course.start_date).getMonth() + 3)) : null;
+    }
+    
+    return new Date(Math.max(...course.course_schedules.map(s => new Date(s.scheduled_date))));
+  };
+
   getProfessor = catchServiceAsync(async (id) => {
     const professor = await _professor.findByPk(id, {
       include: [
@@ -119,6 +227,8 @@ module.exports = class ProfessorService extends BaseService {
   getProfessorCourses = catchServiceAsync(async (professorId) => {
     const today = new Date().toISOString().split('T')[0];
     const now = new Date();
+    const currentDate = new Date();
+    currentDate.setHours(0, 0, 0, 0); 
 
     const professor = await _professor.findOne({
       where: {user_id: professorId},
@@ -170,6 +280,19 @@ module.exports = class ProfessorService extends BaseService {
         ? new Date(Math.max(...courseDates.map((f) => f.getTime())))
         : null;
 
+      // Calculate end date: if lastCourseDate exists, use it; otherwise, use start_date + 3 months
+      let end_date = null;
+      if (lastCourseDate) {
+        end_date = new Date(lastCourseDate);
+      } else if (course.start_date) {
+        const startDate = new Date(course.start_date);
+        end_date = new Date(startDate);
+        end_date.setMonth(startDate.getMonth() + 3);
+      } else {
+        // If no dates available, consider course as active (don't filter it out)
+        end_date = null;
+      }
+
       let endThisMoth = false;
       if (lastCourseDate) {
         const lasMothClass = lastCourseDate.getMonth() + 1;
@@ -184,9 +307,10 @@ module.exports = class ProfessorService extends BaseService {
         course_id: course.id,
         course_name: course.course_name,
         course_number: course.course_number,
-        student_count: course.students.length,
+        student_count: course.students ? course.students.length : 0,
         classSchedule: course.schedule,
         schedule,
+        end_date: end_date,
         options: {
           hasClassToday,
           hasBeenTakenAttendance: hasClassToday
@@ -227,10 +351,25 @@ module.exports = class ProfessorService extends BaseService {
       };
     });
 
-    const totalCourses = currentProfessor.courses.length;
+    // Show all courses in dashboard, but mark which ones are completed
+    const allCourses = coursesWithStudentCount.map((course) => {
+      let isCompleted = false;
+      if (course.end_date) {
+        const courseEndDate = new Date(course.end_date);
+        courseEndDate.setHours(0, 0, 0, 0);
+        isCompleted = courseEndDate < currentDate;
+      }
+      
+      return {
+        ...course,
+        isCompleted: isCompleted
+      };
+    });
 
-    const totalStudents = currentProfessor.courses.reduce(
-      (acc, course) => acc + course.students.length,
+    const totalCourses = allCourses.length;
+
+    const totalStudents = allCourses.reduce(
+      (acc, course) => acc + (course.students ? course.students.length : 0),
       0
     );
 
@@ -239,7 +378,7 @@ module.exports = class ProfessorService extends BaseService {
         professor_name: currentProfessor.name,
         total_courses: totalCourses,
         total_students: totalStudents,
-        courses: coursesWithStudentCount,
+        courses: allCourses,
       },
     };
   });
@@ -527,7 +666,7 @@ module.exports = class ProfessorService extends BaseService {
       
       const activeCourses = currentProfessor.courses.filter((course) => {
         const courseDates = course.course_schedules.map(
-          (schedule) => new Date(schedule.scheduled_date)
+          (schedule) => new Date(schedule.scheduled_date + 'T00:00:00')
         );
         const lastCourseDate = courseDates.length
           ? new Date(Math.max(...courseDates.map((date) => date.getTime())))
@@ -563,7 +702,7 @@ module.exports = class ProfessorService extends BaseService {
           : null;
 
         const courseStartDate = course.start_date
-          ? new Date(course.start_date)
+          ? new Date(course.start_date + 'T00:00:00')
           : firstCourseDate;
 
         let endThisMonth = false;

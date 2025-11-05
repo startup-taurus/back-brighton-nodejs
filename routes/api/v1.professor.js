@@ -15,6 +15,7 @@ module.exports = function ({ ProfessorController, AuthMiddleware }) {
     ],ProfessorController.getAllProfessors);
   router.get('/get-one/:id', ProfessorController.getProfessor);
   router.get('/:id/courses',  ProfessorController.getProfessorCourses);
+  router.get('/:id/courses/calendar',  ProfessorController.getProfessorActiveCoursesForCalendar);
   router.get('/get-active', ProfessorController.getActiveProfessors);
   router.get(
     '/get-courses-and-students',

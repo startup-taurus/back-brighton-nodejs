@@ -219,18 +219,57 @@ module.exports = class CourseService extends BaseService {
     };
 
     const totalCount = await _course.count(countOptions);
+    const courseScheduleInclude = {
+      model: _courseSchedule,
+      as: 'course_schedule',
+      required: false,
+      attributes: ['scheduled_date'],
+      order: [['scheduled_date', 'ASC']],
+    };
 
     const courses = await _course.findAll({
       where,
-      include: [professorInclude, syllabusInclude],
+      include: [professorInclude, syllabusInclude, courseScheduleInclude],
       limit: limitNumber,
       offset: limitNumber * (pageNumber - 1),
-      order: [['id', 'DESC']],
+      order: [
+        ['id', 'DESC'],
+        [{ model: _courseSchedule, as: 'course_schedule' }, 'scheduled_date', 'ASC']
+      ],
     });
 
+    const coursesWithDates = courses.map(course => {
+      const courseData = course.toJSON();
+      
+      if (courseData.course_schedule && courseData.course_schedule.length > 0) {
+        
+        const allDates = courseData.course_schedule
+          .map(schedule => schedule.scheduled_date)
+          .filter(date => date) 
+          .sort(); 
+        
+        console.log('All scheduled dates (sorted):', allDates);
+        
+        if (allDates.length > 0) {
+          const firstDateStr = allDates[0];
+          const lastDateStr = allDates[allDates.length - 1];
+          courseData.first_class_date = new Date(firstDateStr + 'T00:00:00');
+          courseData.last_class_date = new Date(lastDateStr + 'T00:00:00');
+          
+        } else {
+          courseData.first_class_date = courseData.start_date;
+          courseData.last_class_date = courseData.end_date;
+        }
+      } else {
+        courseData.first_class_date = courseData.start_date;
+        courseData.last_class_date = courseData.end_date;
+      }
+      delete courseData.course_schedule;
+      return courseData;
+    });
     return {
       data: {
-        result: courses,
+        result: coursesWithDates,
         totalCount: totalCount,
       },
     };

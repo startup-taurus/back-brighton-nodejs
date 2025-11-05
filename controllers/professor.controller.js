@@ -25,6 +25,12 @@ module.exports = class ProfessorController extends BaseController {
     return appResponse(res, result);
   });
 
+  getProfessorActiveCoursesForCalendar = catchControllerAsync(async (req, res) => {
+    const { id } = req.params;
+    const result = await _professorService.getProfessorActiveCoursesForCalendar(id);
+    return appResponse(res, result);
+  });
+
   getActiveProfessors = catchControllerAsync(async (req, res) => {
     const { page, limit, search } = req.query;
     const result = await _professorService.getActiveProfessors(
