@@ -369,7 +369,7 @@ module.exports = class ProfessorService extends BaseService {
     const totalCourses = allCourses.length;
 
     const totalStudents = allCourses.reduce(
-      (acc, course) => acc + (course.students ? course.students.length : 0),
+      (acc, course) => acc + (course.student_count || 0),
       0
     );
 
