@@ -793,7 +793,6 @@ module.exports = class StudentService extends BaseService {
 
     const parsedCourseId = courseId ? parseInt(courseId) : null;
     const parsedLevelId = levelId ? parseInt(levelId) : null;
-
     if (courseId && isNaN(parsedCourseId)) throw new AppError(`Invalid course ID: ${courseId}`, 400);
     if (levelId && isNaN(parsedLevelId)) throw new AppError(`Invalid level ID: ${levelId}`, 400);
 
@@ -826,8 +825,6 @@ module.exports = class StudentService extends BaseService {
         const level = await _level.findByPk(parsedLevelId, { transaction });
         if (!level) throw new AppError(`Level with ID ${parsedLevelId} not found`, 404);
       }
-
-      // DEDUCIR LEVEL SI LLEGA NULL PERO HAY COURSE
       let effectiveLevelId = parsedLevelId;
       if (!effectiveLevelId && course?.syllabus_id) {
         const syllabus = await _syllabus.findByPk(course.syllabus_id, { transaction });
