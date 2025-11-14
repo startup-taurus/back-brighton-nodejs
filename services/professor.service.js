@@ -152,8 +152,7 @@ module.exports = class ProfessorService extends BaseService {
       
       const futureDates = this.getFutureScheduleDates(course.course_schedules, tomorrow);
       const daysSinceLastClass = this.getDaysSinceLastClass(course.course_schedules);
-      
-        return this._shouldIncludeCourseshouldIncludeCourse(course, futureDates, daysSinceLastClass);
+      return this.shouldIncludeCourse(course, futureDates, daysSinceLastClass);
     });
   };
 
@@ -186,6 +185,9 @@ module.exports = class ProfessorService extends BaseService {
   mapCourseForCalendar = (course) => {
     const today = new Date().toISOString().split('T')[0];
     const hasClassToday = course.course_schedules?.some(s => s.scheduled_date === today) || false;
+    const firstStr = course.course_schedules?.length
+      ? course.course_schedules.map(s => s.scheduled_date).filter(Boolean).reduce((min, d) => (min && min < d ? min : d), course.course_schedules[0].scheduled_date)
+      : (course.start_date || null);
     
     return {
       course_id: course.id,
@@ -194,6 +196,7 @@ module.exports = class ProfessorService extends BaseService {
       student_count: course.students?.length || 0,
       classSchedule: course.schedule,
       schedule: course.schedule ? scheduleStringToDates(course.schedule) : null,
+      start_date: firstStr,
       end_date: this.calculateEndDate(course),
       options: { hasClassToday },
     };
@@ -279,8 +282,6 @@ module.exports = class ProfessorService extends BaseService {
       const lastCourseDate = courseDates.length
         ? new Date(Math.max(...courseDates.map((f) => f.getTime())))
         : null;
-
-      // Calculate end date: if lastCourseDate exists, use it; otherwise, use start_date + 3 months
       let end_date = null;
       if (lastCourseDate) {
         end_date = new Date(lastCourseDate);
@@ -289,7 +290,6 @@ module.exports = class ProfessorService extends BaseService {
         end_date = new Date(startDate);
         end_date.setMonth(startDate.getMonth() + 3);
       } else {
-        // If no dates available, consider course as active (don't filter it out)
         end_date = null;
       }
 
@@ -303,6 +303,10 @@ module.exports = class ProfessorService extends BaseService {
           yearLastClass === new Date().getFullYear();
       }
 
+      const firstStr = course.course_schedules.length
+        ? course.course_schedules.map((s) => s.scheduled_date).filter(Boolean).reduce((min, d) => (min && min < d ? min : d), course.course_schedules[0].scheduled_date)
+        : (course.start_date || null);
+
       return {
         course_id: course.id,
         course_name: course.course_name,
@@ -310,6 +314,7 @@ module.exports = class ProfessorService extends BaseService {
         student_count: course.students ? course.students.length : 0,
         classSchedule: course.schedule,
         schedule,
+        start_date: firstStr,
         end_date: end_date,
         options: {
           hasClassToday,

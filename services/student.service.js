@@ -827,9 +827,16 @@ module.exports = class StudentService extends BaseService {
         if (!level) throw new AppError(`Level with ID ${parsedLevelId} not found`, 404);
       }
 
+      // DEDUCIR LEVEL SI LLEGA NULL PERO HAY COURSE
+      let effectiveLevelId = parsedLevelId;
+      if (!effectiveLevelId && course?.syllabus_id) {
+        const syllabus = await _syllabus.findByPk(course.syllabus_id, { transaction });
+        effectiveLevelId = syllabus?.level_id || null;
+      }
+
       const transferData = await _transferData.create({
         selected_course_id: parsedCourseId,
-        selected_level_id: parsedLevelId,
+        selected_level_id: effectiveLevelId,
         status_level_change: 'approved',
         description: `Transfer and progress for ${parsedStudentIds.length} student(s)`,
         is_group: parsedStudentIds.length > 1,
@@ -845,16 +852,15 @@ module.exports = class StudentService extends BaseService {
       );
 
       for (const studentId of parsedStudentIds) {
-        if (parsedLevelId) {
-          await _student.update({ level_id: parsedLevelId }, { where: { id: studentId }, transaction });
+        if (effectiveLevelId) {
+          await _student.update({ level_id: effectiveLevelId }, { where: { id: studentId }, transaction });
         }
-
-        await _courseStudent.destroy({
-          where: { student_id: studentId, is_retired: false },
-          transaction
-        });
-
         if (parsedCourseId) {
+          await _courseStudent.update(
+            { is_retired: true },
+            { where: { student_id: studentId, is_retired: false }, transaction }
+          );
+
           await _courseStudent.create({
             student_id: studentId,
             course_id: parsedCourseId,
@@ -886,7 +892,7 @@ module.exports = class StudentService extends BaseService {
             id: transferData.id,
             status_level_change: 'approved',
             selected_course_id: parsedCourseId,
-            selected_level_id: parsedLevelId,
+            selected_level_id: effectiveLevelId,
           },
         },
       };

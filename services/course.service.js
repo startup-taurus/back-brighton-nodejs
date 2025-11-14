@@ -22,6 +22,7 @@ let _holidays = null;
 let _grades = null;
 let _syllabus = null;
 let _level = null;
+let _transferData = null;
 
 module.exports = class CourseService extends BaseService {
   constructor({
@@ -39,6 +40,7 @@ module.exports = class CourseService extends BaseService {
     Grades,
     Syllabus,
     Level,
+    TransferData,
   }) {
     super(Course);
     _user = User.User;
@@ -55,6 +57,7 @@ module.exports = class CourseService extends BaseService {
     _sequelize = Sequelize;
     _syllabus = Syllabus.Syllabus;
     _level = Level.Level;
+    _transferData = TransferData.TransferData;
   }
 
   getAllCoursesWithoutFilters = catchServiceAsync(async () => {
@@ -68,14 +71,40 @@ module.exports = class CourseService extends BaseService {
   });
 
   getAllCourses = catchServiceAsync(async () => {
-    const result = await _course.findAndCountAll({});
+    const totalCount = await _course.count({});
 
-    return {
-      data: {
-        result: result.rows,
-        totalCount: result.count,
-      },
-    };
+    const courses = await _course.findAll({
+      include: [
+        {
+          model: _courseSchedule,
+          as: 'course_schedule',
+          required: false,
+          attributes: ['scheduled_date'],
+        },
+      ],
+      order: [['id', 'DESC']],
+    });
+
+    const coursesWithDates = courses.map((course) => {
+      const courseData = course.toJSON();
+      const schedules = Array.isArray(courseData.course_schedule) ? courseData.course_schedule : [];
+      const dates = schedules.map((s) => s?.scheduled_date).filter(Boolean);
+
+      if (dates.length > 0) {
+        const firstDateStr = dates.reduce((min, d) => (min && min < d ? min : d), dates[0]);
+        const lastDateStr = dates.reduce((max, d) => (max && max > d ? max : d), dates[0]);
+        courseData.first_class_date = new Date(firstDateStr + 'T00:00:00');
+        courseData.last_class_date = new Date(lastDateStr + 'T00:00:00');
+      } else {
+        courseData.first_class_date = courseData.start_date;
+        courseData.last_class_date = courseData.end_date;
+      }
+
+      delete courseData.course_schedule;
+      return courseData;
+    });
+
+    return { data: { result: coursesWithDates, totalCount } };
   });
 
   getCourse = catchServiceAsync(async (id) => {
@@ -167,7 +196,11 @@ module.exports = class CourseService extends BaseService {
     };
 
     let where = {};
-    filters?.status && (where.status = trimmedQuery.status);
+    const isTransferredFilter =
+      !!trimmedQuery.status && trimmedQuery.status.toLowerCase() === 'transferred';
+    if (filters?.status && !isTransferredFilter) {
+      where.status = trimmedQuery.status;
+    }
     filters?.course_name &&
       (where.course_name = { [Op.like]: `%${trimmedQuery.course_name}%` });
     filters?.course_number &&
@@ -186,18 +219,12 @@ module.exports = class CourseService extends BaseService {
           as: 'user',
           attributes: ['name'],
           ...(trimmedQuery.teacher_name && {
-            where: {
-              name: { [Op.like]: `%${trimmedQuery.teacher_name}%` },
-            },
+            where: { name: { [Op.like]: `%${trimmedQuery.teacher_name}%` } },
           }),
         },
       ],
     };
-
-    let countOptions = {
-      where,
-    };
-
+    let countOptions = { where };
     if (trimmedQuery.teacher_name) {
       countOptions.include = [professorInclude];
       countOptions.distinct = true;
@@ -208,71 +235,99 @@ module.exports = class CourseService extends BaseService {
       as: 'syllabus',
       required: false,
       attributes: ['id', 'syllabus_name', 'level_id'],
-      include: [
-        {
-          model: _level,
-          as: 'level',
-          required: false,
-          attributes: ['id', 'full_level'],
-        },
-      ],
+      include: [{ model: _level, as: 'level', required: false, attributes: ['id', 'full_level'] }],
     };
 
-    const totalCount = await _course.count(countOptions);
     const courseScheduleInclude = {
       model: _courseSchedule,
       as: 'course_schedule',
       required: false,
       attributes: ['scheduled_date'],
-      order: [['scheduled_date', 'ASC']],
     };
 
-    const courses = await _course.findAll({
-      where,
-      include: [professorInclude, syllabusInclude, courseScheduleInclude],
-      limit: limitNumber,
-      offset: limitNumber * (pageNumber - 1),
-      order: [
-        ['id', 'DESC'],
-        [{ model: _courseSchedule, as: 'course_schedule' }, 'scheduled_date', 'ASC']
+    const activeStudentsInclude = {
+      model: _student,
+      as: 'students',
+      attributes: ['id'],
+      required: false,
+      include: [
+        { model: _user, as: 'user', attributes: ['id'], where: { isActive: 1 }, required: false },
       ],
-    });
-
-    const coursesWithDates = courses.map(course => {
+      through: { attributes: [], where: { is_retired: 0 } },
+    };
+    const mapCourseWithDates = (course) => {
       const courseData = course.toJSON();
-      
-      if (courseData.course_schedule && courseData.course_schedule.length > 0) {
-        
-        const allDates = courseData.course_schedule
-          .map(schedule => schedule.scheduled_date)
-          .filter(date => date) 
-          .sort(); 
-        
-        console.log('All scheduled dates (sorted):', allDates);
-        
-        if (allDates.length > 0) {
-          const firstDateStr = allDates[0];
-          const lastDateStr = allDates[allDates.length - 1];
-          courseData.first_class_date = new Date(firstDateStr + 'T00:00:00');
-          courseData.last_class_date = new Date(lastDateStr + 'T00:00:00');
-          
-        } else {
-          courseData.first_class_date = courseData.start_date;
-          courseData.last_class_date = courseData.end_date;
-        }
+      courseData.active_student_count = Array.isArray(courseData.students)
+        ? courseData.students.length
+        : 0;
+      delete courseData.students;
+      const schedules = Array.isArray(courseData.course_schedule) ? courseData.course_schedule : [];
+      const dates = schedules.map((s) => s?.scheduled_date).filter(Boolean);
+      if (dates.length > 0) {
+        const first = dates.reduce((min, d) => (min && min < d ? min : d), dates[0]);
+        const last = dates.reduce((max, d) => (max && max > d ? max : d), dates[0]);
+        courseData.first_class_date = new Date(first + 'T00:00:00');
+        courseData.last_class_date = new Date(last + 'T00:00:00');
       } else {
         courseData.first_class_date = courseData.start_date;
         courseData.last_class_date = courseData.end_date;
       }
       delete courseData.course_schedule;
       return courseData;
-    });
-    return {
-      data: {
-        result: coursesWithDates,
-        totalCount: totalCount,
-      },
     };
+
+    const includes = [professorInclude, syllabusInclude, courseScheduleInclude, activeStudentsInclude];
+    const findCourses = async (ids) => _course.findAll({
+      ...(ids ? { where: { id: { [Op.in]: ids } } } : { where }),
+      include: includes,
+      ...(ids ? { order: [[{ model: _courseSchedule, as: 'course_schedule' }, 'scheduled_date', 'ASC']] } : {
+        limit: limitNumber,
+        offset: limitNumber * (pageNumber - 1),
+        order: [['id', 'DESC'], [{ model: _courseSchedule, as: 'course_schedule' }, 'scheduled_date', 'ASC']],
+      }),
+    });
+    const getLatestTransfers = async (ids) => {
+      const rows = await _transferData.findAll({
+        where: { status_level_change: 'approved', selected_course_id: { [Op.in]: ids } },
+        attributes: ['selected_course_id', 'updated_at', 'created_at'],
+      });
+      return rows.reduce((acc, t) => {
+        const ts = t.updated_at || t.created_at; const id = t.selected_course_id;
+        if (!acc[id] || new Date(ts) > new Date(acc[id])) acc[id] = ts; return acc;
+      }, {});
+    };
+
+    if (isTransferredFilter) {
+      const transferred = await _course.findAll({
+        ...countOptions,
+        where: { ...where, status: { [Op.in]: ['transferred','Transferred','TRANSFERRED'] } },
+        attributes: ['id'],
+        include: [...(countOptions.include || [])],
+      });
+      const ids = transferred.map(c => c.id);
+      const totalCount = ids.length;
+      if (!ids.length) return { data: { result: [], totalCount } };
+      const coursesWithDates = (await findCourses(ids)).map(mapCourseWithDates);
+      const latest = await getLatestTransfers(ids);
+      const sorted = coursesWithDates
+        .map(c => ({ ...c, transfer_ts: latest[c.id] ? new Date(latest[c.id]) : null }))
+        .sort((a, b) => {
+          const at = a.transfer_ts ? a.transfer_ts.getTime() : 0;
+          const bt = b.transfer_ts ? b.transfer_ts.getTime() : 0;
+          if (bt !== at) return bt - at;
+          const aTime = (a.last_class_date ? new Date(a.last_class_date).getTime() : 0) || (a.end_date ? new Date(a.end_date).getTime() : 0);
+          const bTime = (b.last_class_date ? new Date(b.last_class_date).getTime() : 0) || (b.end_date ? new Date(b.end_date).getTime() : 0);
+          if (bTime !== aTime) return bTime - aTime;
+          return (b.id || 0) - (a.id || 0);
+        });
+      const start = limitNumber * (pageNumber - 1);
+      const end = start + limitNumber;
+      return { data: { result: sorted.slice(start, end), totalCount } };
+    }
+
+    const totalCount = await _course.count(countOptions);
+    const coursesWithDates = (await findCourses()).map(mapCourseWithDates);
+    return { data: { result: coursesWithDates, totalCount } };
   });
 
   getActiveCourses = catchServiceAsync(
