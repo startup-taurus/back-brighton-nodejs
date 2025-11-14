@@ -3,7 +3,7 @@ const BaseService = require('./base.service');
 const AppError = require('../utils/app-error');
 const { validateParameters, generateCredentials, validateEmailFormat } = require('../utils/utils');
 const { Op } = require('sequelize');
-const { ERROR_MESSAGES, GRADING_CATEGORIES, DELETED } = require('../utils/constants');
+const { ERROR_MESSAGES, GRADING_CATEGORIES, DELETED, ALLOWED_STATUS } = require('../utils/constants');
 let _user = null;
 let _student = null;
 let _course = null;
@@ -602,7 +602,7 @@ module.exports = class StudentService extends BaseService {
           totalExamItemsCount = examItems.length;
         }
       } catch (error) {
-        throw new AppError('Error fetching grading items', 500);
+        throw new AppError(ERROR_MESSAGES.GRADING_ITEMS_FETCH_ERROR, 500);
       }
     }
 
@@ -781,6 +781,7 @@ module.exports = class StudentService extends BaseService {
       throw new AppError(ERROR_MESSAGES.CEDULA_ALREADY_REGISTERED, 400);
     }
   });
+
   transferAndProgressStudents = catchServiceAsync(async (studentIds, courseId, levelId) => {
     if (!studentIds?.length) throw new AppError('Student IDs are required', 400);
     if (!courseId && !levelId) throw new AppError(ERROR_MESSAGES.TRANSFER_VALIDATION, 400);
@@ -834,7 +835,7 @@ module.exports = class StudentService extends BaseService {
       const transferData = await _transferData.create({
         selected_course_id: parsedCourseId,
         selected_level_id: effectiveLevelId,
-        status_level_change: 'approved',
+        status_level_change: ALLOWED_STATUS.APPROVED,
         description: `Transfer and progress for ${parsedStudentIds.length} student(s)`,
         is_group: parsedStudentIds.length > 1,
         created_by_id: null,
@@ -887,7 +888,7 @@ module.exports = class StudentService extends BaseService {
           students: updatedStudents,
           transfer_data: {
             id: transferData.id,
-            status_level_change: 'approved',
+            status_level_change: ALLOWED_STATUS.APPROVED,
             selected_course_id: parsedCourseId,
             selected_level_id: effectiveLevelId,
           },

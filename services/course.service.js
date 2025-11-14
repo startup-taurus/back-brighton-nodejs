@@ -2,7 +2,7 @@ const catchServiceAsync = require('../utils/catch-service-async');
 const BaseService = require('./base.service');
 const AppError = require('../utils/app-error');
 const { Op, fn, col, literal } = require('sequelize');
-const { COURSE_TYPES } = require('../utils/constants');
+const { COURSE_TYPES, STATUS, ERROR_MESSAGES } = require('../utils/constants');
 const {
   validateParameters,
   scheduleStringToDates,
@@ -197,7 +197,7 @@ module.exports = class CourseService extends BaseService {
 
     let where = {};
     const isTransferredFilter =
-      !!trimmedQuery.status && trimmedQuery.status.toLowerCase() === 'transferred';
+      !!trimmedQuery.status && trimmedQuery.status.toLowerCase() === STATUS.TRANSFERRED;
     if (filters?.status && !isTransferredFilter) {
       where.status = trimmedQuery.status;
     }
@@ -296,6 +296,10 @@ module.exports = class CourseService extends BaseService {
         if (!acc[id] || new Date(ts) > new Date(acc[id])) acc[id] = ts; return acc;
       }, {});
     };
+    const getCoursesWithDates = async () => {
+      const rows = await findCourses();
+      return rows.map(mapCourseWithDates);
+    };
 
     if (isTransferredFilter) {
       const transferred = await _course.findAll({
@@ -311,14 +315,14 @@ module.exports = class CourseService extends BaseService {
       const latest = await getLatestTransfers(ids);
       const sorted = coursesWithDates
         .map(c => ({ ...c, transfer_ts: latest[c.id] ? new Date(latest[c.id]) : null }))
-        .sort((a, b) => {
-          const at = a.transfer_ts ? a.transfer_ts.getTime() : 0;
-          const bt = b.transfer_ts ? b.transfer_ts.getTime() : 0;
-          if (bt !== at) return bt - at;
-          const aTime = (a.last_class_date ? new Date(a.last_class_date).getTime() : 0) || (a.end_date ? new Date(a.end_date).getTime() : 0);
-          const bTime = (b.last_class_date ? new Date(b.last_class_date).getTime() : 0) || (b.end_date ? new Date(b.end_date).getTime() : 0);
-          if (bTime !== aTime) return bTime - aTime;
-          return (b.id || 0) - (a.id || 0);
+        .sort((courseA, courseB) => {
+          const transferTimeA = courseA.transfer_ts ? courseA.transfer_ts.getTime() : 0;
+          const transferTimeB = courseB.transfer_ts ? courseB.transfer_ts.getTime() : 0;
+          if (transferTimeB !== transferTimeA) return transferTimeB - transferTimeA;
+          const endTimeA = (courseA.last_class_date ? new Date(courseA.last_class_date).getTime() : 0) || (courseA.end_date ? new Date(courseA.end_date).getTime() : 0);
+          const endTimeB = (courseB.last_class_date ? new Date(courseB.last_class_date).getTime() : 0) || (courseB.end_date ? new Date(courseB.end_date).getTime() : 0);
+          if (endTimeB !== endTimeA) return endTimeB - endTimeA;
+          return (courseB.id || 0) - (courseA.id || 0);
         });
       const start = limitNumber * (pageNumber - 1);
       const end = start + limitNumber;
@@ -326,7 +330,7 @@ module.exports = class CourseService extends BaseService {
     }
 
     const totalCount = await _course.count(countOptions);
-    const coursesWithDates = (await findCourses()).map(mapCourseWithDates);
+    const coursesWithDates = await getCoursesWithDates();
     return { data: { result: coursesWithDates, totalCount } };
   });
 
@@ -564,7 +568,7 @@ module.exports = class CourseService extends BaseService {
     if (body.professor_id) {
       const professor = await _professor.findByPk(body.professor_id);
       if (!professor) {
-        throw new AppError('Professor not found', 404);
+        throw new AppError(ERROR_MESSAGES.PROFESSOR_NOT_FOUND, 404);
       }
     }
 

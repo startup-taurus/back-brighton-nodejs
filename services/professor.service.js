@@ -8,7 +8,7 @@ const {
   hasClassToday,
 } = require('../utils/utils');
 const {Op, col, fn} = require('sequelize');
-const {DAYS_OF_WEEK} = require('../utils/constants');
+const {DAYS_OF_WEEK, STATUS, ERROR_MESSAGES} = require('../utils/constants');
 const {orderBy} = require('lodash');
 
 let _user = null;
@@ -104,7 +104,7 @@ module.exports = class ProfessorService extends BaseService {
       include: [{
         model: _course,
         as: 'courses',
-        where: { status: 'active' },
+        where: { status: STATUS.ACTIVE },
         include: [
           { model: _student, as: 'students', attributes: ['id'], required: false, through: { attributes: [], where: { is_retired: 0 } } },
           { model: _courseSchedule, as: 'course_schedules', attributes: ['id', 'scheduled_date'], required: false },
@@ -112,7 +112,7 @@ module.exports = class ProfessorService extends BaseService {
         required: false,
       }],
     });
-    if (!professor) { throw new AppError('Professor not found', 404); }
+    if (!professor) { throw new AppError(ERROR_MESSAGES.PROFESSOR_NOT_FOUND, 404); }
 
     const todayStr = new Date().toISOString().split('T')[0];
     const tomorrow = new Date();
@@ -123,21 +123,23 @@ module.exports = class ProfessorService extends BaseService {
       .filter((course) => {
         if (course.course_number?.includes('COPY')) return false;
         const schedules = course.course_schedules || [];
-        const future = schedules.filter((s) => {
-          const d = new Date(s.scheduled_date);
-          d.setHours(0, 0, 0, 0);
-          return d >= tomorrow;
+        const futureScheduleDates = schedules.filter((schedule) => {
+          const scheduleDate = new Date(schedule.scheduled_date);
+          scheduleDate.setHours(0, 0, 0, 0);
+          return scheduleDate >= tomorrow;
         });
-        const last = schedules.length
+        const lastClassDate = schedules.length
           ? new Date(Math.max(...schedules.map((s) => new Date(s.scheduled_date))))
           : null;
-        const daysSinceLast = last
-          ? Math.floor((new Date().setHours(0, 0, 0, 0), (new Date().getTime() - last.getTime()) / (1000 * 60 * 60 * 24)))
+        const todayStart = new Date();
+        todayStart.setHours(0, 0, 0, 0);
+        const daysSinceLastClass = lastClassDate
+          ? Math.floor((todayStart.getTime() - lastClassDate.getTime()) / (1000 * 60 * 60 * 24))
           : null;
-        const hasFuture = future.length > 0;
-        const isStale = daysSinceLast > 7 && !hasFuture;
-        const isPastEnd = course.end_date && new Date(course.end_date) < new Date() && !hasFuture;
-        return hasFuture && !isStale && !isPastEnd;
+        const hasFutureClasses = futureScheduleDates.length > 0;
+        const isStaleCourse = daysSinceLastClass > 7 && !hasFutureClasses;
+        const isPastEndDate = course.end_date && new Date(course.end_date) < new Date() && !hasFutureClasses;
+        return hasFutureClasses && !isStaleCourse && !isPastEndDate;
       })
       .map((course) => {
         const schedules = course.course_schedules || [];
@@ -183,7 +185,7 @@ module.exports = class ProfessorService extends BaseService {
     });
 
     if (!professor) {
-      throw new AppError('Professor not found', 404);
+      throw new AppError(ERROR_MESSAGES.PROFESSOR_NOT_FOUND, 404);
     }
 
     return {data: professor};
@@ -201,7 +203,7 @@ module.exports = class ProfessorService extends BaseService {
         {
           model: _course,
           as: 'courses',
-          where: {status: 'active'},
+          where: {status: STATUS.ACTIVE},
           include: [
             {
               model: _student,
@@ -219,7 +221,7 @@ module.exports = class ProfessorService extends BaseService {
     });
 
     if (!professor) {
-      throw new AppError('Professor not found', 404);
+      throw new AppError(ERROR_MESSAGES.PROFESSOR_NOT_FOUND, 404);
     }
 
     const currentProfessor = professor.toJSON();
@@ -357,7 +359,7 @@ module.exports = class ProfessorService extends BaseService {
 
       const professors = await _professor.findAll({
         where: {
-          status: 'active',
+          status: STATUS.ACTIVE,
         },
         include: [
           {
@@ -390,11 +392,11 @@ module.exports = class ProfessorService extends BaseService {
     const offset = limitNumber * (pageNumber - 1);
 
     const totalCount = await _professor.count({
-      where: {status: 'active'},
+      where: {status: STATUS.ACTIVE},
     });
 
     const professors = await _professor.findAll({
-      where: {status: 'active'},
+      where: {status: STATUS.ACTIVE},
       include: [
         {
           model: _user,
@@ -411,7 +413,7 @@ module.exports = class ProfessorService extends BaseService {
               as: 'students',
               attributes: [],
               where: {
-                status: 'active', 
+                status: STATUS.ACTIVE, 
               },
               through: {
                 attributes: [],
@@ -508,7 +510,7 @@ module.exports = class ProfessorService extends BaseService {
     });
 
     if (!professor) {
-      throw new AppError('Professor not found', 404);
+      throw new AppError(ERROR_MESSAGES.PROFESSOR_NOT_FOUND, 404);
     }
 
     if (email || cedula || body.username) {
@@ -566,7 +568,7 @@ module.exports = class ProfessorService extends BaseService {
     const professor = await _professor.findByPk(id);
 
     if (!professor) {
-      throw new AppError('Professor not found', 404);
+      throw new AppError(ERROR_MESSAGES.PROFESSOR_NOT_FOUND, 404);
     }
 
     await _professor.destroy({where: {id}});
@@ -584,18 +586,18 @@ module.exports = class ProfessorService extends BaseService {
     const twoWeeksFromNow = new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000);
 
     const professors = await _professor.findAll({
-      where: {status: 'active'},
+      where: {status: STATUS.ACTIVE},
       include: [
         {
           model: _user,
           as: 'user',
           attributes: ['id', 'name', 'email'],
-          where: { status: 'active' }
+          where: { status: STATUS.ACTIVE }
         },
         {
           model: _course,
           as: 'courses',
-          where: {status: 'active'},
+          where: {status: STATUS.ACTIVE},
           include: [
             {
               model: _student,
@@ -609,7 +611,7 @@ module.exports = class ProfessorService extends BaseService {
               include: [{
                 model: _user,
                 as: 'user',
-                where: { status: 'active' }
+                where: { status: STATUS.ACTIVE }
               }]
             },
             {
@@ -744,7 +746,7 @@ module.exports = class ProfessorService extends BaseService {
       const totalStudents = activeCourses.reduce(
         (acc, course) => acc + course.students.filter(student => 
           !student.courseStudent?.is_retired && 
-          student.user?.status === 'active'
+          student.user?.status === STATUS.ACTIVE
         ).length,
         0
       );
