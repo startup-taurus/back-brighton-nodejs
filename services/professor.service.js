@@ -317,8 +317,6 @@ module.exports = class ProfessorService extends BaseService {
         },
       };
     });
-
-    // Show all courses in dashboard, but mark which ones are completed
     const allCourses = coursesWithStudentCount.map((course) => {
       let isCompleted = false;
       if (course.end_date) {
