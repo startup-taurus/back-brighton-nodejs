@@ -206,6 +206,13 @@ module.exports = class AuditModel {
     });
     _course.hasMany(_courseSchedule, {
       foreignKey: 'course_id',
+      as: 'course_schedule',
+    });
+    
+    // Additional association with plural alias for professor service
+    _course.hasMany(_courseSchedule, {
+      foreignKey: 'course_id',
+      as: 'course_schedules',
     });
 
     // Relación de uno a muchos entre estudiante y asistencia

@@ -3,7 +3,7 @@ const BaseService = require('./base.service');
 const AppError = require('../utils/app-error');
 const { validateParameters, generateCredentials, validateEmailFormat } = require('../utils/utils');
 const { Op } = require('sequelize');
-const { ERROR_MESSAGES, GRADING_CATEGORIES, DELETED } = require('../utils/constants');
+const { ERROR_MESSAGES, GRADING_CATEGORIES, DELETED, ALLOWED_STATUS } = require('../utils/constants');
 let _user = null;
 let _student = null;
 let _course = null;
@@ -602,7 +602,7 @@ module.exports = class StudentService extends BaseService {
           totalExamItemsCount = examItems.length;
         }
       } catch (error) {
-        console.error('Error fetching grading items:', error);
+        throw new AppError(ERROR_MESSAGES.GRADING_ITEMS_FETCH_ERROR, 500);
       }
     }
 
@@ -779,6 +779,124 @@ module.exports = class StudentService extends BaseService {
     
     if (duplicateCedula) {
       throw new AppError(ERROR_MESSAGES.CEDULA_ALREADY_REGISTERED, 400);
+    }
+  });
+
+  transferAndProgressStudents = catchServiceAsync(async (studentIds, courseId, levelId) => {
+    if (!studentIds?.length) throw new AppError('Student IDs are required', 400);
+    if (!courseId && !levelId) throw new AppError(ERROR_MESSAGES.TRANSFER_VALIDATION, 400);
+
+    const parsedStudentIds = studentIds.map(id => {
+      const parsed = parseInt(id);
+      if (isNaN(parsed)) throw new AppError(`Invalid student ID: ${id}`, 400);
+      return parsed;
+    });
+
+    const parsedCourseId = courseId ? parseInt(courseId) : null;
+    const parsedLevelId = levelId ? parseInt(levelId) : null;
+    if (courseId && isNaN(parsedCourseId)) throw new AppError(`Invalid course ID: ${courseId}`, 400);
+    if (levelId && isNaN(parsedLevelId)) throw new AppError(`Invalid level ID: ${levelId}`, 400);
+
+    const transaction = await _student.sequelize.transaction();
+
+    try {
+      const students = await _student.findAll({
+        where: { id: parsedStudentIds },
+        include: [{ model: _user, as: 'user', attributes: ['isActive'], required: true }],
+        transaction
+      });
+
+      if (students.length !== parsedStudentIds.length) {
+        const foundIds = students.map(s => s.id);
+        const missingIds = parsedStudentIds.filter(id => !foundIds.includes(id));
+        throw new AppError(`Students not found: ${missingIds.join(', ')}`, 404);
+      }
+
+      const inactiveStudents = students.filter(s => !s.user?.isActive);
+      if (inactiveStudents.length > 0) {
+        throw new AppError(`Cannot transfer inactive students: ${inactiveStudents.map(s => s.id).join(', ')}`, 400);
+      }
+
+      if (parsedCourseId) {
+        const course = await _course.findByPk(parsedCourseId, { transaction });
+        if (!course) throw new AppError(`Course with ID ${parsedCourseId} not found`, 404);
+      }
+
+      if (parsedLevelId) {
+        const level = await _level.findByPk(parsedLevelId, { transaction });
+        if (!level) throw new AppError(`Level with ID ${parsedLevelId} not found`, 404);
+      }
+      let effectiveLevelId = parsedLevelId;
+      if (!effectiveLevelId && course?.syllabus_id) {
+        const syllabus = await _syllabus.findByPk(course.syllabus_id, { transaction });
+        effectiveLevelId = syllabus?.level_id || null;
+      }
+
+      const transferData = await _transferData.create({
+        selected_course_id: parsedCourseId,
+        selected_level_id: effectiveLevelId,
+        status_level_change: ALLOWED_STATUS.APPROVED,
+        description: `Transfer and progress for ${parsedStudentIds.length} student(s)`,
+        is_group: parsedStudentIds.length > 1,
+        created_by_id: null,
+      }, { transaction });
+
+      await _studentTransfer.bulkCreate(
+        parsedStudentIds.map(studentId => ({
+          student_id: studentId,
+          transfer_data_id: transferData.id,
+        })),
+        { transaction }
+      );
+
+      for (const studentId of parsedStudentIds) {
+        if (effectiveLevelId) {
+          await _student.update({ level_id: effectiveLevelId }, { where: { id: studentId }, transaction });
+        }
+        if (parsedCourseId) {
+          await _courseStudent.update(
+            { is_retired: true },
+            { where: { student_id: studentId, is_retired: false }, transaction }
+          );
+
+          await _courseStudent.create({
+            student_id: studentId,
+            course_id: parsedCourseId,
+            enrollment_date: new Date(),
+            is_retired: false,
+          }, { transaction });
+        }
+      }
+      await transaction.commit();
+      const updatedStudents = await _student.findAll({
+        where: { id: parsedStudentIds },
+        include: [
+          { model: _user, as: 'user', attributes: ['id', 'name', 'email'] },
+          { model: _level, as: 'level', attributes: ['id', 'full_level'] },
+          {
+            model: _courseStudent,
+            as: 'coursesStudent',
+            where: { is_retired: false },
+            required: false,
+            include: [{ model: _course, as: 'course', attributes: ['id', 'course_name', 'course_number'] }],
+          },
+        ],
+      });
+      return {
+        data: {
+          message: 'Students transferred and progressed successfully',
+          students: updatedStudents,
+          transfer_data: {
+            id: transferData.id,
+            status_level_change: ALLOWED_STATUS.APPROVED,
+            selected_course_id: parsedCourseId,
+            selected_level_id: effectiveLevelId,
+          },
+        },
+      };
+    } catch (error) {
+      await transaction.rollback();
+      throw error instanceof AppError ? error : new AppError(`${ERROR_MESSAGES.PROGRESS_ERROR}: ${error.message}`, 500);
     }
   });
 };

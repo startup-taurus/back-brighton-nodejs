@@ -53,4 +53,10 @@ module.exports = class StudentController extends BaseController {
     });
     return appResponse(res, result);
   });
+
+  transferAndProgressStudents = catchControllerAsync(async (req, res) => {
+    const { studentIds, courseId, levelId } = req.body;
+    const result = await _studentService.transferAndProgressStudents(studentIds, courseId, levelId);
+    return appResponse(res, result);
+  });
 };

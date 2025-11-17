@@ -120,9 +120,11 @@ const DELETED = {
 };
 const ERROR_MESSAGES = {
   STUDENT_NOT_FOUND: 'Student not found',
+  PROFESSOR_NOT_FOUND: 'Professor not found',
   TRANSFER_VALIDATION: 'Please provide either a course or a level to transfer students.',
   TRANSFER_ERROR: 'Error requesting transfer for students',
   PROGRESS_ERROR: 'Error transferring or progressing students',
+  GRADING_ITEMS_FETCH_ERROR: 'Error fetching grading items',
   EMAIL_CEDULA_REQUIRED: 'Email and cedula are required',
   EMAIL_ALREADY_REGISTERED: 'This email is already registered',
   CEDULA_ALREADY_REGISTERED: 'This cedula is already registered',
@@ -155,6 +157,8 @@ const HOLIDAY_TYPE ={
 const STATUS={
   ACTIVE: 'active',
   INACTIVE: 'inactive',
+  TRANSFERRED: 'transferred',
+  COMPLETED: 'completed',
 }
 const ATTENDANCE_STATUS = {
   PRESENT: 'present',
