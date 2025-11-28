@@ -26,6 +26,7 @@ const {
   TransferDataService,
   StudentTransferService,
   PrivateClassHoursService,
+  PermissionsService,
 
 } = require('../services');
 
@@ -48,6 +49,7 @@ const {
   TransferDataController,
   StudentTransferController,
   PrivateClassHoursController,
+  PermissionsController,
 
 } = require('../controllers');
 
@@ -72,6 +74,7 @@ const {
   TransferDataRoutes,
   StudentTransferRoutes,
   PrivateClassHoursRoutes, 
+  PermissionsRoutes,
 
 } = require('../routes/api/index');
 
@@ -142,6 +145,7 @@ container
     TransferDataService: asClass(TransferDataService).singleton(),
     StudentTransferService: asClass(StudentTransferService).singleton(),
     PrivateClassHoursService: asClass(PrivateClassHoursService).singleton(),
+    PermissionsService: asClass(PermissionsService).singleton(),
 
   })
 
@@ -180,6 +184,7 @@ container
     TransferDataController: asClass(TransferDataController).singleton(),
     StudentTransferController: asClass(StudentTransferController).singleton(),
     PrivateClassHoursController: asClass(PrivateClassHoursController).singleton(),
+    PermissionsController: asClass(PermissionsController).singleton(),
 
   })
   .register({
@@ -200,6 +205,7 @@ container
     TransferDataRoutes: asFunction(TransferDataRoutes).singleton(),
     StudentTransferRoutes: asFunction(StudentTransferRoutes).singleton(),
     PrivateClassHoursRoutes: asFunction(PrivateClassHoursRoutes).singleton(),
+    PermissionsRoutes: asFunction(PermissionsRoutes).singleton(),
 
   })
   .register({

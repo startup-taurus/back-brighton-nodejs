@@ -26,6 +26,7 @@ module.exports = function ({
   TransferDataRoutes,
   StudentTransferRoutes,
   PrivateClassHoursRoutes, 
+  PermissionsRoutes,
 }) {
   const router = express.Router();
   const apiRouter = express.Router();
@@ -52,6 +53,7 @@ module.exports = function ({
   apiRouter.use('/cancelled-lesson', CancelledLessonRoutes);
   apiRouter.use('/student-transfer', StudentTransferRoutes);
   apiRouter.use('/registered-student', RegisteredStudentRoutes);
+  apiRouter.use('/permissions', PermissionsRoutes);
 
   apiRouter.use('/images', express.static(path.join(__dirname, '../uploads')));
   router.use('/v1/api', apiRouter);
