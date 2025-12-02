@@ -62,6 +62,12 @@ module.exports = function ({
     CourseGradingController.deleteCourseAssignmentItem
   );
 
+  router.post(
+    '/assignment/delete-batch',
+    [AuthMiddleware],
+    CourseGradingController.deleteCourseAssignmentItemsBatch
+  );
+
   router.post('/create', CourseController.createCourse);
   router.put('/update/:id', CourseController.updateCourse);
   router.put('/update-status/:id', CourseController.updateCourseStatus);

@@ -45,4 +45,10 @@ module.exports = class CourseGradingController extends BaseController {
     const result = await _courseGradingService.deleteCourseAssignmentItem(courseId, Number(itemId));
     return appResponse(res, result);
   });
+
+  deleteCourseAssignmentItemsBatch = catchControllerAsync(async (req, res) => {
+    const payload = req.body?.deletes || [];
+    const result = await _courseGradingService.deleteCourseAssignmentItemsBatch(payload);
+    return appResponse(res, result);
+  });
 };
