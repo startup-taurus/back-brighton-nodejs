@@ -34,4 +34,15 @@ module.exports = class CourseGradingController extends BaseController {
     );
     return appResponse(res, result);
   });
+  upsertCourseAssignmentItem = catchControllerAsync(async (req, res) => {
+    const { courseId } = req.params;
+    const result = await _courseGradingService.upsertAssignment(courseId, req.body);
+    return appResponse(res, result);
+  });
+
+  deleteCourseAssignmentItem = catchControllerAsync(async (req, res) => {
+    const { courseId, itemId } = req.params;
+    const result = await _courseGradingService.deleteCourseAssignmentItem(courseId, Number(itemId));
+    return appResponse(res, result);
+  });
 };

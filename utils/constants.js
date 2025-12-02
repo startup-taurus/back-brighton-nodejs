@@ -125,6 +125,14 @@ const ERROR_MESSAGES = {
   TRANSFER_ERROR: 'Error requesting transfer for students',
   PROGRESS_ERROR: 'Error transferring or progressing students',
   GRADING_ITEMS_FETCH_ERROR: 'Error fetching grading items',
+  COURSE_NOT_FOUND: 'Course not found',
+  COURSE_HAS_NO_SYLLABUS: 'Course has no syllabus',
+  GRADING_ITEM_NOT_FOUND: 'Grading item not found',
+  ASSIGNMENT_CATEGORY_NOT_FOUND: 'Assignment category not found',
+  ASSIGNMENT_NAME_REQUIRED: 'Assignment name is required',
+  ASSIGNMENT_NOT_FOUND_IN_COURSE: 'Assignment not found in course',
+  NO_ADJACENT_ASSIGNMENT: 'No adjacent assignment in this course',
+  NO_EMPTY_ASSIGNMENT_TARGET: 'No empty assignment available to receive grades',
   EMAIL_CEDULA_REQUIRED: 'Email and cedula are required',
   EMAIL_ALREADY_REGISTERED: 'This email is already registered',
   CEDULA_ALREADY_REGISTERED: 'This cedula is already registered',
@@ -142,6 +150,11 @@ const GRADING_CATEGORIES = {
   ASSIGNMENT: 'ASSIGNMENTS',
   TEST: 'PROGRESS TESTS', 
   EXAM: 'MOVERS EXAM'
+};
+
+const GRADING_ORIGIN = {
+  SYLLABUS: 'syllabus',
+  COURSE: 'course',
 };
 
 const COURSE_TYPES = {
@@ -180,6 +193,7 @@ module.exports = {
   LEVEL_TO_EXAM_TYPE_BY_AGE,
   ERROR_MESSAGES,
   GRADING_CATEGORIES,
+  GRADING_ORIGIN,
   DELETED,
   COURSE_TYPES,
   ATTENDANCE_THRESHOLDS,

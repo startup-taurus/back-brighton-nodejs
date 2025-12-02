@@ -18,6 +18,8 @@ let _courseSchedule = null;
 let _courseScheduleService = null;
 let _categoryMap = null;
 let _holidays = null;
+let _professor = null;
+let _user = null;
 
 module.exports = class SyllabusService extends BaseService {
   constructor({
@@ -34,6 +36,8 @@ module.exports = class SyllabusService extends BaseService {
     CourseSchedule,
     CourseScheduleService,
     Holidays,
+    Professor,
+    User,
   }) {
     super(Syllabus.Syllabus);
     _course = Course.Course;
@@ -49,6 +53,8 @@ module.exports = class SyllabusService extends BaseService {
     _courseSchedule = CourseSchedule.CourseSchedule;
     _courseScheduleService = CourseScheduleService;
     _holidays = Holidays.Holidays;
+    _professor = Professor.Professor;
+    _user = User.User;
   }
 
   getCategoryMap = catchServiceAsync(async () => {
@@ -229,15 +235,51 @@ module.exports = class SyllabusService extends BaseService {
     const categoryMap = await this.getCategoryMap();
 
     const gradingItems = syllabus.grading_items || [];
-    const assignments = gradingItems
-      .filter((item) => item.category_id === categoryMap['ASSIGNMENTS'])
-      .map((item) => item.name);
+    const assignments = [];
     const progressTests = gradingItems
       .filter((item) => item.category_id === categoryMap['PROGRESS TESTS'])
       .map((item) => item.name);
     const examModules = gradingItems
       .filter((item) => item.category_id === categoryMap['MOVERS EXAM'])
       .map((item) => item.name);
+
+    const coursesWithSyllabus = await _course.findAll({
+      where: { syllabus_id: syllabus.id },
+      attributes: ['id', 'professor_id'],
+    });
+    const courseIds = coursesWithSyllabus.map((c) => c.id);
+    const cgRecords = await _courseGrading.findAll({
+      where: { course_id: { [Op.in]: courseIds } },
+      attributes: ['course_id', 'grading_item_id'],
+      order: [['id', 'ASC']],
+    });
+    const itemIdToCourses = cgRecords.reduce((map, rec) => {
+      const arr = map.get(rec.grading_item_id) || [];
+      arr.push(rec.course_id);
+      map.set(rec.grading_item_id, arr);
+      return map;
+    }, new Map());
+
+    const teacherAssignmentsMap = new Map();
+    for (const course of coursesWithSyllabus) {
+      const prof = await _professor.findByPk(course.professor_id);
+      const profName = prof ? (await _user.findByPk(prof.user_id))?.name : null;
+      teacherAssignmentsMap.set(course.id, { course_id: course.id, professor_id: course.professor_id, professor_name: profName || 'Unknown', items: [] });
+    }
+
+    const assignmentItemsFull = gradingItems.filter((item) => item.category_id === categoryMap['ASSIGNMENTS']);
+    const globalAssignments = [];
+    for (const gi of assignmentItemsFull) {
+      const linkedCourses = itemIdToCourses.get(gi.id) || [];
+      if (linkedCourses.length <= 1) {
+        const courseId = linkedCourses[0];
+        if (courseId && teacherAssignmentsMap.has(courseId)) {
+          teacherAssignmentsMap.get(courseId).items.push({ id: gi.id, name: gi.name });
+        }
+      } else {
+        globalAssignments.push({ id: gi.id, name: gi.name });
+      }
+    }
 
     const formattedSyllabus = {
       id: syllabus.id,
@@ -246,7 +288,9 @@ module.exports = class SyllabusService extends BaseService {
       level: syllabus.level,
       items: syllabus.items,
       percentages: syllabus.percentages,
-      assignments,
+      assignments: globalAssignments.map((a) => a.name),
+      global_assignments: globalAssignments,
+      teacher_assignments: Array.from(teacherAssignmentsMap.values()).filter((t) => t.items.length > 0),
       progress_tests: progressTests,
       exam_modules: examModules,
       movers_exam: examModules,
@@ -586,6 +630,23 @@ module.exports = class SyllabusService extends BaseService {
         {categoryId: 2, items: progress_tests},
         {categoryId: 3, items: exam_modules || movers_exam},
       ];
+      const coursesWithSyllabus = await _course.findAll({
+        where: { syllabus_id: id },
+        attributes: ['id'],
+        transaction,
+      });
+      const courseIds = coursesWithSyllabus.map((c) => c.id);
+      const cgRecords = await _courseGrading.findAll({
+        where: { course_id: { [Op.in]: courseIds } },
+        attributes: ['course_id', 'grading_item_id'],
+        transaction,
+      });
+      const itemIdToCourses = cgRecords.reduce((map, rec) => {
+        const arr = map.get(rec.grading_item_id) || [];
+        arr.push(rec.course_id);
+        map.set(rec.grading_item_id, arr);
+        return map;
+      }, new Map());
 
       for (const {categoryId, items: categoryItems} of gradingCategories) {
         if (categoryItems && Array.isArray(categoryItems)) {
@@ -594,14 +655,18 @@ module.exports = class SyllabusService extends BaseService {
             order: [['id', 'ASC']],
             transaction,
           });
+          const targetItems =
+            categoryId === 1
+              ? currentGradingItems.filter((gi) => (itemIdToCourses.get(gi.id) || []).length > 1)
+              : currentGradingItems;
 
           for (
             let categoryItemIndex = 0;
             categoryItemIndex < categoryItems.length;
             categoryItemIndex++
           ) {
-            if (categoryItemIndex < currentGradingItems.length) {
-              await currentGradingItems[categoryItemIndex].update(
+            if (categoryItemIndex < targetItems.length) {
+              await targetItems[categoryItemIndex].update(
                 {name: categoryItems[categoryItemIndex]},
                 {transaction}
               );
@@ -614,12 +679,6 @@ module.exports = class SyllabusService extends BaseService {
                 },
                 {transaction}
               );
-
-              const coursesWithSyllabus = await _course.findAll({
-                where: {syllabus_id: id},
-                attributes: ['id'],
-                transaction,
-              });
 
               const courseGradingRecords = coursesWithSyllabus.map(
                 (course) => ({
@@ -637,17 +696,17 @@ module.exports = class SyllabusService extends BaseService {
             }
           }
 
-          if (currentGradingItems.length > categoryItems.length) {
+          if (targetItems.length > categoryItems.length) {
             const itemsToDelete = currentGradingItems.slice(
-              categoryItems.length
+              targetItems.length
             );
             for (const item of itemsToDelete) {
-              await _courseGrading.destroy({
-                where: {grading_item_id: item.id},
-                transaction,
-              });
-
-              await item.destroy({transaction});
+              const linked = (itemIdToCourses.get(item.id) || []).length;
+              if (categoryId === 1 && linked <= 1) {
+                continue;
+              }
+              await _courseGrading.destroy({ where: { grading_item_id: item.id }, transaction });
+              await item.destroy({ transaction });
             }
           }
         }
