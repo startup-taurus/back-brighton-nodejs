@@ -17,4 +17,5 @@ module.exports = {
   StudentTransferController: require('./student-transfer.controller'),
   PrivateClassHoursController: require('./private-class-hours.controller'),
   PermissionsController: require('./permissions.controller'),
+  RoleController: require('./role.controller'),
 };
