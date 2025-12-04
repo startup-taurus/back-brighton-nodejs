@@ -18,6 +18,8 @@ let _courseSchedule = null;
 let _courseScheduleService = null;
 let _categoryMap = null;
 let _holidays = null;
+let _professor = null;
+let _user = null;
 
 module.exports = class SyllabusService extends BaseService {
   constructor({
@@ -34,6 +36,8 @@ module.exports = class SyllabusService extends BaseService {
     CourseSchedule,
     CourseScheduleService,
     Holidays,
+    Professor,
+    User,
   }) {
     super(Syllabus.Syllabus);
     _course = Course.Course;
@@ -49,6 +53,8 @@ module.exports = class SyllabusService extends BaseService {
     _courseSchedule = CourseSchedule.CourseSchedule;
     _courseScheduleService = CourseScheduleService;
     _holidays = Holidays.Holidays;
+    _professor = Professor.Professor;
+    _user = User.User;
   }
 
   getCategoryMap = catchServiceAsync(async () => {
@@ -229,15 +235,51 @@ module.exports = class SyllabusService extends BaseService {
     const categoryMap = await this.getCategoryMap();
 
     const gradingItems = syllabus.grading_items || [];
-    const assignments = gradingItems
-      .filter((item) => item.category_id === categoryMap['ASSIGNMENTS'])
-      .map((item) => item.name);
+    const assignments = [];
     const progressTests = gradingItems
       .filter((item) => item.category_id === categoryMap['PROGRESS TESTS'])
       .map((item) => item.name);
     const examModules = gradingItems
       .filter((item) => item.category_id === categoryMap['MOVERS EXAM'])
       .map((item) => item.name);
+
+    const coursesWithSyllabus = await _course.findAll({
+      where: { syllabus_id: syllabus.id },
+      attributes: ['id', 'professor_id'],
+    });
+    const courseIds = coursesWithSyllabus.map((c) => c.id);
+    const cgRecords = await _courseGrading.findAll({
+      where: { course_id: { [Op.in]: courseIds } },
+      attributes: ['course_id', 'grading_item_id'],
+      order: [['id', 'ASC']],
+    });
+    const itemIdToCourses = cgRecords.reduce((map, rec) => {
+      const arr = map.get(rec.grading_item_id) || [];
+      arr.push(rec.course_id);
+      map.set(rec.grading_item_id, arr);
+      return map;
+    }, new Map());
+
+    const teacherAssignmentsMap = new Map();
+    for (const course of coursesWithSyllabus) {
+      const prof = await _professor.findByPk(course.professor_id);
+      const profName = prof ? (await _user.findByPk(prof.user_id))?.name : null;
+      teacherAssignmentsMap.set(course.id, { course_id: course.id, professor_id: course.professor_id, professor_name: profName || 'Unknown', items: [] });
+    }
+
+    const assignmentItemsFull = gradingItems.filter((item) => item.category_id === categoryMap['ASSIGNMENTS']);
+    const globalAssignments = [];
+    for (const gi of assignmentItemsFull) {
+      const linkedCourses = itemIdToCourses.get(gi.id) || [];
+      if (linkedCourses.length <= 1) {
+        const courseId = linkedCourses[0];
+        if (courseId && teacherAssignmentsMap.has(courseId)) {
+          teacherAssignmentsMap.get(courseId).items.push({ id: gi.id, name: gi.name });
+        }
+      } else {
+        globalAssignments.push({ id: gi.id, name: gi.name });
+      }
+    }
 
     const formattedSyllabus = {
       id: syllabus.id,
@@ -246,7 +288,9 @@ module.exports = class SyllabusService extends BaseService {
       level: syllabus.level,
       items: syllabus.items,
       percentages: syllabus.percentages,
-      assignments,
+      assignments: globalAssignments.map((a) => a.name),
+      global_assignments: globalAssignments,
+      teacher_assignments: Array.from(teacherAssignmentsMap.values()).filter((t) => t.items.length > 0),
       progress_tests: progressTests,
       exam_modules: examModules,
       movers_exam: examModules,
@@ -586,6 +630,23 @@ module.exports = class SyllabusService extends BaseService {
         {categoryId: 2, items: progress_tests},
         {categoryId: 3, items: exam_modules || movers_exam},
       ];
+      const coursesWithSyllabus = await _course.findAll({
+        where: { syllabus_id: id },
+        attributes: ['id'],
+        transaction,
+      });
+      const courseIds = coursesWithSyllabus.map((c) => c.id);
+      const cgRecords = await _courseGrading.findAll({
+        where: { course_id: { [Op.in]: courseIds } },
+        attributes: ['course_id', 'grading_item_id'],
+        transaction,
+      });
+      const itemIdToCourses = cgRecords.reduce((map, rec) => {
+        const arr = map.get(rec.grading_item_id) || [];
+        arr.push(rec.course_id);
+        map.set(rec.grading_item_id, arr);
+        return map;
+      }, new Map());
 
       for (const {categoryId, items: categoryItems} of gradingCategories) {
         if (categoryItems && Array.isArray(categoryItems)) {
@@ -594,14 +655,18 @@ module.exports = class SyllabusService extends BaseService {
             order: [['id', 'ASC']],
             transaction,
           });
+          const targetItems =
+            categoryId === 1
+              ? currentGradingItems.filter((gi) => (itemIdToCourses.get(gi.id) || []).length > 1)
+              : currentGradingItems;
 
           for (
             let categoryItemIndex = 0;
             categoryItemIndex < categoryItems.length;
             categoryItemIndex++
           ) {
-            if (categoryItemIndex < currentGradingItems.length) {
-              await currentGradingItems[categoryItemIndex].update(
+            if (categoryItemIndex < targetItems.length) {
+              await targetItems[categoryItemIndex].update(
                 {name: categoryItems[categoryItemIndex]},
                 {transaction}
               );
@@ -614,12 +679,6 @@ module.exports = class SyllabusService extends BaseService {
                 },
                 {transaction}
               );
-
-              const coursesWithSyllabus = await _course.findAll({
-                where: {syllabus_id: id},
-                attributes: ['id'],
-                transaction,
-              });
 
               const courseGradingRecords = coursesWithSyllabus.map(
                 (course) => ({
@@ -637,17 +696,109 @@ module.exports = class SyllabusService extends BaseService {
             }
           }
 
-          if (currentGradingItems.length > categoryItems.length) {
-            const itemsToDelete = currentGradingItems.slice(
-              categoryItems.length
-            );
-            for (const item of itemsToDelete) {
-              await _courseGrading.destroy({
-                where: {grading_item_id: item.id},
-                transaction,
-              });
+          if (targetItems.length > categoryItems.length) {
+            const itemsToDelete = currentGradingItems.slice(targetItems.length);
+            const deletableIds = itemsToDelete
+              .filter((it) => {
+                const linked = (itemIdToCourses.get(it.id) || []).length;
+                return !(categoryId === 1 && linked <= 1);
+              })
+              .map((it) => it.id);
+            if (deletableIds.length > 0) {
+              const assignmentIds = currentGradingItems
+                .filter((gi) => gi.category_id === 1)
+                .map((gi) => gi.id);
 
-              await item.destroy({transaction});
+              const courseIdToAssignments = new Map();
+              for (const c of coursesWithSyllabus) {
+                const idsForCourse = cgRecords
+                  .filter((rec) => rec.course_id === c.id && assignmentIds.includes(rec.grading_item_id))
+                  .map((rec) => rec.grading_item_id)
+                  .sort((a, b) => a - b);
+                courseIdToAssignments.set(c.id, idsForCourse);
+              }
+
+              const candidatePairs = [];
+              for (const delId of deletableIds) {
+                for (const c of coursesWithSyllabus) {
+                  const ids = courseIdToAssignments.get(c.id) || [];
+                  const idx = ids.indexOf(Number(delId));
+                  if (idx === -1) continue;
+                  const candidates = [...ids.slice(idx + 1), ...ids.slice(0, idx).reverse()];
+                  if (candidates.length > 0) {
+                    candidatePairs.push({ course_id: c.id, del_id: Number(delId), candidates });
+                  } else {
+                    candidatePairs.push({ course_id: c.id, del_id: Number(delId), candidates: [] });
+                  }
+                }
+              }
+
+              const unionCandidateIds = Array.from(new Set(candidatePairs.flatMap((p) => p.candidates)));
+              const occupiedRows = unionCandidateIds.length > 0
+                ? await _studentGrades.findAll({
+                    where: { course_id: { [Op.in]: coursesWithSyllabus.map((c) => c.id) }, grading_item_id: { [Op.in]: unionCandidateIds } },
+                    attributes: ['course_id', 'grading_item_id'],
+                    raw: true,
+                    transaction,
+                  })
+                : [];
+              const occupiedMap = new Map();
+              for (const r of occupiedRows) {
+                const key = `${r.course_id}:${r.grading_item_id}`;
+                occupiedMap.set(key, true);
+              }
+
+              const creations = [];
+              const linksToCreate = [];
+              const moves = [];
+              for (const p of candidatePairs) {
+                let target = p.candidates.find((id) => !occupiedMap.get(`${p.course_id}:${id}`)) || null;
+                if (!target) {
+                  const gi = await _gradingItem.findByPk(Number(p.del_id), { attributes: ['name'], transaction });
+                  creations.push({ syllabus_id: id, category_id: 1, name: gi?.name || 'Assignment' });
+                  moves.push({ course_id: p.course_id, from: p.del_id, target: 'PENDING_NEW' });
+                } else {
+                  moves.push({ course_id: p.course_id, from: p.del_id, target });
+                }
+              }
+
+              let createdItems = [];
+              if (creations.length > 0) {
+                createdItems = await _gradingItem.bulkCreate(creations, { transaction, returning: true });
+                let i = 0;
+                for (const m of moves) {
+                  if (m.target === 'PENDING_NEW') {
+                    const gi = createdItems[i++];
+                    m.target = gi.id;
+                    linksToCreate.push({ course_id: m.course_id, grading_item_id: gi.id, weight: 0 });
+                  }
+                }
+                if (linksToCreate.length > 0) {
+                  await _courseGrading.bulkCreate(linksToCreate, { transaction });
+                }
+              }
+
+              const updates = [];
+              const destroys = [];
+              for (const m of moves) {
+                updates.push(
+                  _studentGrades.update(
+                    { grading_item_id: m.target },
+                    { where: { course_id: m.course_id, grading_item_id: m.from }, transaction }
+                  )
+                );
+                destroys.push(
+                  _courseGrading.destroy({ where: { course_id: m.course_id, grading_item_id: m.from }, transaction })
+                );
+              }
+              await Promise.all([...updates, ...destroys]);
+
+              for (const delId of deletableIds) {
+                const remaining = await _courseGrading.count({ where: { grading_item_id: Number(delId) }, transaction });
+                if (remaining === 0) {
+                  await _gradingItem.destroy({ where: { id: Number(delId) }, transaction });
+                }
+              }
             }
           }
         }
@@ -803,6 +954,80 @@ module.exports = class SyllabusService extends BaseService {
 
   getExamTypeByLevel = (levelId) => {
     return LEVEL_TO_EXAM_TYPE[levelId] || 'PRELIM';
+  };
+
+  applyCategoryNames = async (
+    syllabusId,
+    categoryId,
+    desiredList,
+    targetItems,
+    currentGradingItems,
+    coursesWithSyllabus,
+    itemIdToCourses,
+    transaction
+  ) => {
+
+    const trimmed = (s) => String(s || '').trim();
+    
+    const desired = Array.isArray(desiredList) ? desiredList.map(trimmed) : [];
+
+    const updates = [];
+    
+    for (let i = 0; i < Math.min(desired.length, targetItems.length); i++) {
+      const name = desired[i];
+      if (name !== targetItems[i].name) {
+        updates.push(targetItems[i].update({ name }, { transaction }));
+      }
+    }
+    if (updates.length > 0) {
+      await Promise.all(updates);
+    }
+
+    const creationsPayload = [];
+    
+    for (let i = targetItems.length; i < desired.length; i++) {
+      const name = desired[i];
+      creationsPayload.push({ syllabus_id: syllabusId, category_id: categoryId, name });
+    }
+    
+    if (creationsPayload.length > 0) {
+      const created = await _gradingItem.bulkCreate(creationsPayload, { transaction, returning: true });
+      const courseGradingRecords = [];
+      
+      for (const course of coursesWithSyllabus) {
+        
+        for (const gi of created) {
+          courseGradingRecords.push({ course_id: course.id, grading_item_id: gi.id, weight: 0 });
+        }
+      }
+      if (courseGradingRecords.length > 0) {
+        await _courseGrading.bulkCreate(courseGradingRecords, { transaction });
+      }
+    }
+
+    if (targetItems.length > desired.length) {
+
+      const itemsToDelete = currentGradingItems.slice(desired.length);
+
+      const deleteIds = itemsToDelete.map((it) => it.id);
+
+      for (const item of itemsToDelete) {
+        const linked = (itemIdToCourses.get(item.id) || []).length;
+        if (categoryId === 1 && linked <= 1) continue;
+      }
+
+      const deletable = itemsToDelete.filter((item) => {
+        const linked = (itemIdToCourses.get(item.id) || []).length;
+        return !(categoryId === 1 && linked <= 1);
+      });
+
+      const deletableIds = deletable.map((d) => d.id);
+      
+      if (deletableIds.length > 0) {
+        await _courseGrading.destroy({ where: { grading_item_id: { [Op.in]: deletableIds } }, transaction });
+        await _gradingItem.destroy({ where: { id: { [Op.in]: deletableIds } }, transaction });
+      }
+    }
   };
 
   createExamModulesByType = catchServiceAsync(async (syllabusId, examType) => {

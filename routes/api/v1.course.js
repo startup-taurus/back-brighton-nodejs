@@ -13,7 +13,6 @@ module.exports = function ({
   router.get('/get-one/:id', CourseController.getCourse);
   router.get(
     '/get-students/:id',
-
     [
       AuthMiddleware,
       requireRoles(
@@ -50,6 +49,23 @@ module.exports = function ({
   router.get(
     '/get-grading-percentage-by-syllabus/:syllabusId/',
     CourseGradingController.getGradingPercentageBySyllabus
+  );
+  router.put(
+    '/:courseId/assignment',
+    [AuthMiddleware],
+    CourseGradingController.upsertCourseAssignmentItem
+  );
+
+  router.delete(
+    '/:courseId/assignment/:itemId',
+    [AuthMiddleware],
+    CourseGradingController.deleteCourseAssignmentItem
+  );
+
+  router.post(
+    '/assignment/delete-batch',
+    [AuthMiddleware],
+    CourseGradingController.deleteCourseAssignmentItemsBatch
   );
 
   router.post('/create', CourseController.createCourse);
