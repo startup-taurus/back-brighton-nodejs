@@ -63,8 +63,16 @@ module.exports = class PermissionsService extends BaseService {
   });
 
   getPermissionsForUser = catchServiceAsync(async (user) => {
-    if (!user?.role) return { data: [] };
-    return this.getPermissionsByRole(user.role);
+    let roleName = user?.role_info?.name || null;
+    if (!roleName && user?.role_id) {
+      const roleRecord = await _role.findByPk(user.role_id, { attributes: ['name'] });
+      roleName = roleRecord?.name || null;
+    }
+    if (!roleName && typeof user?.role === 'string' && user.role) {
+      roleName = user.role;
+    }
+    if (!roleName) return { data: [] };
+    return this.getPermissionsByRole(roleName);
   });
 
   setPermissionsByRole = catchServiceAsync(async (roleName, permissionIdentifiers) => {
@@ -75,6 +83,27 @@ module.exports = class PermissionsService extends BaseService {
     const transaction = await _sequelize.transaction();
 
     try {
+      const normalizedRole = String(roleName).trim().toLowerCase();
+      if (normalizedRole === 'professor') {
+        const allowed = new Set([
+          'view_dashboard',
+          'view_courses',
+          'view_syllabus',
+          'view_attendance',
+          'mark_attendance',
+          'view_gradebook',
+          'add_grades',
+          'edit_grades',
+          'view_holidays',
+          'view_cancelled_lessons',
+          'create_cancelled_lesson',
+          'view_student_reports',
+          'create_student_report',
+          'edit_student_report',
+        ]);
+        permissionIdentifiers = permissionIdentifiers.filter(p => allowed.has(p));
+      }
+
       const roleRecord = await _role.findOne({ where: { name: roleName }, transaction });
       if (!roleRecord) {
         await transaction.rollback();
@@ -125,7 +154,7 @@ module.exports = class PermissionsService extends BaseService {
       { key: 'student', module: 'Students' },
       { key: 'transfer', module: 'Students' },
       { key: 'teacher', module: 'Professors' },
-      { key: 'cancelled_lesson', module: 'Courses' },
+      { key: 'cancelled_lesson', module: 'Holidays' },
       { key: 'course', module: 'Courses' },
       { key: 'syllabus', module: 'Syllabus' },
       { key: 'attendance', module: 'Attendance' },

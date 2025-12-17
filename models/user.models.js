@@ -44,15 +44,12 @@ module.exports = class UserModel {
           allowNull: false,
         },
         role: {
-          type: DataTypes.ENUM(
-            'professor',
-            'student',
-            'admin_staff',
-            'financial',
-            'coordinator',
-            'receptionist'
-          ),
+          type: DataTypes.STRING(100),
           allowNull: false,
+        },
+        role_id: {
+          type: DataTypes.INTEGER.UNSIGNED,
+          allowNull: true,
         },
         image: {
           type: DataTypes.STRING,

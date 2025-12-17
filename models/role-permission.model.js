@@ -24,6 +24,7 @@ module.exports = class RolePermissionModel {
       },
       {
         tableName: 'role_permission',
+        timestamps: false,
       }
     );
   }

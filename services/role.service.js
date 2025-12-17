@@ -2,12 +2,14 @@ const catchServiceAsync = require('../utils/catch-service-async');
 const BaseService = require('./base.service');
 
 let _role = null;
+let _user = null;
 let _sequelize = null;
 
 module.exports = class RoleService extends BaseService {
-  constructor({ Role, Sequelize }) {
+  constructor({ Role, User, Sequelize }) {
     super();
     _role = Role.Role ? Role.Role : Role;
+    _user = User.User;
     _sequelize = Sequelize;
   }
 
@@ -41,6 +43,9 @@ module.exports = class RoleService extends BaseService {
 
       update.updated_at = new Date();
       await _role.update(update, { where: { id: roleRecord.id }, transaction });
+      if (update.name) {
+        await _user.update({ role: update.name }, { where: { role_id: roleRecord.id }, transaction });
+      }
       await transaction.commit();
       return { data: { id: roleRecord.id, ...update } };
     } catch (error) {

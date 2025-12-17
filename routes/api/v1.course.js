@@ -1,6 +1,7 @@
 const { Router } = require('express');
-const { requireRoles } = require('../../middleware/teacherMiddleware');
+const { requireRoles, requirePermissions } = require('../../middleware/teacherMiddleware');
 const { USER_TYPES } = require('../../utils/constants');
+const { PERMISSIONS } = require('../../utils/permissions');
 
 module.exports = function ({
   CourseController,
@@ -52,19 +53,19 @@ module.exports = function ({
   );
   router.put(
     '/:courseId/assignment',
-    [AuthMiddleware],
+    [AuthMiddleware, requireRoles(USER_TYPES.PROFESSOR, USER_TYPES.COORDINATOR, USER_TYPES.ADMIN), requirePermissions(PERMISSIONS.ADD_GRADES)],
     CourseGradingController.upsertCourseAssignmentItem
   );
 
   router.delete(
     '/:courseId/assignment/:itemId',
-    [AuthMiddleware],
+    [AuthMiddleware, requireRoles(USER_TYPES.PROFESSOR, USER_TYPES.COORDINATOR, USER_TYPES.ADMIN), requirePermissions(PERMISSIONS.ADD_GRADES)],
     CourseGradingController.deleteCourseAssignmentItem
   );
 
   router.post(
     '/assignment/delete-batch',
-    [AuthMiddleware],
+    [AuthMiddleware, requireRoles(USER_TYPES.PROFESSOR, USER_TYPES.COORDINATOR, USER_TYPES.ADMIN), requirePermissions(PERMISSIONS.ADD_GRADES)],
     CourseGradingController.deleteCourseAssignmentItemsBatch
   );
 

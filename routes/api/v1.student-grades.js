@@ -1,6 +1,7 @@
 const { Router } = require('express');
-const { requireRoles } = require('../../middleware/teacherMiddleware');
+const { requireRoles, requirePermissions } = require('../../middleware/teacherMiddleware');
 const { USER_TYPES } = require('../../utils/constants'); 
+const { PERMISSIONS } = require('../../utils/permissions');
 
 module.exports = function ({ StudentGradesController, AuthMiddleware }) {
   const router = Router();
@@ -22,7 +23,8 @@ module.exports = function ({ StudentGradesController, AuthMiddleware }) {
   router.patch(
     '/update',
     [AuthMiddleware,
-    requireRoles(USER_TYPES.PROFESSOR, USER_TYPES.COORDINATOR, USER_TYPES.ADMIN, USER_TYPES.RECEPTIONIST)],
+    requireRoles(USER_TYPES.PROFESSOR, USER_TYPES.COORDINATOR, USER_TYPES.ADMIN, USER_TYPES.RECEPTIONIST),
+    requirePermissions(PERMISSIONS.EDIT_GRADES)],
     StudentGradesController.createStudentGrade
   );
   
