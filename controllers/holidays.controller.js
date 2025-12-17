@@ -10,7 +10,8 @@ module.exports = class HolidaysController extends BaseController {
   }
 
   getAllHolidays = catchControllerAsync(async (req, res) => {
-    const result = await _holidayService.getAllHolidays(req.query);
+    const { page, limit } = req.query;
+    const result = await _holidayService.getAllHolidays(page, limit);
     return appResponse(res, result);
   });
 
