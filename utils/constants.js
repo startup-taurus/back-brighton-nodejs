@@ -34,6 +34,39 @@ const USER_TYPES = {
   RECEPTIONIST: 'receptionist',
 };
 
+const ROLE_IDS = {
+  ADMIN: 1,
+  PROFESSOR: 2,
+  STUDENT: 3,
+  FINANCIAL: 4,
+  COORDINATOR: 5,
+  RECEPTIONIST: 6,
+};
+
+const MODULES_ORDER = [
+  'Dashboard', 'Students', 'Professors', 'Courses', 'Syllabus',
+  'Attendance', 'Gradebook', 'Holidays', 'Users', 'Payments',
+  'FinancialReports', 'StudentReports'
+];
+
+const MODULE_RULES = [
+  { key: 'dashboard', module: 'Dashboard' },
+  { key: 'student_report', module: 'StudentReports' },
+  { key: 'student', module: 'Students' },
+  { key: 'transfer', module: 'Students' },
+  { key: 'teacher', module: 'Professors' },
+  { key: 'cancelled_lesson', module: 'Holidays' },
+  { key: 'course', module: 'Courses' },
+  { key: 'syllabus', module: 'Syllabus' },
+  { key: 'attendance', module: 'Attendance' },
+  { key: 'gradebook', module: 'Gradebook' },
+  { key: 'grade', module: 'Gradebook' },
+  { key: 'holiday', module: 'Holidays' },
+  { key: 'user', module: 'Users' },
+  { key: 'payment', module: 'Payments' },
+  { key: 'financial', module: 'FinancialReports' },
+];
+
 const EXAMS_TYPE = {
   STARTERS: 'STARTERS',
   MOVERS: 'MOVERS',
@@ -199,5 +232,8 @@ module.exports = {
   ATTENDANCE_THRESHOLDS,
   HOLIDAY_TYPE ,
   STATUS,
-  ATTENDANCE_STATUS
+  ATTENDANCE_STATUS,
+  ROLE_IDS
+  , MODULES_ORDER
+  , MODULE_RULES
 };

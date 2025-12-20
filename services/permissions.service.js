@@ -2,6 +2,7 @@ const catchServiceAsync = require('../utils/catch-service-async');
 const BaseService = require('./base.service');
 const { Op } = require('sequelize');
 const { PERMISSIONS } = require('../utils/permissions');
+const { MODULES_ORDER, MODULE_RULES } = require('../utils/constants');
 
 let _role = null;
 let _permission = null;
@@ -25,7 +26,6 @@ module.exports = class PermissionsService extends BaseService {
       });
       return { data: roles };
     } catch (error) {
-      console.error(error);
       return { data: [] };
     }
   });
@@ -44,7 +44,7 @@ module.exports = class PermissionsService extends BaseService {
         return { data: [], created_at: roleRecord.created_at, updated_at: roleRecord.updated_at };
       }
 
-      const permissionIds = rolePermissionRecords.map(rp => rp.permission_id);
+      const permissionIds = rolePermissionRecords.map(rolePermission => rolePermission.permission_id);
       const permissions = await _permission.findAll({
         where: { id: { [Op.in]: permissionIds } },
         attributes: ['identifier'],
@@ -52,25 +52,23 @@ module.exports = class PermissionsService extends BaseService {
       });
 
       return {
-        data: permissions.map(p => p.identifier),
+        data: permissions.map(permission => permission.identifier),
         created_at: roleRecord.created_at,
         updated_at: roleRecord.updated_at
       };
     } catch (error) {
-      console.error(error);
       return { data: [], created_at: null, updated_at: null };
     }
   });
 
   getPermissionsForUser = catchServiceAsync(async (user) => {
-    let roleName = user?.role_info?.name || null;
-    if (!roleName && user?.role_id) {
-      const roleRecord = await _role.findByPk(user.role_id, { attributes: ['name'] });
-      roleName = roleRecord?.name || null;
-    }
-    if (!roleName && typeof user?.role === 'string' && user.role) {
-      roleName = user.role;
-    }
+    const roleName = user?.role_info?.name
+      ? user.role_info.name
+      : user?.role_id
+      ? (await _role.findByPk(user.role_id, { attributes: ['name'] }))?.name || null
+      : typeof user?.role === 'string' && user.role
+      ? user.role
+      : null;
     if (!roleName) return { data: [] };
     return this.getPermissionsByRole(roleName);
   });
@@ -101,7 +99,7 @@ module.exports = class PermissionsService extends BaseService {
           'create_student_report',
           'edit_student_report',
         ]);
-        permissionIdentifiers = permissionIdentifiers.filter(p => allowed.has(p));
+        permissionIdentifiers = permissionIdentifiers.filter(permissionIdentifier => allowed.has(permissionIdentifier));
       }
 
       const roleRecord = await _role.findOne({ where: { name: roleName }, transaction });
@@ -142,33 +140,9 @@ module.exports = class PermissionsService extends BaseService {
     const identifiers = Object.values(PERMISSIONS);
     const now = new Date();
 
-    const MODULES_ORDER = [
-      'Dashboard', 'Students', 'Professors', 'Courses', 'Syllabus',
-      'Attendance', 'Gradebook', 'Holidays', 'Users', 'Payments',
-      'FinancialReports', 'StudentReports'
-    ];
-
-    const MODULE_RULES = [
-      { key: 'dashboard', module: 'Dashboard' },
-      { key: 'student_report', module: 'StudentReports' },
-      { key: 'student', module: 'Students' },
-      { key: 'transfer', module: 'Students' },
-      { key: 'teacher', module: 'Professors' },
-      { key: 'cancelled_lesson', module: 'Holidays' },
-      { key: 'course', module: 'Courses' },
-      { key: 'syllabus', module: 'Syllabus' },
-      { key: 'attendance', module: 'Attendance' },
-      { key: 'gradebook', module: 'Gradebook' },
-      { key: 'grade', module: 'Gradebook' },
-      { key: 'holiday', module: 'Holidays' },
-      { key: 'user', module: 'Users' },
-      { key: 'payment', module: 'Payments' },
-      { key: 'financial', module: 'FinancialReports' },
-    ];
-
     const getModuleId = (identifier) => {
-      const s = String(identifier).toLowerCase();
-      const found = MODULE_RULES.find(r => s.includes(r.key));
+      const identifierLower = String(identifier).toLowerCase();
+      const found = MODULE_RULES.find(r => identifierLower.includes(r.key));
       const moduleName = found ? found.module : 'Dashboard';
       const idx = MODULES_ORDER.indexOf(moduleName);
       return idx >= 0 ? idx + 1 : 2;

@@ -13,6 +13,14 @@ module.exports = class RoleService extends BaseService {
     _sequelize = Sequelize;
   }
 
+  normalizeStatus = (value) => {
+    let statusValue = value;
+    if (typeof statusValue === 'string') {
+      statusValue = statusValue.toLowerCase() === 'active' ? 1 : 0;
+    }
+    return statusValue ? 1 : 0;
+  };
+
   getAll = catchServiceAsync(async () => {
     const roles = await _role.findAll({
       attributes: ['id', 'name', 'status', 'created_at', 'updated_at'],
@@ -36,9 +44,7 @@ module.exports = class RoleService extends BaseService {
       }
 
       if (typeof status !== 'undefined') {
-        let s = status;
-        if (typeof s === 'string') s = s.toLowerCase() === 'active' ? 1 : 0;
-        update.status = s ? 1 : 0;
+        update.status = this.normalizeStatus(status);
       }
 
       update.updated_at = new Date();
@@ -60,9 +66,7 @@ module.exports = class RoleService extends BaseService {
     try {
       const exists = await _role.findOne({ where: { name }, transaction });
       if (exists) throw new Error(`Role name '${name}' already exists`);
-      let s = status;
-      if (typeof s === 'string') s = s.toLowerCase() === 'active' ? 1 : 0;
-      const created = await _role.create({ name, status: s ? 1 : 0 }, { transaction });
+      const created = await _role.create({ name, status: this.normalizeStatus(status) }, { transaction });
       await transaction.commit();
       return { data: created };
     } catch (error) {

@@ -30,7 +30,7 @@ const protect = ({ User, config, PermissionsService }) =>
       req.user = await User.User.findByPk(decoded.id);
 
       if (!req.user) {
-        return next(new AppError("No existe el usuario", 404));
+        return next(new AppError("The user does not exist", 404));
       }
 
       const perms = await PermissionsService.getPermissionsForUser(req.user);
@@ -38,7 +38,6 @@ const protect = ({ User, config, PermissionsService }) =>
 
       next();
     } catch (error) {
-      console.log('Error en authMiddleware:', error.message);
       
       if (error.message === "jwt malformed") {
         return next(new AppError("Token mal formado. Verifica que el token sea válido.", 400));

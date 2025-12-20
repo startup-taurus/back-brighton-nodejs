@@ -18,15 +18,15 @@ const requireRoles = (...allowedRoles) => {
   };
 };
 
-const buildPermissionsMiddleware = (perms, checkFn, errorBuilder) => {
+const buildPermissionsMiddleware = (requiredPermissions, permissionCheck, errorMessageBuilder) => {
   return async (req, res, next) => {
     if (!req.user) {
       return next(new AppError('Unauthenticated user', 401));
     }
-    const userPerms = Array.isArray(req.user.permissions) ? req.user.permissions : [];
-    const ok = checkFn(userPerms, perms);
-    if (!ok) {
-      return next(new AppError(errorBuilder(perms), 403));
+    const userPermissions = Array.isArray(req.user.permissions) ? req.user.permissions : [];
+    const hasAccess = permissionCheck(userPermissions, requiredPermissions);
+    if (!hasAccess) {
+      return next(new AppError(errorMessageBuilder(requiredPermissions), 403));
     }
     next();
   };
@@ -35,16 +35,16 @@ const buildPermissionsMiddleware = (perms, checkFn, errorBuilder) => {
 const requirePermissions = (...needed) => {
   return buildPermissionsMiddleware(
     needed,
-    (userPerms, perms) => perms.every(p => userPerms.includes(p)),
-    (perms) => `Access denied. Permissions required: ${perms.join(', ')}`
+    (userPermissions, requiredPermissions) => requiredPermissions.every(requiredPermission => userPermissions.includes(requiredPermission)),
+    (requiredPermissions) => `Access denied. Permissions required: ${requiredPermissions.join(', ')}`
   );
 };
 
 const requireAnyPermissions = (...options) => {
   return buildPermissionsMiddleware(
     options,
-    (userPerms, perms) => perms.some(p => userPerms.includes(p)),
-    (perms) => `Access denied. One of these permissions is required: ${perms.join(', ')}`
+    (userPermissions, requiredPermissions) => requiredPermissions.some(requiredPermission => userPermissions.includes(requiredPermission)),
+    (requiredPermissions) => `Access denied. One of these permissions is required: ${requiredPermissions.join(', ')}`
   );
 };
 

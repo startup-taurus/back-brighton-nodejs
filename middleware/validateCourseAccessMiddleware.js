@@ -1,6 +1,7 @@
 const asyncHandler = require('express-async-handler');
 
 const AppError = require('../utils/app-error');
+const { ROLE_IDS } = require('../utils/constants');
 
 const validateProfessorCourseAccess = ({ Course, Professor }) =>
   asyncHandler(async (req, res, next) => {
@@ -8,11 +9,11 @@ const validateProfessorCourseAccess = ({ Course, Professor }) =>
     const userId = req.user.id;
     const roleId = req.user.role_id;
 
-    if (roleId === 1 || roleId === 5) {
+    if (roleId === ROLE_IDS.ADMIN || roleId === ROLE_IDS.COORDINATOR) {
       return next();
     }
 
-    if (roleId === 2 && courseId) {
+    if (roleId === ROLE_IDS.PROFESSOR && courseId) {
       const teacher = await Professor.Professor.findOne({
         where: {
           user_id: userId,
