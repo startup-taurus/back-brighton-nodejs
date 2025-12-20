@@ -206,6 +206,10 @@ const STATUS={
   TRANSFERRED: 'transferred',
   COMPLETED: 'completed',
 }
+const STATUS_MAP = {
+  active: 1,
+  inactive: 0,
+}
 const ATTENDANCE_STATUS = {
   PRESENT: 'present',
   ABSENT: 'absent',
@@ -232,6 +236,7 @@ module.exports = {
   ATTENDANCE_THRESHOLDS,
   HOLIDAY_TYPE ,
   STATUS,
+  STATUS_MAP,
   ATTENDANCE_STATUS,
   ROLE_IDS
   , MODULES_ORDER

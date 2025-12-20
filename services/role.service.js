@@ -1,5 +1,6 @@
 const catchServiceAsync = require('../utils/catch-service-async');
 const BaseService = require('./base.service');
+const { STATUS, STATUS_MAP } = require('../utils/constants');
 
 let _role = null;
 let _user = null;
@@ -16,9 +17,10 @@ module.exports = class RoleService extends BaseService {
   normalizeStatus = (value) => {
     let statusValue = value;
     if (typeof statusValue === 'string') {
-      statusValue = statusValue.toLowerCase() === 'active' ? 1 : 0;
+      const key = statusValue.toLowerCase();
+      statusValue = typeof STATUS_MAP[key] === 'number' ? STATUS_MAP[key] : STATUS_MAP[STATUS.INACTIVE];
     }
-    return statusValue ? 1 : 0;
+    return statusValue ? STATUS_MAP[STATUS.ACTIVE] : STATUS_MAP[STATUS.INACTIVE];
   };
 
   getAll = catchServiceAsync(async () => {
