@@ -1,11 +1,11 @@
 const { Router } = require('express');
-const { requireRoles } = require('../../middleware/teacherMiddleware');
-const { USER_TYPES } = require('../../utils/constants')
+const { requirePermissions } = require('../../middleware/teacherMiddleware');
+const { PERMISSIONS } = require('../../utils/permissions')
 module.exports = function ({ TransferDataController, AuthMiddleware }) {
   const router = Router();
   
   router.get('/get-all', AuthMiddleware,
-    requireRoles(USER_TYPES.COORDINATOR, USER_TYPES.ADMIN, USER_TYPES.RECEPTIONIST),TransferDataController.getAllTransferData);
+    requirePermissions(PERMISSIONS.VIEW_TRANSFER_STUDENTS),TransferDataController.getAllTransferData);
   router.get('/get-one/:id', TransferDataController.getTransferData);
   router.get('/get-pending', TransferDataController.getPendingTransferData);
   router.get('/get-approved', TransferDataController.getApprovedTransfers);

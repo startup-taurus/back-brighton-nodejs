@@ -1,6 +1,5 @@
 const { Router } = require('express');
-const { requireRoles, requirePermissions } = require('../../middleware/teacherMiddleware');
-const { USER_TYPES } = require('../../utils/constants');
+const { requirePermissions } = require('../../middleware/teacherMiddleware');
 const { PERMISSIONS } = require('../../utils/permissions');
 
 module.exports = function ({
@@ -16,12 +15,7 @@ module.exports = function ({
     '/get-students/:id',
     [
       AuthMiddleware,
-      requireRoles(
-        USER_TYPES.PROFESSOR,
-        USER_TYPES.COORDINATOR,
-        USER_TYPES.ADMIN,
-        USER_TYPES.RECEPTIONIST,
-      ),
+      requirePermissions(PERMISSIONS.VIEW_COURSES),
       ValidateCourseMiddleware,
     ],
     CourseController.getCourseWithStudents
@@ -29,7 +23,7 @@ module.exports = function ({
 
   router.get(
     '/get-all-with-professors',
-    [AuthMiddleware, requireRoles(USER_TYPES.COORDINATOR, USER_TYPES.ADMIN, USER_TYPES.RECEPTIONIST)],
+    [AuthMiddleware, requirePermissions(PERMISSIONS.VIEW_COURSES)],
     CourseController.getAllCoursesWithProfessors
   );
   router.get(
@@ -53,30 +47,34 @@ module.exports = function ({
   );
   router.put(
     '/:courseId/assignment',
-    [AuthMiddleware, requireRoles(USER_TYPES.PROFESSOR, USER_TYPES.COORDINATOR, USER_TYPES.ADMIN), requirePermissions(PERMISSIONS.ADD_GRADES)],
+    [AuthMiddleware, requirePermissions(PERMISSIONS.ADD_GRADES)],
     CourseGradingController.upsertCourseAssignmentItem
   );
 
   router.delete(
     '/:courseId/assignment/:itemId',
-    [AuthMiddleware, requireRoles(USER_TYPES.PROFESSOR, USER_TYPES.COORDINATOR, USER_TYPES.ADMIN), requirePermissions(PERMISSIONS.ADD_GRADES)],
+    [AuthMiddleware, requirePermissions(PERMISSIONS.ADD_GRADES)],
     CourseGradingController.deleteCourseAssignmentItem
   );
 
   router.post(
     '/assignment/delete-batch',
-    [AuthMiddleware, requireRoles(USER_TYPES.PROFESSOR, USER_TYPES.COORDINATOR, USER_TYPES.ADMIN), requirePermissions(PERMISSIONS.ADD_GRADES)],
+    [AuthMiddleware, requirePermissions(PERMISSIONS.ADD_GRADES)],
     CourseGradingController.deleteCourseAssignmentItemsBatch
   );
 
   router.post('/create', CourseController.createCourse);
   router.put('/update/:id', CourseController.updateCourse);
-  router.put('/update-status/:id', CourseController.updateCourseStatus);
+  router.put(
+    '/update-status/:id',
+    [AuthMiddleware, requirePermissions(PERMISSIONS.TOGGLE_COURSE_STATUS)],
+    CourseController.updateCourseStatus
+  );
   router.get(
     '/get-calendar',
     [
       AuthMiddleware,
-      requireRoles(USER_TYPES.COORDINATOR, USER_TYPES.ADMIN, USER_TYPES.RECEPTIONIST)
+      requirePermissions(PERMISSIONS.VIEW_COURSES)
     ],
     CourseController.getAllCoursesForCalendar
   );

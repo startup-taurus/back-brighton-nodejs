@@ -1,6 +1,5 @@
 const { Router } = require('express');
-const { requireRoles, requirePermissions } = require('../../middleware/teacherMiddleware');
-const { USER_TYPES } = require('../../utils/constants');
+const { requirePermissions, requireAnyPermissions } = require('../../middleware/teacherMiddleware');
 const { PERMISSIONS } = require('../../utils/permissions');
 
 module.exports = function ({ CancelledLessonController, AuthMiddleware }) {
@@ -9,13 +8,7 @@ module.exports = function ({ CancelledLessonController, AuthMiddleware }) {
     '/get-all-by-course/:courseId',
     [
       AuthMiddleware,
-      requireRoles(
-        USER_TYPES.PROFESSOR,
-        USER_TYPES.COORDINATOR,
-        USER_TYPES.ADMIN,
-        USER_TYPES.RECEPTIONIST
-      ),
-      requirePermissions(PERMISSIONS.VIEW_CANCELLED_LESSONS),
+      requireAnyPermissions(PERMISSIONS.VIEW_CANCELLED_LESSONS, PERMISSIONS.VIEW_HOLIDAYS),
     ],
     CancelledLessonController.getCancelledLessonsByCourse
   );
@@ -23,7 +16,6 @@ module.exports = function ({ CancelledLessonController, AuthMiddleware }) {
     '/create',
     [
       AuthMiddleware,
-      requireRoles(USER_TYPES.PROFESSOR, USER_TYPES.COORDINATOR, USER_TYPES.ADMIN),
       requirePermissions(PERMISSIONS.CREATE_CANCELLED_LESSON),
     ],
     CancelledLessonController.create
@@ -32,12 +24,6 @@ module.exports = function ({ CancelledLessonController, AuthMiddleware }) {
     '/delete',
     [
       AuthMiddleware,
-      requireRoles(
-        USER_TYPES.PROFESSOR,
-        USER_TYPES.COORDINATOR,
-        USER_TYPES.ADMIN,
-        USER_TYPES.RECEPTIONIST
-      ),
       requirePermissions(PERMISSIONS.VIEW_CANCELLED_LESSONS),
     ],
     CancelledLessonController.delete
@@ -46,7 +32,6 @@ module.exports = function ({ CancelledLessonController, AuthMiddleware }) {
     '/update/:id',
     [
       AuthMiddleware,
-      requireRoles(USER_TYPES.COORDINATOR, USER_TYPES.ADMIN),
       requirePermissions(PERMISSIONS.EDIT_CANCELLED_LESSON),
     ],
     CancelledLessonController.update

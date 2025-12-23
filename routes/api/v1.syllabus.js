@@ -1,18 +1,24 @@
 const { Router } = require('express');
-const { requireRoles } = require('../../middleware/teacherMiddleware');
-const { USER_TYPES } = require('../../utils/constants')
+const { requirePermissions, requireAnyPermissions } = require('../../middleware/teacherMiddleware');
+const { PERMISSIONS } = require('../../utils/permissions');
 module.exports = function ({ SyllabusController, AuthMiddleware }) {
   const router = Router();
 
-  router.get('/get-all', [AuthMiddleware,
-    requireRoles(USER_TYPES.COORDINATOR, USER_TYPES.ADMIN)], SyllabusController.getAllSyllabus);
-  router.get('/get-one/:id',  [AuthMiddleware,
-    requireRoles(USER_TYPES.COORDINATOR, USER_TYPES.ADMIN)], SyllabusController.getSyllabusById);
+  router.get('/get-all', [
+    AuthMiddleware,
+    requireAnyPermissions(PERMISSIONS.VIEW_SYLLABUS, PERMISSIONS.VIEW_COURSES)
+  ], SyllabusController.getAllSyllabus);
+  router.get('/get-one/:id',  [
+    AuthMiddleware,
+    requireAnyPermissions(PERMISSIONS.VIEW_SYLLABUS, PERMISSIONS.VIEW_COURSES)
+  ], SyllabusController.getSyllabusById);
   router.get('/get-syllabus/:id', SyllabusController.getIdSyllabus);
   router.get(
     '/get-percentages-by-syllabus/:id',
-    [AuthMiddleware,
-    requireRoles(USER_TYPES.COORDINATOR, USER_TYPES.ADMIN, USER_TYPES.PROFESSOR, USER_TYPES.RECEPTIONIST)],
+    [
+      AuthMiddleware,
+      requireAnyPermissions(PERMISSIONS.VIEW_SYLLABUS, PERMISSIONS.VIEW_COURSES, PERMISSIONS.VIEW_GRADEBOOK)
+    ],
     SyllabusController.getFinalPercentageBySyllabusId
   );
   router.post('/create', SyllabusController.createSyllabus);

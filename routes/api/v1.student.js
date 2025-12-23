@@ -1,63 +1,49 @@
 const { Router } = require('express');
-const { requireRoles } = require('../../middleware/teacherMiddleware');
-const { USER_TYPES } = require('../../utils/constants')
+const { requirePermissions } = require('../../middleware/teacherMiddleware');
+const { PERMISSIONS } = require('../../utils/permissions');
 module.exports = function ({ StudentController, AuthMiddleware }) {
   const router = Router();
   router.get(
     '/get-all',
     [
       AuthMiddleware,
-      requireRoles(
-        USER_TYPES.COORDINATOR,
-        USER_TYPES.ADMIN,
-        USER_TYPES.RECEPTIONIST,
-        USER_TYPES.FINANCIAL,
-        USER_TYPES.PROFESSOR
-      ),
+      requirePermissions(PERMISSIONS.VIEW_STUDENTS),
     ],
     StudentController.getAllStudents
   );
   router.get(
     '/get-one/:id',
-    [AuthMiddleware,
-      requireRoles(
-        USER_TYPES.COORDINATOR,
-        USER_TYPES.ADMIN,
-        USER_TYPES.RECEPTIONIST,
-        USER_TYPES.FINANCIAL,
-        USER_TYPES.PROFESSOR
-      )
-    ],
+    [AuthMiddleware, requirePermissions(PERMISSIONS.VIEW_STUDENTS)],
     StudentController.getStudent
   );
   router.get(
     '/best-students',
-    [AuthMiddleware, requireRoles(USER_TYPES.ADMIN, USER_TYPES.COORDINATOR)],
+    [AuthMiddleware, requirePermissions(PERMISSIONS.VIEW_STUDENTS)],
     StudentController.getBestStudents
   );
   router.post(
     '/create',
-    [AuthMiddleware, requireRoles(USER_TYPES.ADMIN, USER_TYPES.COORDINATOR)],
+    [AuthMiddleware, requirePermissions(PERMISSIONS.CREATE_STUDENT)],
     StudentController.createStudent
   );
   router.post(
     '/transfer-and-progress',
-    [AuthMiddleware, requireRoles(USER_TYPES.ADMIN, USER_TYPES.COORDINATOR)],
+    [AuthMiddleware, requirePermissions(PERMISSIONS.APPROVE_TRANSFER)],
     StudentController.transferAndProgressStudents
   );
   router.put(
     '/update/:id',
-    [AuthMiddleware, requireRoles(USER_TYPES.ADMIN, USER_TYPES.COORDINATOR)],
+    [AuthMiddleware, requirePermissions(PERMISSIONS.EDIT_STUDENT)],
     StudentController.updateStudent
   );
   router.put(
     '/update-status/:id',
-    [AuthMiddleware, requireRoles(USER_TYPES.ADMIN, USER_TYPES.COORDINATOR)],
+    [AuthMiddleware, requirePermissions(PERMISSIONS.TOGGLE_STUDENT_STATUS)],
     StudentController.updateStudentStatus
   );
   router.delete(
     '/delete/:id',
-    [AuthMiddleware, requireRoles(USER_TYPES.ADMIN)],
+    [AuthMiddleware, requirePermissions(PERMISSIONS.DELETE_STUDENT)],
     StudentController.deleteStudent
   );
   return router;

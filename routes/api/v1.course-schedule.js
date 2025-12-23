@@ -1,6 +1,5 @@
 const { Router } = require('express');
-const { requireRoles, requirePermissions } = require('../../middleware/teacherMiddleware');
-const { USER_TYPES } = require('../../utils/constants');
+const { requirePermissions } = require('../../middleware/teacherMiddleware');
 const { PERMISSIONS } = require('../../utils/permissions');
 
 module.exports = function ({ CourseScheduleController, AuthMiddleware }) {
@@ -14,7 +13,6 @@ module.exports = function ({ CourseScheduleController, AuthMiddleware }) {
     '/update-course-schedule/:id',
     [
       AuthMiddleware,
-      requireRoles(USER_TYPES.PROFESSOR, USER_TYPES.COORDINATOR, USER_TYPES.ADMIN),
       requirePermissions(PERMISSIONS.MARK_ATTENDANCE),
     ],
     CourseScheduleController.updateLessonTaught

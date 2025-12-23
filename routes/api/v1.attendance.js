@@ -1,6 +1,5 @@
 const { Router } = require('express');
-const { requireRoles, requirePermissions } = require('../../middleware/teacherMiddleware');
-const { USER_TYPES } = require('../../utils/constants');
+const { requirePermissions } = require('../../middleware/teacherMiddleware');
 const { PERMISSIONS } = require('../../utils/permissions');
 
 module.exports = function ({ AttendanceController, AuthMiddleware }) {
@@ -14,7 +13,6 @@ module.exports = function ({ AttendanceController, AuthMiddleware }) {
     '/create',
     [
       AuthMiddleware,
-      requireRoles(USER_TYPES.PROFESSOR, USER_TYPES.COORDINATOR, USER_TYPES.ADMIN),
       requirePermissions(PERMISSIONS.MARK_ATTENDANCE),
     ],
     AttendanceController.createAttendance
