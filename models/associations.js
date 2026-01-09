@@ -21,6 +21,7 @@ let _registeredStudent = null;
 let _studentTransfer = null;
 let _transferData = null;
 let _privateClassHours = null;
+let _role = null;
 module.exports = class AuditModel {
   constructor({
     User,
@@ -46,6 +47,7 @@ module.exports = class AuditModel {
     StudentTransfer,
     TransferData,
     PrivateClassHours,
+    Role,
 
   }) {
     _student = Student.Student;
@@ -71,6 +73,7 @@ module.exports = class AuditModel {
     _studentTransfer = StudentTransfer.StudentTransfer;
     _transferData = TransferData.TransferData;
     _privateClassHours = PrivateClassHours.PrivateClassHours;
+    _role = Role.Role;
 
     this.defineModel();
   }
@@ -108,6 +111,16 @@ module.exports = class AuditModel {
     _student.belongsTo(_user, {
       foreignKey: 'user_id',
       as: 'user',
+    });
+
+    _user.belongsTo(_role, {
+      foreignKey: 'role_id',
+      as: 'role_info',
+    });
+
+    _role.hasMany(_user, {
+      foreignKey: 'role_id',
+      as: 'users',
     });
 
     // Relación entre estudiante y nivel

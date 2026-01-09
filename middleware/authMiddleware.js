@@ -3,7 +3,7 @@ const asyncHandler = require("express-async-handler");
 const { promisify } = require("util");
 const AppError = require("../utils/app-error");
 
-const protect = ({ User, config }) =>
+const protect = ({ User, config, PermissionsService }) =>
   asyncHandler(async (req, res, next) => {
     let authorization = req.headers["authorization"];
     let token;
@@ -30,12 +30,14 @@ const protect = ({ User, config }) =>
       req.user = await User.User.findByPk(decoded.id);
 
       if (!req.user) {
-        return next(new AppError("No existe el usuario", 404));
+        return next(new AppError("The user does not exist", 404));
       }
+
+      const perms = await PermissionsService.getPermissionsForUser(req.user);
+      req.user.permissions = Array.isArray(perms?.data) ? perms.data : [];
 
       next();
     } catch (error) {
-      console.log('Error en authMiddleware:', error.message);
       
       if (error.message === "jwt malformed") {
         return next(new AppError("Token mal formado. Verifica que el token sea válido.", 400));

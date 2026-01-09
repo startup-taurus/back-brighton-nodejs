@@ -1,15 +1,15 @@
 const { Router } = require('express');
-const { requireRoles } = require('../../middleware/teacherMiddleware');
-const { USER_TYPES } = require('../../utils/constants')
+const { requirePermissions } = require('../../middleware/teacherMiddleware');
+const { PERMISSIONS } = require('../../utils/permissions')
 module.exports = function ({ StudentTransferController, AuthMiddleware }) {
   const router = Router();
   router.get('/get-all', [AuthMiddleware,
-    requireRoles(USER_TYPES.COORDINATOR, USER_TYPES.ADMIN)], StudentTransferController.getAllStudentTransfers);
+    requirePermissions(PERMISSIONS.VIEW_TRANSFER_STUDENTS)], StudentTransferController.getAllStudentTransfers);
   router.get('/get-one/:id',[AuthMiddleware,
-    requireRoles(USER_TYPES.COORDINATOR, USER_TYPES.ADMIN)], StudentTransferController.getStudentTransfer);
+    requirePermissions(PERMISSIONS.VIEW_TRANSFER_STUDENTS)], StudentTransferController.getStudentTransfer);
   router.get(
     '/by-transfer/:transfer_data_id', [AuthMiddleware,
-    requireRoles(USER_TYPES.COORDINATOR, USER_TYPES.ADMIN, USER_TYPES.RECEPTIONIST)],
+    requirePermissions(PERMISSIONS.VIEW_TRANSFER_STUDENTS)],
     StudentTransferController.getStudentTransfersByTransferDataId
   );
   router.post('/create',  StudentTransferController.createStudentTransfer);

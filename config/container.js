@@ -26,6 +26,8 @@ const {
   TransferDataService,
   StudentTransferService,
   PrivateClassHoursService,
+  PermissionsService,
+  RoleService,
 
 } = require('../services');
 
@@ -48,6 +50,8 @@ const {
   TransferDataController,
   StudentTransferController,
   PrivateClassHoursController,
+  PermissionsController,
+  RoleController,
 
 } = require('../controllers');
 
@@ -72,6 +76,8 @@ const {
   TransferDataRoutes,
   StudentTransferRoutes,
   PrivateClassHoursRoutes, 
+  PermissionsRoutes,
+  RoleRoutes,
 
 } = require('../routes/api/index');
 
@@ -102,6 +108,9 @@ const {
   StudentTransfer,
   TransferData,
   PrivateClassHours, 
+  RolePermission,
+  Permission,
+  Role
 } = require('../models');
 
 const protect = require('../middleware/authMiddleware');
@@ -142,6 +151,8 @@ container
     TransferDataService: asClass(TransferDataService).singleton(),
     StudentTransferService: asClass(StudentTransferService).singleton(),
     PrivateClassHoursService: asClass(PrivateClassHoursService).singleton(),
+    PermissionsService: asClass(PermissionsService).singleton(),
+    RoleService: asClass(RoleService).singleton(),
 
   })
 
@@ -180,6 +191,8 @@ container
     TransferDataController: asClass(TransferDataController).singleton(),
     StudentTransferController: asClass(StudentTransferController).singleton(),
     PrivateClassHoursController: asClass(PrivateClassHoursController).singleton(),
+    PermissionsController: asClass(PermissionsController).singleton(),
+    RoleController: asClass(RoleController).singleton(),
 
   })
   .register({
@@ -200,6 +213,8 @@ container
     TransferDataRoutes: asFunction(TransferDataRoutes).singleton(),
     StudentTransferRoutes: asFunction(StudentTransferRoutes).singleton(),
     PrivateClassHoursRoutes: asFunction(PrivateClassHoursRoutes).singleton(),
+    PermissionsRoutes: asFunction(PermissionsRoutes).singleton(),
+    RoleRoutes: asFunction(RoleRoutes).singleton(),
 
   })
   .register({
@@ -233,6 +248,9 @@ container
     StudentTransfer: asClass(StudentTransfer).singleton(),
     TransferData: asClass(TransferData).singleton(),
     PrivateClassHours: asClass(PrivateClassHours).singleton(), 
+    RolePermission: asClass(RolePermission).singleton(),
+    Permission: asClass(Permission).singleton(),
+    Role: asClass(Role).singleton(),
   })
   .register({
     //middlewares

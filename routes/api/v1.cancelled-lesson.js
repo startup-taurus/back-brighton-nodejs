@@ -1,14 +1,41 @@
 const { Router } = require('express');
+const { requirePermissions, requireAnyPermissions } = require('../../middleware/teacherMiddleware');
+const { PERMISSIONS } = require('../../utils/permissions');
 
-module.exports = function ({ CancelledLessonController }) {
+module.exports = function ({ CancelledLessonController, AuthMiddleware }) {
   const router = Router();
   router.get(
     '/get-all-by-course/:courseId',
+    [
+      AuthMiddleware,
+      requireAnyPermissions(PERMISSIONS.VIEW_CANCELLED_LESSONS, PERMISSIONS.VIEW_HOLIDAYS),
+    ],
     CancelledLessonController.getCancelledLessonsByCourse
   );
-  router.post('/create', CancelledLessonController.create);
-  router.post('/delete', CancelledLessonController.delete);
-  router.patch('/update/:id', CancelledLessonController.update);
+  router.post(
+    '/create',
+    [
+      AuthMiddleware,
+      requirePermissions(PERMISSIONS.CREATE_CANCELLED_LESSON),
+    ],
+    CancelledLessonController.create
+  );
+  router.post(
+    '/delete',
+    [
+      AuthMiddleware,
+      requirePermissions(PERMISSIONS.DELETE_CANCELLED_LESSON),
+    ],
+    CancelledLessonController.delete
+  );
+  router.put(
+    '/update/:id',
+    [
+      AuthMiddleware,
+      requirePermissions(PERMISSIONS.EDIT_CANCELLED_LESSON),
+    ],
+    CancelledLessonController.update
+  );
 
   return router;
 };

@@ -101,7 +101,7 @@ module.exports = class HolidaysService extends BaseService {
     const data = await _holidays.findAndCountAll({
       limit: limitNumber,
       offset: limitNumber * (pageNumber - 1),
-      order: [['id', 'DESC']],
+      order: [['holiday_date', 'ASC'], ['id', 'DESC']],
     });
 
     return {

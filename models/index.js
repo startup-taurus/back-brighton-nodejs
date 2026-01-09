@@ -24,4 +24,7 @@ module.exports = {
   StudentTransfer: require('./student-transfer.models'),
   TransferData: require('./transfer_data.models'),
   PrivateClassHours: require('./private-class-hours.model'),
+  RolePermission: require('./role-permission.model'),
+  Permission: require('./permission.model'),
+  Role: require('./role.model'),
 };

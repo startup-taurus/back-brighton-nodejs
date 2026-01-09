@@ -1,16 +1,50 @@
 const { Router } = require('express');
-const { requireRoles } = require('../../middleware/teacherMiddleware');
-const { USER_TYPES } = require('../../utils/constants')
+const { requirePermissions } = require('../../middleware/teacherMiddleware');
+const { PERMISSIONS } = require('../../utils/permissions');
 module.exports = function ({ StudentController, AuthMiddleware }) {
   const router = Router();
-  router.get('/get-all', [AuthMiddleware,
-    requireRoles(USER_TYPES.COORDINATOR, USER_TYPES.ADMIN, USER_TYPES.RECEPTIONIST)], StudentController.getAllStudents);
-  router.get('/get-one/:id', StudentController.getStudent);
-  router.get('/best-students', StudentController.getBestStudents);
-  router.post('/create', StudentController.createStudent);
-  router.post('/transfer-and-progress', StudentController.transferAndProgressStudents);
-  router.put('/update/:id', StudentController.updateStudent);
-  router.put('/update-status/:id', StudentController.updateStudentStatus);
-  router.delete('/delete/:id', StudentController.deleteStudent);
+  router.get(
+    '/get-all',
+    [
+      AuthMiddleware,
+      requirePermissions(PERMISSIONS.VIEW_STUDENTS),
+    ],
+    StudentController.getAllStudents
+  );
+  router.get(
+    '/get-one/:id',
+    [AuthMiddleware, requirePermissions(PERMISSIONS.VIEW_STUDENTS)],
+    StudentController.getStudent
+  );
+  router.get(
+    '/best-students',
+    [AuthMiddleware, requirePermissions(PERMISSIONS.VIEW_STUDENTS)],
+    StudentController.getBestStudents
+  );
+  router.post(
+    '/create',
+    [AuthMiddleware, requirePermissions(PERMISSIONS.CREATE_STUDENT)],
+    StudentController.createStudent
+  );
+  router.post(
+    '/transfer-and-progress',
+    [AuthMiddleware, requirePermissions(PERMISSIONS.APPROVE_TRANSFER)],
+    StudentController.transferAndProgressStudents
+  );
+  router.put(
+    '/update/:id',
+    [AuthMiddleware, requirePermissions(PERMISSIONS.EDIT_STUDENT)],
+    StudentController.updateStudent
+  );
+  router.put(
+    '/update-status/:id',
+    [AuthMiddleware, requirePermissions(PERMISSIONS.TOGGLE_STUDENT_STATUS)],
+    StudentController.updateStudentStatus
+  );
+  router.delete(
+    '/delete/:id',
+    [AuthMiddleware, requirePermissions(PERMISSIONS.DELETE_STUDENT)],
+    StudentController.deleteStudent
+  );
   return router;
 };
