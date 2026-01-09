@@ -95,6 +95,7 @@ module.exports = class PermissionsService extends BaseService {
           'view_holidays',
           'view_cancelled_lessons',
           'create_cancelled_lesson',
+          'delete_cancelled_lesson',
           'view_student_reports',
           'create_student_report',
           'edit_student_report',
