@@ -9,7 +9,7 @@ module.exports = function ({ CourseScheduleController, AuthMiddleware }) {
     CourseScheduleController.getCourseScheduleDates
   );
 
-  router.patch(
+  router.put(
     '/update-course-schedule/:id',
     [
       AuthMiddleware,

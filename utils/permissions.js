@@ -49,6 +49,7 @@ const PERMISSIONS = {
   VIEW_GRADEBOOK: 'view_gradebook',
   ADD_GRADES: 'add_grades',
   EDIT_GRADES: 'edit_grades',
+  DELETE_GRADES: 'delete_grades',
 
   VIEW_HOLIDAYS: 'view_holidays',
   CREATE_HOLIDAY: 'create_holiday',

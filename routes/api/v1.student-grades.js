@@ -17,7 +17,7 @@ module.exports = function ({ StudentGradesController, AuthMiddleware }) {
     StudentGradesController.getGradesByCourseAndStudent
   );
   
-  router.patch(
+  router.put(
     '/update',
     [AuthMiddleware, requirePermissions(PERMISSIONS.EDIT_GRADES)],
     StudentGradesController.createStudentGrade

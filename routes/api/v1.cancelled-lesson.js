@@ -24,11 +24,11 @@ module.exports = function ({ CancelledLessonController, AuthMiddleware }) {
     '/delete',
     [
       AuthMiddleware,
-      requirePermissions(PERMISSIONS.VIEW_CANCELLED_LESSONS),
+      requirePermissions(PERMISSIONS.DELETE_CANCELLED_LESSON),
     ],
     CancelledLessonController.delete
   );
-  router.patch(
+  router.put(
     '/update/:id',
     [
       AuthMiddleware,

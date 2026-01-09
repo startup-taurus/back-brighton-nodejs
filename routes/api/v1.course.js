@@ -47,19 +47,19 @@ module.exports = function ({
   );
   router.put(
     '/:courseId/assignment',
-    [AuthMiddleware, requirePermissions(PERMISSIONS.ADD_GRADES)],
+    [AuthMiddleware, requirePermissions(PERMISSIONS.EDIT_GRADES)],
     CourseGradingController.upsertCourseAssignmentItem
   );
 
   router.delete(
     '/:courseId/assignment/:itemId',
-    [AuthMiddleware, requirePermissions(PERMISSIONS.ADD_GRADES)],
+    [AuthMiddleware, requirePermissions(PERMISSIONS.DELETE_GRADES)],
     CourseGradingController.deleteCourseAssignmentItem
   );
 
   router.post(
     '/assignment/delete-batch',
-    [AuthMiddleware, requirePermissions(PERMISSIONS.ADD_GRADES)],
+    [AuthMiddleware, requirePermissions(PERMISSIONS.DELETE_GRADES)],
     CourseGradingController.deleteCourseAssignmentItemsBatch
   );
 
