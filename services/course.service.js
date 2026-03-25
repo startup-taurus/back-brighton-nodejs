@@ -24,6 +24,20 @@ let _syllabus = null;
 let _level = null;
 let _transferData = null;
 
+const normalizeCourseNumber = (courseNumber) => {
+  if (courseNumber === null || courseNumber === undefined) return courseNumber;
+  return String(courseNumber)
+    .trim()
+    .replace(/[°º˚ᵒ⁰○◦]/g, '')
+    .replace(/\s+/g, '')
+    .toUpperCase();
+};
+
+const formatCourseNumberForStorage = (courseNumber) => {
+  const normalized = normalizeCourseNumber(courseNumber);
+  return normalized ? `${normalized}°` : normalized;
+};
+
 module.exports = class CourseService extends BaseService {
   constructor({
     Sequelize,
@@ -503,10 +517,12 @@ module.exports = class CourseService extends BaseService {
       syllabus_id,
     } = body;
 
+    const normalizedCourseNumber = normalizeCourseNumber(course_number);
+
     if (course_type === COURSE_TYPES.PRIVATE || course_type === COURSE_TYPES.PRIVATE_ONLINE) {
       validateParameters({
         course_name,
-        course_number,
+        course_number: normalizedCourseNumber,
         start_date,
         status,
         course_type,
@@ -519,7 +535,7 @@ module.exports = class CourseService extends BaseService {
     } else {
       validateParameters({
         course_name,
-        course_number,
+        course_number: normalizedCourseNumber,
         start_date,
         status,
         course_type,
@@ -530,6 +546,10 @@ module.exports = class CourseService extends BaseService {
 
       body.syllabus_id = parseInt(syllabus_id);
     }
+
+    body.course_number = formatCourseNumberForStorage(course_number);
+
+    await this.validateCourseNumberAvailability(body.course_number);
 
     body.professor_id = parseInt(professor_id);
 
@@ -564,6 +584,14 @@ module.exports = class CourseService extends BaseService {
 
   updateCourse = catchServiceAsync(async (id, body) => {
     delete body.professor;
+
+    const parsedCourseId = parseInt(id, 10);
+
+    if (body.course_number !== undefined) {
+      const normalizedCourseNumber = normalizeCourseNumber(body.course_number);
+      await this.validateCourseNumberAvailability(normalizedCourseNumber, parsedCourseId);
+      body.course_number = formatCourseNumberForStorage(body.course_number);
+    }
     
     if (body.professor_id) {
       const professor = await _professor.findByPk(body.professor_id);
@@ -604,6 +632,39 @@ module.exports = class CourseService extends BaseService {
 
     const course = await _course.update(body, { where: { id } });
     return { data: course };
+  });
+
+  validateCourseNumberAvailability = catchServiceAsync(async (courseNumber, excludedCourseId = null) => {
+    const normalizedCourseNumber = normalizeCourseNumber(courseNumber);
+
+    validateParameters({ course_number: normalizedCourseNumber });
+
+    const existingCourse = await this.findCourseByNormalizedNumber(
+      normalizedCourseNumber,
+      excludedCourseId
+    );
+
+    if (existingCourse) {
+      throw new AppError('This course number is already registered', 400);
+    }
+  });
+
+  findCourseByNormalizedNumber = catchServiceAsync(async (normalizedCourseNumber, excludedCourseId = null) => {
+    if (!normalizedCourseNumber) {
+      return null;
+    }
+
+    const existingCourses = await _course.findAll({
+      ...(excludedCourseId ? { where: { id: { [Op.ne]: excludedCourseId } } } : {}),
+      attributes: ['id', 'course_number'],
+      raw: true,
+    });
+
+    return (
+      existingCourses.find(
+        (course) => normalizeCourseNumber(course.course_number) === normalizedCourseNumber
+      ) || null
+    );
   });
 
   updateCourseStatus = catchServiceAsync(async (id, body) => {
