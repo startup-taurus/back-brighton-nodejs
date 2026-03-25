@@ -4,16 +4,18 @@ const AppError = require('../utils/app-error');
 const { validateParameters } = require('../utils/utils');
 const sendEmail = require('../utils/email.utils');
 const { Op } = require('sequelize');
-const { AGE_CATEGORY } = require('../utils/constants');
+const { AGE_CATEGORY, ERROR_MESSAGES } = require('../utils/constants');
 
 let _registeredStudent = null;
 let _level = null;
+let _student = null;
 
 module.exports = class RegisteredStudentService extends BaseService {
-  constructor({ RegisteredStudent, Level }) {
+  constructor({ RegisteredStudent, Level, Student }) {
     super(RegisteredStudent);
     _registeredStudent = RegisteredStudent.RegisteredStudent;
     _level = Level.Level;
+    _student = Student.Student;
   }
 
   getAllRegisteredStudents = catchServiceAsync(async (query) => {
@@ -159,12 +161,14 @@ module.exports = class RegisteredStudentService extends BaseService {
       schedule,
     } = body;
 
+    const normalizedIdNumber = id_number?.trim();
+
     const validationParams = {
       first_name,
       middle_name,
       last_name,
       second_last_name,
-      id_number,
+      id_number: normalizedIdNumber,
       phone_number,
       email,
       address,
@@ -183,12 +187,29 @@ module.exports = class RegisteredStudentService extends BaseService {
 
     validateParameters(validationParams);
 
+    const [existingRegisteredStudent, existingStudent] = await Promise.all([
+      _registeredStudent.findOne({
+        where: { id_number: normalizedIdNumber },
+        attributes: ['id', 'id_number'],
+        raw: true,
+      }),
+      _student.findOne({
+        where: { cedula: normalizedIdNumber },
+        attributes: ['id', 'cedula'],
+        raw: true,
+      }),
+    ]);
+
+    if (existingRegisteredStudent || existingStudent) {
+      throw new AppError(ERROR_MESSAGES.CEDULA_ALREADY_REGISTERED, 400);
+    }
+
     const student = await _registeredStudent.create({
       first_name,
       middle_name,
       last_name,
       second_last_name,
-      id_number,
+      id_number: normalizedIdNumber,
       phone_number,
       email,
       address,

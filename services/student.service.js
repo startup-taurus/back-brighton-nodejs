@@ -2,7 +2,7 @@ const catchServiceAsync = require('../utils/catch-service-async');
 const BaseService = require('./base.service');
 const AppError = require('../utils/app-error');
 const { validateParameters, generateCredentials, validateEmailFormat } = require('../utils/utils');
-const { Op } = require('sequelize');
+const { Op, fn, col, where } = require('sequelize');
 const { ERROR_MESSAGES, GRADING_CATEGORIES, DELETED, ALLOWED_STATUS } = require('../utils/constants');
 let _user = null;
 let _student = null;
@@ -19,6 +19,11 @@ let _gradingCategory = null;
 let _gradingItem = null;
 let _studentTransfer = null;
 let _transferData = null;
+
+const normalizeCedula = (cedula) => {
+  if (cedula === null || cedula === undefined) return cedula;
+  return String(cedula).trim().replace(/[\s.-]/g, '');
+};
 
 module.exports = class StudentService extends BaseService {
   constructor({
@@ -365,17 +370,19 @@ module.exports = class StudentService extends BaseService {
       birth_date,
       phone_number,
     } = body;
+
+    const normalizedCedula = normalizeCedula(cedula);
     
     validateParameters({
       name,
-      cedula,
+      cedula: normalizedCedula,
       status,
       course: courseId,
     });
 
-    await this.validateDuplicates(body.email, cedula);
+    await this.validateDuplicates(body.email, normalizedCedula);
 
-    const { username, password } = generateCredentials(name, cedula);
+    const { username, password } = generateCredentials(name, normalizedCedula);
     body.username = username;
     body.password = password;
 
@@ -385,7 +392,7 @@ module.exports = class StudentService extends BaseService {
 
     const student = await _student.create({
       user_id: user.id,
-      cedula,
+      cedula: normalizedCedula,
       profession,
       level_id,
       status,
@@ -434,16 +441,9 @@ module.exports = class StudentService extends BaseService {
       birth_date,
       courseId,
     } = body;
-  
-    await _courseStudent.destroy({
-      where: { student_id: id }
-    });
-  
-    await _courseStudent.create({
-      course_id: parseInt(courseId),
-      student_id: id,
-      enrollment_date: new Date(),
-    });
+
+    const normalizedCedula = normalizeCedula(cedula);
+    const parsedStudentId = parseInt(id, 10);
   
     const student = await _student.findByPk(id, {
       include: [
@@ -457,6 +457,40 @@ module.exports = class StudentService extends BaseService {
   
     if (!student) {
       throw new AppError('Student not found', 404);
+    }
+
+    if (normalizedCedula) {
+      await this.validateCedulaAvailability(normalizedCedula, parsedStudentId);
+    }
+
+    await _courseStudent.destroy({
+      where: { student_id: id }
+    });
+
+    await _courseStudent.create({
+      course_id: parseInt(courseId, 10),
+      student_id: id,
+      enrollment_date: new Date(),
+    });
+
+    if (email && email !== student.user.email) {
+      const emailValidation = validateEmailFormat(email);
+      if (!emailValidation.isValid) {
+        throw new AppError(emailValidation.message, 400);
+      }
+
+      const existingEmailUser = await _user.findOne({
+        where: {
+          email,
+          id: { [Op.ne]: student.user_id },
+        },
+        attributes: ['id'],
+        raw: true,
+      });
+
+      if (existingEmailUser) {
+        throw new AppError(ERROR_MESSAGES.EMAIL_ALREADY_REGISTERED, 400);
+      }
     }
 
     if (name || email || first_name || middle_name || last_name || second_last_name) {
@@ -477,7 +511,7 @@ module.exports = class StudentService extends BaseService {
   
     await _student.update(
       {
-        cedula,
+        cedula: normalizedCedula,
         phone_number,
         level_id,
         status,
@@ -746,7 +780,9 @@ module.exports = class StudentService extends BaseService {
   });
 
   validateDuplicates = catchServiceAsync(async (email, cedula) => {
-    validateParameters({ email, cedula });
+    const normalizedCedula = normalizeCedula(cedula);
+
+    validateParameters({ email, cedula: normalizedCedula });
     
     const emailValidation = validateEmailFormat(email);
     if (!emailValidation.isValid) {
@@ -759,11 +795,7 @@ module.exports = class StudentService extends BaseService {
         attributes: ['id', 'email'],
         raw: true
       }),
-      _student.findOne({
-        where: { cedula },
-        attributes: ['id', 'cedula'],
-        raw: true
-      })
+      this.findStudentByNormalizedCedula(normalizedCedula)
     ]);
     
     const duplicateEmail = !!existingEmailUser;
@@ -780,6 +812,49 @@ module.exports = class StudentService extends BaseService {
     if (duplicateCedula) {
       throw new AppError(ERROR_MESSAGES.CEDULA_ALREADY_REGISTERED, 400);
     }
+  });
+
+  validateCedulaAvailability = catchServiceAsync(async (cedula, excludedStudentId = null) => {
+    const normalizedCedula = normalizeCedula(cedula);
+
+    validateParameters({ cedula: normalizedCedula });
+
+    const existingCedulaStudent = await this.findStudentByNormalizedCedula(
+      normalizedCedula,
+      excludedStudentId
+    );
+
+    if (existingCedulaStudent) {
+      throw new AppError(ERROR_MESSAGES.CEDULA_ALREADY_REGISTERED, 400);
+    }
+  });
+
+  findStudentByNormalizedCedula = catchServiceAsync(async (normalizedCedula, excludedStudentId = null) => {
+    if (!normalizedCedula) {
+      return null;
+    }
+
+    const conditions = [
+      where(
+        fn(
+          'REPLACE',
+          fn('REPLACE', fn('REPLACE', col('cedula'), ' ', ''), '-', ''),
+          '.',
+          ''
+        ),
+        normalizedCedula
+      ),
+    ];
+
+    if (excludedStudentId) {
+      conditions.push({ id: { [Op.ne]: excludedStudentId } });
+    }
+
+    return _student.findOne({
+      where: { [Op.and]: conditions },
+      attributes: ['id', 'cedula'],
+      raw: true,
+    });
   });
 
   transferAndProgressStudents = catchServiceAsync(async (studentIds, courseId, levelId) => {
