@@ -39,13 +39,27 @@ module.exports = class StudentGradesService extends BaseService {
   );
 
   createStudentGrade = async (body) => {
-    const { course_id, student_id, grading_item_id, grade = 0 } = body;
+    const { course_id, student_id, grading_item_id } = body;
+    const hasGrade = Object.prototype.hasOwnProperty.call(body, 'grade');
+    const incomingGrade = hasGrade ? body.grade : null;
 
     validateParameters({
       course_id,
       student_id,
       grading_item_id,
     });
+
+    let grade = null;
+
+    if (incomingGrade !== null && incomingGrade !== undefined) {
+      const numericGrade = Number(incomingGrade);
+
+      if (Number.isNaN(numericGrade) || numericGrade < 0 || numericGrade > 100) {
+        throw new AppError('Grade must be a number between 0 and 100 or null', 400);
+      }
+
+      grade = numericGrade;
+    }
 
     const studentGrade = await _studentGrades.findOne({
       where: {
@@ -54,6 +68,16 @@ module.exports = class StudentGradesService extends BaseService {
         grading_item_id,
       },
     });
+
+    if (incomingGrade === null || incomingGrade === undefined) {
+      if (studentGrade) {
+        await _studentGrades.destroy({
+          where: { course_id, student_id, grading_item_id },
+        });
+      }
+
+      return { data: null };
+    }
 
     let studentGrades;
 

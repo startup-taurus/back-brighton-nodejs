@@ -24,9 +24,9 @@ module.exports = class StudentGradesController extends BaseController {
     return appResponse(res, result);
   });
 
-  createStudentGrade = async (req, res) => {
+  createStudentGrade = catchControllerAsync(async (req, res) => {
     const body = req.body;
     const result = await _studentGradesService.createStudentGrade(body);
     return appResponse(res, result);
-  };
+  });
 };

@@ -41,7 +41,7 @@ module.exports = class StudentGradesModel {
         },
         grade: {
           type: DataTypes.DECIMAL(5, 2),
-          allowNull: false,
+          allowNull: true,
         },
       },
       {
