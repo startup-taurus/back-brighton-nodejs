@@ -167,7 +167,6 @@ module.exports = class StudentService extends BaseService {
           student_id: student.id,
           ...(query.course && { course_id: query.course }),
         },
-        limit: 2,
         include: [
           {
             model: _course,
@@ -201,6 +200,7 @@ module.exports = class StudentService extends BaseService {
             course_number: courseJson.course?.course_number,
             professor: courseJson.course?.professor?.user?.name,
             enrollment_date: courseJson.enrollment_date,
+            is_retired: courseJson.is_retired,
           };
         })
         .filter((c) => c.id);
@@ -276,7 +276,6 @@ module.exports = class StudentService extends BaseService {
       where: {
         student_id: student.id,
       },
-      limit: 2,
       include: [
         {
           model: _course,
@@ -310,6 +309,7 @@ module.exports = class StudentService extends BaseService {
           course_number: courseJson.course?.course_number,
           professor: courseJson.course?.professor?.user?.name,
           enrollment_date: courseJson.enrollment_date,
+          is_retired: courseJson.is_retired,
         };
       })
       .filter((c) => c.id);
@@ -444,6 +444,7 @@ module.exports = class StudentService extends BaseService {
 
     const normalizedCedula = normalizeCedula(cedula);
     const parsedStudentId = parseInt(id, 10);
+    const parsedCourseId = courseId ? parseInt(courseId, 10) : null;
   
     const student = await _student.findByPk(id, {
       include: [
@@ -463,15 +464,37 @@ module.exports = class StudentService extends BaseService {
       await this.validateCedulaAvailability(normalizedCedula, parsedStudentId);
     }
 
-    await _courseStudent.destroy({
-      where: { student_id: id }
-    });
+    if (courseId && isNaN(parsedCourseId)) {
+      throw new AppError('Invalid course ID', 400);
+    }
 
-    await _courseStudent.create({
-      course_id: parseInt(courseId, 10),
-      student_id: id,
-      enrollment_date: new Date(),
-    });
+    if (parsedCourseId) {
+      const activeCourseRelation = await _courseStudent.findOne({
+        where: { student_id: id, is_retired: false },
+        order: [['enrollment_date', 'DESC']],
+      });
+
+      if (!activeCourseRelation) {
+        await _courseStudent.create({
+          course_id: parsedCourseId,
+          student_id: id,
+          enrollment_date: new Date(),
+          is_retired: false,
+        });
+      } else if (activeCourseRelation.course_id !== parsedCourseId) {
+        await _courseStudent.update(
+          { is_retired: true },
+          { where: { student_id: id, is_retired: false } }
+        );
+
+        await _courseStudent.create({
+          course_id: parsedCourseId,
+          student_id: id,
+          enrollment_date: new Date(),
+          is_retired: false,
+        });
+      }
+    }
 
     if (email && email !== student.user.email) {
       const emailValidation = validateEmailFormat(email);

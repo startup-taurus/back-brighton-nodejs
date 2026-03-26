@@ -182,12 +182,18 @@ module.exports = class CourseService extends BaseService {
       observations: student.courseStudent?.observations,
     }));
 
+    const activeStudentsCount = studentList.filter(
+      (student) => !student.is_retired
+    ).length;
+
     return {
       data: {
         course_name: course.course_name,
         course_number: course.course_number,
         course_type: course.course_type, 
         total_students: course.students.length,
+        historical_students_count: course.students.length,
+        active_students_count: activeStudentsCount,
         students: studentList,
         professor: { ...course.professor.user.dataValues },
       },
