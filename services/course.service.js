@@ -355,29 +355,59 @@ module.exports = class CourseService extends BaseService {
   });
 
   getActiveCourses = catchServiceAsync(
-    async (page = 1, limit = 100, search = '') => {
+    async (page = 1, limit = 100, search = '', status = 'active') => {
       let limitNumber = parseInt(limit);
       let pageNumber = parseInt(page);
       const offset = (pageNumber - 1) * limitNumber;
 
-      const courses = await _course.findAll({
-        where: {
-          status: 'active',
-          ...(search && {
+      const normalizedStatus = String(status || 'active').toLowerCase();
+      const allowedStatuses = ['active', 'inactive'];
+      const statusFilter = allowedStatuses.includes(normalizedStatus)
+        ? normalizedStatus
+        : 'active';
+
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      const whereClause = {
+        status: statusFilter,
+        ...(search && {
+          [Op.or]: [
+            {
+              course_name: {
+                [Op.like]: `%${search}%`,
+              },
+            },
+            {
+              course_number: {
+                [Op.like]: `%${search}%`,
+              },
+            },
+          ],
+        }),
+      };
+
+      if (_course.rawAttributes?.last_class_date) {
+        whereClause[Op.and] = [
+          {
             [Op.or]: [
               {
-                course_name: {
-                  [Op.like]: `%${search}%`,
+                last_class_date: {
+                  [Op.is]: null,
                 },
               },
               {
-                course_number: {
-                  [Op.like]: `%${search}%`,
+                last_class_date: {
+                  [Op.gte]: today,
                 },
               },
             ],
-          }),
-        },
+          },
+        ];
+      }
+
+      const courses = await _course.findAll({
+        where: whereClause,
         include: [
           {
             model: _professor,
@@ -408,6 +438,15 @@ module.exports = class CourseService extends BaseService {
         limit: limitNumber,
         offset,
         order: [['id', 'DESC']],
+      });
+
+      console.log('[CourseService.getActiveCourses]', {
+        status: statusFilter,
+        page: pageNumber,
+        limit: limitNumber,
+        search,
+        lastClassDateFilterApplied: Boolean(_course.rawAttributes?.last_class_date),
+        returned: courses.length,
       });
 
       return {

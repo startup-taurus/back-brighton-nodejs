@@ -50,8 +50,8 @@ module.exports = class CourseController extends BaseController {
   });
 
   getActiveCourses = catchControllerAsync(async (req, res) => {
-    const { page, limit, search } = req.query;
-    const result = await _courseService.getActiveCourses(page, limit, search);
+    const { page, limit, search, status } = req.query;
+    const result = await _courseService.getActiveCourses(page, limit, search, status);
     return appResponse(res, result);
   });
 
