@@ -114,6 +114,7 @@ module.exports = class CourseGradingService extends BaseService {
       const missing = allItems
         .filter(
           (item) =>
+            item.category?.name !== GRADING_CATEGORIES.ASSIGNMENT &&
             (usageByItemId.get(item.id) || 0) === 0 && !existingIds.has(item.id)
         )
         .map((item) => ({
