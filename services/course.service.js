@@ -90,6 +90,20 @@ module.exports = class CourseService extends BaseService {
     const courses = await _course.findAll({
       include: [
         {
+          model: _professor,
+          as: 'professor',
+          required: false,
+          attributes: ['id', 'user_id'],
+          include: [
+            {
+              model: _user,
+              as: 'user',
+              required: false,
+              attributes: ['name'],
+            },
+          ],
+        },
+        {
           model: _courseSchedule,
           as: 'course_schedule',
           required: false,
@@ -113,6 +127,10 @@ module.exports = class CourseService extends BaseService {
         courseData.first_class_date = courseData.start_date;
         courseData.last_class_date = courseData.end_date;
       }
+
+      courseData.professor_name =
+        courseData.professor?.user?.name ||
+        null;
 
       delete courseData.course_schedule;
       return courseData;
@@ -440,14 +458,6 @@ module.exports = class CourseService extends BaseService {
         order: [['id', 'DESC']],
       });
 
-      console.log('[CourseService.getActiveCourses]', {
-        status: statusFilter,
-        page: pageNumber,
-        limit: limitNumber,
-        search,
-        lastClassDateFilterApplied: Boolean(_course.rawAttributes?.last_class_date),
-        returned: courses.length,
-      });
 
       return {
         data: courses,
@@ -699,9 +709,14 @@ module.exports = class CourseService extends BaseService {
       return null;
     }
 
+    const where = {
+      status: STATUS.ACTIVE,
+      ...(excludedCourseId ? { id: { [Op.ne]: excludedCourseId } } : {}),
+    };
+
     const existingCourses = await _course.findAll({
-      ...(excludedCourseId ? { where: { id: { [Op.ne]: excludedCourseId } } } : {}),
-      attributes: ['id', 'course_number'],
+      where,
+      attributes: ['id', 'course_number', 'status'],
       raw: true,
     });
 
@@ -872,6 +887,47 @@ module.exports = class CourseService extends BaseService {
 
     return {
       data: calendarData,
+    };
+  });
+
+  deactivateAndCreateCourse = catchServiceAsync(async (existingCourseId, newCourseData, deactivateStatus = STATUS.INACTIVE) => {
+    validateParameters({ 
+      course_number: normalizeCourseNumber(newCourseData.course_number),
+      deactivateStatus 
+    });
+
+    const validDeactivateStatuses = [STATUS.INACTIVE, STATUS.COMPLETED];
+    if (!validDeactivateStatuses.includes(deactivateStatus)) {
+      throw new AppError(`Invalid deactivate status. Allowed: ${validDeactivateStatuses.join(', ')}`, 400);
+    }
+
+    const existingCourse = await _course.findByPk(existingCourseId, { raw: true });
+    if (!existingCourse) {
+      throw new AppError('Existing course not found', 404);
+    }
+    if (existingCourse.status !== STATUS.ACTIVE) {
+      throw new AppError('Can only deactivate courses with ACTIVE status', 400);
+    }
+
+    await _course.update(
+      { status: deactivateStatus },
+      { where: { id: existingCourseId } }
+    );
+
+    const createResult = await this.createCourse(newCourseData);
+
+    return {
+      data: {
+        deactivated_course: {
+          id: existingCourse.id,
+          course_number: existingCourse.course_number,
+          course_name: existingCourse.course_name,
+          previous_status: existingCourse.status,
+          new_status: deactivateStatus,
+        },
+        new_course: createResult.data,
+      },
+      message: `Course ${existingCourse.course_name} has been ${deactivateStatus === STATUS.COMPLETED ? 'completed' : 'deactivated'}. New course created successfully.`,
     };
   });
 };

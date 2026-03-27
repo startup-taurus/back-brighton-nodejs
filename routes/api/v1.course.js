@@ -70,6 +70,13 @@ module.exports = function ({
     [AuthMiddleware, requirePermissions(PERMISSIONS.TOGGLE_COURSE_STATUS)],
     CourseController.updateCourseStatus
   );
+
+  router.post(
+    '/deactivate-and-create',
+    [AuthMiddleware, requirePermissions(PERMISSIONS.TOGGLE_COURSE_STATUS)],
+    CourseController.deactivateAndCreateCourse
+  );
+
   router.get(
     '/get-calendar',
     [

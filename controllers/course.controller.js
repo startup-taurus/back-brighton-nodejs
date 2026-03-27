@@ -84,4 +84,14 @@ module.exports = class CourseController extends BaseController {
     const result = await _courseService.updateCourseStatus(id, body);
     return appResponse(res, result);
   });
+
+  deactivateAndCreateCourse = catchControllerAsync(async (req, res) => {
+    const { existingCourseId, newCourseData, deactivateStatus } = req.body;
+    const result = await _courseService.deactivateAndCreateCourse(
+      existingCourseId,
+      newCourseData,
+      deactivateStatus
+    );
+    return appResponse(res, result);
+  });
 };
