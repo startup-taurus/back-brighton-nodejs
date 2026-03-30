@@ -18,6 +18,7 @@ const PERMISSIONS = {
   DELETE_STUDENT: 'delete_student',
   TRANSFER_STUDENT: 'transfer_student',
   TOGGLE_STUDENT_STATUS: 'toggle_student_status',
+  DOWNLOAD_STUDENT_DOCUMENT: 'download_student_document',
 
   VIEW_TEACHERS: 'view_teachers',
   CREATE_TEACHER: 'create_teacher',
