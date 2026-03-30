@@ -1,7 +1,6 @@
 const catchServiceAsync = require('../utils/catch-service-async');
 const BaseService = require('./base.service');
 const AppError = require('../utils/app-error');
-const { deleteFile } = require('../utils/upload');
 const {
   validateParameters,
   scheduleStringToDates,
@@ -523,26 +522,20 @@ module.exports = class ProfessorService extends BaseService {
       );
     }
 
-   
-    if (
-      body.image &&
-      professor.user.image &&
-      body.image !== professor.user.image
-    ) {
-      deleteFile(professor.user.image);
-    }
     const file = image ? { filename: image } : null;
-    await _userService.updateUser(professor.user_id, body, file);
-    await _professor.update(
-      {
-        cedula,
-        status,
-        email,
-        phone,
-        hourly_rate,
-      },
-      {where: {id}}
-    );
+      await _professor.sequelize.transaction(async (transaction) => {
+        await _userService.updateUser(professor.user_id, body, file, {transaction});
+        await _professor.update(
+          {
+            cedula,
+            status,
+            email,
+            phone,
+            hourly_rate,
+          },
+          {where: {id}, transaction}
+        );
+      });
 
     const updatedProfessor = await _professor.findByPk(id, {
       include: [

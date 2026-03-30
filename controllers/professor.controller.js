@@ -1,6 +1,7 @@
 const catchControllerAsync = require('../utils/catch-controller-async');
 const BaseController = require('./base.controller');
 const { appResponse } = require('../utils/app-response');
+const { deleteFile } = require('../utils/upload');
 let _professorService = null;
 module.exports = class ProfessorController extends BaseController {
   constructor({ ProfessorService }) {
@@ -52,21 +53,35 @@ module.exports = class ProfessorController extends BaseController {
 
   createProfessor = catchControllerAsync(async (req, res) => {
     const body = req.body;
-    if (req.file) {
-      body.image = req.file.filename;
+    try {
+      if (req.file) {
+        body.image = req.file.filename;
+      }
+      const result = await _professorService.createProfessor(body);
+      return appResponse(res, result);
+    } catch (error) {
+      if (req.file?.filename) {
+        deleteFile(req.file.filename);
+      }
+      throw error;
     }
-    const result = await _professorService.createProfessor(body);
-    return appResponse(res, result);
   });
 
   updateProfessor = catchControllerAsync(async (req, res) => {
-    if (req.file) {
-      req.body.image = req.file.filename;
-    }
     const body = req.body;
     const { id } = req.params;
-    const result = await _professorService.updateProfessor(id, body);
-    return appResponse(res, result);
+    try {
+      if (req.file) {
+        req.body.image = req.file.filename;
+      }
+      const result = await _professorService.updateProfessor(id, body);
+      return appResponse(res, result);
+    } catch (error) {
+      if (req.file?.filename) {
+        deleteFile(req.file.filename);
+      }
+      throw error;
+    }
   });
 
   updateProfessorStatus = catchControllerAsync(async (req, res) => {

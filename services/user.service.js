@@ -366,7 +366,7 @@ module.exports = class UserService extends BaseService {
     }
   );
 
-  updateUser = catchServiceAsync(async (id, body, file) => {
+  updateUser = catchServiceAsync(async (id, body, file, options = {}) => {
     const {
       name,
       first_name,
@@ -381,9 +381,11 @@ module.exports = class UserService extends BaseService {
     } = body;
     validateParameters({name, username, email, role, status});
 
+    const {transaction} = options;
+
     await this.validateDuplicateUser(email, username, id);
 
-    const currentUser = await _user.findByPk(id);
+    const currentUser = await _user.findByPk(id, {transaction});
     if (!currentUser) {
       throw new AppError('Usuario no encontrado', 404);
     }
@@ -409,7 +411,7 @@ module.exports = class UserService extends BaseService {
       updateData.password = hashedPassword;
     }
 
-    const user = await _user.update(updateData, {where: {id}});
+    const user = await _user.update(updateData, {where: {id}, transaction});
     return {data: user};
   });
 
