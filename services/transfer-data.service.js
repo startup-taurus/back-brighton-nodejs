@@ -418,67 +418,117 @@ module.exports = class TransferDataService extends BaseService {
   });
 
   approveTransfer = catchServiceAsync(async (transferDataId) => {
-    const transferData = await _transferData.findByPk(transferDataId, {
-      include: [
-        {
-          model: _course,
-          as: 'selected_course',
-          attributes: ['id', 'course_name'],
-        },
-        {
-          model: _level,
-          as: 'selected_level',
-          attributes: ['id', 'full_level'],
-        },
-      ],
-    });
-
-    if (!transferData) {
-      throw new AppError('Transfer data not found', 404);
-    }
-
+    const transaction = await _sequelize.transaction();
+    let transferData;
     let studentTransfers;
-    if (transferData.is_group) {
+
+    try {
+      transferData = await _transferData.findByPk(transferDataId, {
+        include: [
+          {
+            model: _course,
+            as: 'selected_course',
+            attributes: ['id', 'course_name'],
+          },
+          {
+            model: _level,
+            as: 'selected_level',
+            attributes: ['id', 'full_level'],
+          },
+        ],
+        transaction,
+        lock: transaction.LOCK.UPDATE,
+      });
+
+      if (!transferData) {
+        throw new AppError('Transfer data not found', 404);
+      }
+
+      if (transferData.status_level_change === ALLOWED_STATUS.REJECTED) {
+        throw new AppError('Rejected transfer cannot be approved', 400);
+      }
+
       studentTransfers = await _studentTransfer.findAll({
         where: { transfer_data_id: transferDataId },
+        transaction,
+        lock: transaction.LOCK.UPDATE,
       });
-    } else {
-      studentTransfers = await _studentTransfer.findAll({
-        where: { transfer_data_id: transferDataId },
-      });
-    }
 
-    await _transferData.update(
-      { status_level_change: 'approved' },
-      { where: { id: transferDataId } }
-    );
+      if (!studentTransfers.length) {
+        throw new AppError('Transfer has no students to process', 400);
+      }
 
-    for (const studentTransfer of studentTransfers) {
-      const student = await _student.findByPk(studentTransfer.student_id);
+      if (
+        transferData.status_level_change !== ALLOWED_STATUS.APPROVED &&
+        !transferData.selected_course_id &&
+        !transferData.selected_level_id
+      ) {
+        throw new AppError('Transfer target course or level is required', 400);
+      }
 
-      if (!student) {
-        throw new AppError(
-          `Student with ID ${studentTransfer.student_id} not found`,
-          404
+      if (transferData.status_level_change !== ALLOWED_STATUS.APPROVED) {
+        for (const studentTransfer of studentTransfers) {
+          const student = await _student.findByPk(studentTransfer.student_id, {
+            transaction,
+            lock: transaction.LOCK.UPDATE,
+          });
+
+          if (!student) {
+            throw new AppError(
+              `Student with ID ${studentTransfer.student_id} not found`,
+              404
+            );
+          }
+
+          if (transferData.selected_level_id) {
+            await _student.update(
+              { level_id: transferData.selected_level_id },
+              { where: { id: student.id }, transaction }
+            );
+          }
+
+          if (transferData.selected_course_id) {
+            await _courseStudent.update(
+              { is_retired: true },
+              { where: { student_id: student.id, is_retired: false }, transaction }
+            );
+
+            const existingActiveEnrollment = await _courseStudent.findOne({
+              where: {
+                student_id: student.id,
+                course_id: transferData.selected_course_id,
+                is_retired: false,
+              },
+              transaction,
+            });
+
+            if (!existingActiveEnrollment) {
+              await _courseStudent.create(
+                {
+                  student_id: student.id,
+                  course_id: transferData.selected_course_id,
+                  enrollment_date: new Date(),
+                  is_retired: false,
+                },
+                { transaction }
+              );
+            }
+          }
+        }
+
+        await _transferData.update(
+          {
+            status_level_change: ALLOWED_STATUS.APPROVED,
+            updated_at: new Date(),
+          },
+          { where: { id: transferDataId }, transaction }
         );
       }
 
-      await _student.update(
-        { level_id: transferData.selected_level_id },
-        { where: { id: student.id } }
-      );
-
-      await _courseStudent.update(
-        { is_retired: true },
-        { where: { student_id: student.id, is_retired: false } }
-      );
-
-      await _courseStudent.create({
-        student_id: student.id,
-        course_id: transferData.selected_course_id,
-        enrollment_date: new Date(),
-        is_retired: false,
-      });
+      await transaction.commit();
+    } catch (error) {
+      await transaction.rollback();
+      throw error;
     }
 
     const updatedStudents = await Promise.all(
@@ -512,7 +562,7 @@ module.exports = class TransferDataService extends BaseService {
         students: updatedStudents,
         transfer_data: {
           id: transferData.id,
-          status_level_change: 'approved',
+          status_level_change: ALLOWED_STATUS.APPROVED,
           selected_course: transferData.selected_course,
           selected_level: transferData.selected_level,
         },

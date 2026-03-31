@@ -3,7 +3,13 @@ const BaseService = require('./base.service');
 const AppError = require('../utils/app-error');
 const { validateParameters, generateCredentials, validateEmailFormat } = require('../utils/utils');
 const { Op, fn, col, where } = require('sequelize');
-const { ERROR_MESSAGES, GRADING_CATEGORIES, DELETED, ALLOWED_STATUS } = require('../utils/constants');
+const {
+  ERROR_MESSAGES,
+  GRADING_CATEGORIES,
+  DELETED,
+  ALLOWED_STATUS,
+  STATUS,
+} = require('../utils/constants');
 let _user = null;
 let _student = null;
 let _course = null;
@@ -19,6 +25,7 @@ let _gradingCategory = null;
 let _gradingItem = null;
 let _studentTransfer = null;
 let _transferData = null;
+let _sequelize = null;
 
 const normalizeCedula = (cedula) => {
   if (cedula === null || cedula === undefined) return cedula;
@@ -42,6 +49,7 @@ module.exports = class StudentService extends BaseService {
     GradingItem,
     StudentTransfer,
     TransferData,
+    Sequelize,
   }) {
     super(Student);
     _user = User.User;
@@ -59,6 +67,7 @@ module.exports = class StudentService extends BaseService {
     _gradingItem = GradingItem.GradingItem;
     _studentTransfer = StudentTransfer.StudentTransfer;
     _transferData = TransferData.TransferData;
+    _sequelize = Sequelize;
     
     this.categoryIds = null;
   }
@@ -586,6 +595,100 @@ module.exports = class StudentService extends BaseService {
     validateParameters({ id, status });
     const student = await _student.update({ status }, { where: { id } });
     return { data: student };
+  });
+
+  reactivateStudentsInCourse = catchServiceAsync(async (body = {}) => {
+    const { student_ids = [], course_id } = body;
+
+    const parsedCourseId = Number(course_id);
+    const parsedStudentIds = Array.isArray(student_ids)
+      ? [...new Set(student_ids.map((id) => Number(id)).filter((id) => Number.isInteger(id) && id > 0))]
+      : [];
+
+    if (!Number.isInteger(parsedCourseId) || parsedCourseId <= 0) {
+      throw new AppError('Valid course_id is required', 400);
+    }
+
+    if (!parsedStudentIds.length) {
+      throw new AppError('At least one valid student id is required', 400);
+    }
+
+    const courseExists = await _course.findByPk(parsedCourseId);
+    if (!courseExists) {
+      throw new AppError('Course not found', 404);
+    }
+
+    const transaction = await _sequelize.transaction();
+
+    try {
+      for (const studentId of parsedStudentIds) {
+        const student = await _student.findByPk(studentId, {
+          transaction,
+          lock: transaction.LOCK.UPDATE,
+        });
+
+        if (!student || student.status === DELETED.DELETED_ITEM) {
+          throw new AppError(`Student with ID ${studentId} not found`, 404);
+        }
+
+        await _courseStudent.update(
+          { is_retired: true },
+          {
+            where: {
+              student_id: studentId,
+              is_retired: false,
+              course_id: { [Op.ne]: parsedCourseId },
+            },
+            transaction,
+          }
+        );
+
+        const relationInTargetCourse = await _courseStudent.findOne({
+          where: {
+            student_id: studentId,
+            course_id: parsedCourseId,
+          },
+          transaction,
+          lock: transaction.LOCK.UPDATE,
+        });
+
+        if (relationInTargetCourse) {
+          if (relationInTargetCourse.is_retired) {
+            await relationInTargetCourse.update({ is_retired: false }, { transaction });
+          }
+        } else {
+          await _courseStudent.create(
+            {
+              student_id: studentId,
+              course_id: parsedCourseId,
+              enrollment_date: new Date(),
+              is_retired: false,
+            },
+            { transaction }
+          );
+        }
+
+        if (student.status === STATUS.INACTIVE) {
+          await _student.update(
+            { status: STATUS.ACTIVE },
+            { where: { id: studentId }, transaction }
+          );
+        }
+      }
+
+      await transaction.commit();
+
+      return {
+        data: {
+          course_id: parsedCourseId,
+          student_ids: parsedStudentIds,
+          reactivated_count: parsedStudentIds.length,
+        },
+      };
+    } catch (error) {
+      await transaction.rollback();
+      throw error;
+    }
   });
 
   deleteStudent = catchServiceAsync(async (id) => {

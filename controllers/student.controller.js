@@ -38,6 +38,11 @@ module.exports = class StudentController extends BaseController {
     return appResponse(res, result);
   });
 
+  reactivateStudentsInCourse = catchControllerAsync(async (req, res) => {
+    const result = await _studentService.reactivateStudentsInCourse(req.body);
+    return appResponse(res, result);
+  });
+
   deleteStudent = catchControllerAsync(async (req, res) => {
     const { id } = req.params;
     const result = await _studentService.deleteStudent(id);

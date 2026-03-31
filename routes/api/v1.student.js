@@ -41,6 +41,11 @@ module.exports = function ({ StudentController, AuthMiddleware }) {
     [AuthMiddleware, requirePermissions(PERMISSIONS.TOGGLE_STUDENT_STATUS)],
     StudentController.updateStudentStatus
   );
+  router.put(
+    '/reactivate-in-course',
+    [AuthMiddleware, requirePermissions(PERMISSIONS.EDIT_GRADES)],
+    StudentController.reactivateStudentsInCourse
+  );
   router.delete(
     '/delete/:id',
     [AuthMiddleware, requirePermissions(PERMISSIONS.DELETE_STUDENT)],
