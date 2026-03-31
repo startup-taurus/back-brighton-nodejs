@@ -7,12 +7,12 @@ module.exports = class RegisteredStudentController extends BaseController {
     super(RegisteredStudentService);
     _registeredStudentService = RegisteredStudentService;
   }
-  getAllRegisteredStudents = async (req, res) => {
+  getAllRegisteredStudents = catchControllerAsync(async (req, res) => {
     const result = await _registeredStudentService.getAllRegisteredStudents({
       ...req.query,
     });
     return appResponse(res, result);
-  };
+  });
 
   getStudent = catchControllerAsync(async (req, res) => {
     const { id } = req.params;

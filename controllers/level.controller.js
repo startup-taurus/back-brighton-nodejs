@@ -10,10 +10,10 @@ module.exports = class LevelController extends BaseController {
     _levelService = LevelService;
   }
 
-  getAllLevels = async (req, res) => {
+  getAllLevels = catchControllerAsync(async (req, res) => {
     const result = await _levelService.getAllLevels({ ...req.query });
     return appResponse(res, result);
-  };
+  });
 
   getLevel = catchControllerAsync(async (req, res) => {
     const { id } = req.params;
