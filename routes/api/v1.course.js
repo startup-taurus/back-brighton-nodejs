@@ -57,6 +57,12 @@ module.exports = function ({
     CourseGradingController.deleteCourseAssignmentItem
   );
 
+  router.delete(
+    '/:courseId/assignment-gradebook/:itemId',
+    [AuthMiddleware, ValidateCourseMiddleware],
+    CourseGradingController.deleteAssignmentFromGradebook
+  );
+
   router.post(
     '/assignment/delete-batch',
     [AuthMiddleware, requirePermissions(PERMISSIONS.DELETE_GRADES)],

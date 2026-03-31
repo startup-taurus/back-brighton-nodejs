@@ -51,4 +51,10 @@ module.exports = class CourseGradingController extends BaseController {
     const result = await _courseGradingService.deleteCourseAssignmentItemsBatch(payload);
     return appResponse(res, result);
   });
+
+  deleteAssignmentFromGradebook = catchControllerAsync(async (req, res) => {
+    const { courseId, itemId } = req.params;
+    const result = await _courseGradingService.deleteAssignmentFromGradebook(courseId, Number(itemId));
+    return appResponse(res, result);
+  });
 };

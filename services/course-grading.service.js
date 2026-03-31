@@ -377,6 +377,52 @@ module.exports = class CourseGradingService extends BaseService {
     return {data: {shifted_to: target}};
   });
 
+  deleteAssignmentFromGradebook = catchServiceAsync(async (courseId, itemId) => {
+    const transaction = await _courseGrading.sequelize.transaction();
+    try {
+      const courseGrading = await _courseGrading.findOne({
+        where: {
+          course_id: Number(courseId),
+        },
+        include: [
+          {
+            model: _gradingItem,
+            as: 'grading_item',
+            attributes: ['id'],
+            where: { id: Number(itemId) },
+          },
+        ],
+        transaction,
+      });
+
+      if (!courseGrading) {
+        throw new AppError(ERROR_MESSAGES.ASSIGNMENT_NOT_FOUND_IN_COURSE, 404);
+      }
+
+      await _studentGrades.destroy({
+        where: {
+          course_id: Number(courseId),
+          grading_item_id: Number(itemId),
+        },
+        transaction,
+      });
+
+      await _courseGrading.destroy({
+        where: {
+          course_id: Number(courseId),
+          grading_item_id: Number(itemId),
+        },
+        transaction,
+      });
+
+      await transaction.commit();
+      return { data: { message: 'Assignment deleted successfully' } };
+    } catch (err) {
+      await transaction.rollback();
+      throw err;
+    }
+  });
+
   deleteCourseAssignmentItemsBatch = catchServiceAsync(async (deletes) => {
     const transaction = await _courseGrading.sequelize.transaction();
     try {
