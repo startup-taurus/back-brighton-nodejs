@@ -18,6 +18,7 @@ let _syllabusItems = null;
 let _gradingItem = null;
 let _courseGrading = null;
 let _courseSchedule = null;
+let _attendance = null;
 let _holidays = null;
 let _grades = null;
 let _syllabus = null;
@@ -50,6 +51,7 @@ module.exports = class CourseService extends BaseService {
     SyllabusItems,
     CourseGrading,
     GradingItem,
+    Attendance,
     Holidays,
     Grades,
     Syllabus,
@@ -66,6 +68,7 @@ module.exports = class CourseService extends BaseService {
     _courseSchedule = CourseSchedule.CourseSchedule;
     _courseGrading = CourseGrading.CourseGrading;
     _gradingItem = GradingItem.GradingItem;
+    _attendance = Attendance.Attendance;
     _holidays = Holidays.Holidays;
     _grades = Grades.Grades;
     _sequelize = Sequelize;
@@ -641,6 +644,135 @@ module.exports = class CourseService extends BaseService {
     delete body.professor;
 
     const parsedCourseId = parseInt(id, 10);
+    const courseData = await _course.findByPk(parsedCourseId, {
+      attributes: ['id', 'course_type', 'start_date', 'schedule', 'syllabus_id'],
+      raw: true,
+    });
+
+    if (!courseData) {
+      throw new AppError('Course not found', 404);
+    }
+
+    const toDateOnly = (value) => {
+      if (!value) return null;
+      if (value instanceof Date) {
+        const year = value.getFullYear();
+        const month = String(value.getMonth() + 1).padStart(2, '0');
+        const day = String(value.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+      }
+
+      const valueStr = value.toString();
+      return valueStr.includes('T') ? valueStr.split('T')[0] : valueStr;
+    };
+
+    const getSelectiveScheduleUpdates = async ({ courseId, startDate, schedule, syllabusId }) => {
+      const existingScheduleRows = await _courseSchedule.findAll({
+        where: { course_id: courseId },
+        order: [['scheduled_date', 'ASC']],
+        raw: true,
+      });
+
+      if (!existingScheduleRows || existingScheduleRows.length === 0) {
+        return [];
+      }
+
+      const scheduleIds = existingScheduleRows.map((scheduleRow) => scheduleRow.id);
+      const attendanceRows = await _attendance.findAll({
+        where: {
+          course_schedule_id: {
+            [Op.in]: scheduleIds,
+          },
+        },
+        attributes: ['course_schedule_id'],
+        raw: true,
+      });
+
+      const schedulesWithAttendance = new Set(
+        attendanceRows.map((attendance) => Number(attendance.course_schedule_id))
+      );
+
+      const today = toDateOnly(new Date());
+      const movableSchedules = [];
+      const blockedDates = new Set();
+
+      existingScheduleRows.forEach((scheduleRow) => {
+        const scheduleDate = toDateOnly(scheduleRow.scheduled_date);
+        const hasAttendance = schedulesWithAttendance.has(Number(scheduleRow.id));
+        const isTodayOrFuture = scheduleDate >= today;
+
+        if (!hasAttendance && isTodayOrFuture) {
+          movableSchedules.push(scheduleRow);
+        } else {
+          blockedDates.add(scheduleDate);
+        }
+      });
+
+      if (movableSchedules.length === 0) {
+        return [];
+      }
+
+      let syllabus = await _syllabusService.getSyllabusById(syllabusId);
+      syllabus = syllabus?.data;
+
+      if (!syllabus || !Array.isArray(syllabus.items) || syllabus.items.length === 0) {
+        throw new AppError('Syllabus items not found', 404);
+      }
+
+      const activeHolidays = await _holidays.findAll({
+        where: { status: 'active' },
+      });
+
+      const recalculatedDates = calculateClassDates(
+        startDate,
+        syllabus.items,
+        schedule,
+        activeHolidays
+      );
+
+      const candidateDates = recalculatedDates
+        .map((date) => toDateOnly(date))
+        .filter((date) => !blockedDates.has(date));
+
+      if (candidateDates.length < movableSchedules.length) {
+        throw new AppError(
+          'Cannot apply schedule changes because some future classes are locked by attendance records',
+          400
+        );
+      }
+
+      return movableSchedules.map((scheduleRow, index) => ({
+        id: scheduleRow.id,
+        scheduled_date: candidateDates[index],
+      }));
+    };
+
+    const shouldRecalculateSchedule =
+      body.course_type !== COURSE_TYPES.PRIVATE &&
+      body.course_type !== COURSE_TYPES.PRIVATE_ONLINE &&
+      (body.start_date !== undefined || body.schedule !== undefined) &&
+      courseData.course_type !== COURSE_TYPES.PRIVATE &&
+      courseData.course_type !== COURSE_TYPES.PRIVATE_ONLINE;
+
+    let selectiveScheduleUpdates = [];
+    if (shouldRecalculateSchedule) {
+      const todayDateOnly = toDateOnly(new Date());
+      const requestedStartDate = body.start_date || toDateOnly(courseData.start_date);
+      const nextStartDate = requestedStartDate > todayDateOnly ? requestedStartDate : todayDateOnly;
+      const nextSchedule = body.schedule || courseData.schedule;
+      const nextSyllabusId = body.syllabus_id || courseData.syllabus_id;
+
+      if (!nextStartDate || !nextSchedule || !nextSyllabusId) {
+        throw new AppError('Start date, schedule and syllabus are required to update class dates', 400);
+      }
+
+      selectiveScheduleUpdates = await getSelectiveScheduleUpdates({
+        courseId: parsedCourseId,
+        startDate: nextStartDate,
+        schedule: nextSchedule,
+        syllabusId: nextSyllabusId,
+      });
+    }
 
     if (body.course_number !== undefined) {
       const normalizedCourseNumber = normalizeCourseNumber(body.course_number);
@@ -686,6 +818,18 @@ module.exports = class CourseService extends BaseService {
     }
 
     const course = await _course.update(body, { where: { id } });
+
+    if (selectiveScheduleUpdates.length > 0) {
+      await Promise.all(
+        selectiveScheduleUpdates.map(({ id: scheduleId, scheduled_date }) =>
+          _courseSchedule.update(
+            { scheduled_date },
+            { where: { id: scheduleId } }
+          )
+        )
+      );
+    }
+
     return { data: course };
   });
 

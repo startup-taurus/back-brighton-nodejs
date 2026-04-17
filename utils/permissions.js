@@ -11,6 +11,7 @@ const PERMISSIONS = {
   VIEW_DASHBOARD_PROFESSORS_SUMMARY: 'view_dashboard_professors_summary',
   VIEW_DASHBOARD_LAST_STUDENT_TRANSFER: 'view_dashboard_last_student_transfer',
   VIEW_DASHBOARD_CONSECUTIVE_ABSENCES_REPORT: 'view_dashboard_consecutive_absences_report',
+  VIEW_DASHBOARD_DAILY_ABSENCE_REMINDER: 'view_dashboard_daily_absence_reminder',
 
   VIEW_STUDENTS: 'view_students',
   CREATE_STUDENT: 'create_student',
