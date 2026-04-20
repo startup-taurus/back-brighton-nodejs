@@ -22,4 +22,12 @@ module.exports = class CourseScheduleController extends BaseController {
     const result = await _courseScheduleService.updateLessonTaught(id, body);
     return appResponse(res, result);
   });
+
+  rescheduleDate = catchControllerAsync(async (req, res) => {
+    const { id } = req.params;
+    const body = req.body;
+
+    const result = await _courseScheduleService.rescheduleDate(id, body);
+    return appResponse(res, result);
+  });
 };

@@ -18,5 +18,14 @@ module.exports = function ({ CourseScheduleController, AuthMiddleware }) {
     CourseScheduleController.updateLessonTaught
   );
 
+  router.put(
+    '/reschedule/:id',
+    [
+      AuthMiddleware,
+      requirePermissions(PERMISSIONS.RESCHEDULE_ATTENDANCE_DATE),
+    ],
+    CourseScheduleController.rescheduleDate
+  );
+
   return router;
 };

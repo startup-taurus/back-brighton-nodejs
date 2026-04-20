@@ -2,6 +2,7 @@ const { isWithinInterval, isBefore } = require('date-fns');
 const { Op } = require('sequelize');
 const catchServiceAsync = require('../utils/catch-service-async');
 const { calculateClassDates } = require('../utils/utils');
+const AppError = require('../utils/app-error');
 const BaseService = require('./base.service');
 
 let _courseSchedule = null;
@@ -57,6 +58,110 @@ module.exports = class CourseScheduleService extends BaseService {
     );
 
     return { data: response };
+  });
+
+  normalizeDateInput = (inputDate) => {
+    if (!inputDate) return null;
+    if (typeof inputDate === 'string') {
+      const raw = inputDate.trim();
+      const datePart = raw.split('T')[0];
+      if (/^\d{4}-\d{2}-\d{2}$/.test(datePart)) return datePart;
+    }
+
+    const parsed = new Date(inputDate);
+    if (Number.isNaN(parsed.getTime())) return null;
+    return parsed.toISOString().split('T')[0];
+  };
+
+  rescheduleDate = catchServiceAsync(async (id, data = {}) => {
+    const scheduleId = Number(id);
+    if (!Number.isInteger(scheduleId) || scheduleId <= 0) {
+      throw new AppError('Invalid schedule id', 400);
+    }
+
+    const targetDate = this.normalizeDateInput(data.new_date);
+    if (!targetDate) {
+      throw new AppError('new_date is required in YYYY-MM-DD format', 400);
+    }
+
+    return _courseSchedule.sequelize.transaction(async (transaction) => {
+      const schedule = await _courseSchedule.findByPk(scheduleId, {
+        raw: true,
+        transaction,
+      });
+
+      if (!schedule) {
+        throw new AppError('Course schedule not found', 404);
+      }
+
+      const currentDate = new Date(schedule.scheduled_date)
+        .toISOString()
+        .split('T')[0];
+
+      if (currentDate === targetDate) {
+        throw new AppError('The selected date is the same as the current date', 400);
+      }
+
+      const [holidayCount, conflictingSchedule, cancelledLessonCount] = await Promise.all([
+        _holidays.count({
+          where: {
+            status: 'active',
+            [Op.and]: [
+              _holidays.sequelize.where(
+                _holidays.sequelize.fn('DATE', _holidays.sequelize.col('holiday_date')),
+                targetDate
+              ),
+            ],
+          },
+          transaction,
+        }),
+        _courseSchedule.findOne({
+          where: {
+            id: { [Op.ne]: scheduleId },
+            course_id: schedule.course_id,
+            [Op.and]: [
+              _courseSchedule.sequelize.where(
+                _courseSchedule.sequelize.fn('DATE', _courseSchedule.sequelize.col('scheduled_date')),
+                targetDate
+              ),
+            ],
+          },
+          raw: true,
+          transaction,
+        }),
+        _cancelledLesson.count({
+          where: {
+            course_id: schedule.course_id,
+            cancel_date: targetDate,
+          },
+          transaction,
+        }),
+      ]);
+
+      if (holidayCount > 0) {
+        throw new AppError('Cannot move class to a holiday date', 400);
+      }
+
+      if (cancelledLessonCount > 0) {
+        throw new AppError('Cannot move class to a cancelled lesson date', 400);
+      }
+
+      if (conflictingSchedule) {
+        throw new AppError('The course already has a class on the selected date', 400);
+      }
+
+      await _courseSchedule.update(
+        { scheduled_date: targetDate },
+        { where: { id: scheduleId }, transaction }
+      );
+
+      const updatedSchedule = await _courseSchedule.findByPk(scheduleId, {
+        raw: true,
+        transaction,
+      });
+
+      return { data: updatedSchedule };
+    });
   });
 
   updateScheduleDaysOfClasess = catchServiceAsync(

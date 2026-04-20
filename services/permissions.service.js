@@ -89,6 +89,7 @@ module.exports = class PermissionsService extends BaseService {
           'view_syllabus',
           'view_attendance',
           'mark_attendance',
+          'reschedule_attendance_date',
           'view_gradebook',
           'add_grades',
           'edit_grades',

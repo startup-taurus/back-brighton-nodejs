@@ -47,6 +47,7 @@ const PERMISSIONS = {
   VIEW_ATTENDANCE: 'view_attendance',
   MARK_ATTENDANCE: 'mark_attendance',
   EDIT_ATTENDANCE: 'edit_attendance',
+  RESCHEDULE_ATTENDANCE_DATE: 'reschedule_attendance_date',
 
   VIEW_GRADEBOOK: 'view_gradebook',
   ADD_GRADES: 'add_grades',
