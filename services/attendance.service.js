@@ -174,6 +174,11 @@ module.exports = class AttendanceService extends BaseService {
   });
 
   getConsecutiveAbsencesReport = catchServiceAsync(async () => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const hasLastClassDate = Boolean(_course.rawAttributes?.last_class_date);
+
     const attendanceRecords = await _attendance.findAll({
       include: [
         {
@@ -183,10 +188,15 @@ module.exports = class AttendanceService extends BaseService {
             {
               model: _course,
               as: 'course',
-              attributes: ['id', 'course_name', 'course_number']
+              where: {
+                status: 'active'
+              },
+              attributes: ['id', 'course_name', 'course_number', ...(hasLastClassDate ? ['last_class_date'] : [])],
+              required: true
             }
           ],
-          attributes: ['id', 'scheduled_date', 'course_id']
+          attributes: ['id', 'scheduled_date', 'course_id'],
+          required: true
         },
         {
           model: _student,
@@ -206,88 +216,99 @@ module.exports = class AttendanceService extends BaseService {
               where: {
                 is_retired: false
               },
-              required: true
+              attributes: ['course_id', 'is_retired'],
+              required: true,
             }
           ],
           attributes: ['id', 'user_id', 'status']
         }
       ],
-      where: {
-        status: 'absent'
-      },
-      order: [['student_id', 'ASC'], [{ model: _courseSchedule, as: 'course_schedule' }, 'scheduled_date', 'ASC']]
+      order: [
+        ['student_id', 'ASC'],
+        [{ model: _courseSchedule, as: 'course_schedule' }, 'course_id', 'ASC'],
+        [{ model: _courseSchedule, as: 'course_schedule' }, 'scheduled_date', 'DESC']
+      ]
     });
-    
+
     if (!attendanceRecords || attendanceRecords.length === 0) {
       return { data: [] };
     }
-    
-    const studentCourseAbsences = {};
-    
+
+    const studentCourseAttendances = {};
+
     attendanceRecords.forEach(record => {
+      const courseSchedule = record.course_schedule;
+      const course = courseSchedule?.course;
+      const student = record.student;
+
+      if (!courseSchedule || !course || !student?.user) {
+        return;
+      }
+
+      if (hasLastClassDate && course.last_class_date) {
+        const courseLastClassDate = new Date(course.last_class_date);
+        if (courseLastClassDate < today) {
+          return;
+        }
+      }
+
       const studentId = record.student_id;
-      const courseId = record.course_schedule.course_id;
-      const courseCode = record.course_schedule.course.course_number;
-      const courseName = record.course_schedule.course.course_name;
-      const studentName = record.student.user.name;
-      const absenceDate = new Date(record.course_schedule.scheduled_date);
-      
+      const courseId = courseSchedule.course_id;
+
+      const hasActiveEnrollmentInCourse = Array.isArray(student.coursesStudent)
+        && student.coursesStudent.some(courseStudent =>
+          !courseStudent.is_retired && Number(courseStudent.course_id) === Number(courseId)
+        );
+
+      if (!hasActiveEnrollmentInCourse) {
+        return;
+      }
+
       const key = `${studentId}-${courseId}`;
-      
-      if (!studentCourseAbsences[key]) {
-        studentCourseAbsences[key] = {
+
+      if (!studentCourseAttendances[key]) {
+        studentCourseAttendances[key] = {
           studentId,
-          studentName,
+          studentName: student.user.name,
           courseId,
-          courseCode,
-          courseName,
-          absences: []
+          courseCode: course.course_number,
+          courseName: course.course_name,
+          attendances: []
         };
       }
-      
-      studentCourseAbsences[key].absences.push(absenceDate);
-    });
-    
-    const consecutiveAbsencesReport = [];
-    
-    Object.values(studentCourseAbsences).forEach(studentCourse => {
-      studentCourse.absences.sort((a, b) => a - b);
-      
-      let maxConsecutive = 0;
-      let currentConsecutive = 1;
-      
-      if (studentCourse.absences.length === 1) {
-        maxConsecutive = 1;
-      } else {
-        for (let i = 1; i < studentCourse.absences.length; i++) {
-          const prevDate = studentCourse.absences[i - 1];
-          const currentDate = studentCourse.absences[i];
-          
-          const diffTime = Math.abs(currentDate - prevDate);
-          const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-          
-          if (diffDays <= 7) {
-            currentConsecutive++;
-          } else {
-            maxConsecutive = Math.max(maxConsecutive, currentConsecutive);
-            currentConsecutive = 1;
-          }
-        }
-        
 
-        maxConsecutive = Math.max(maxConsecutive, currentConsecutive);
+      studentCourseAttendances[key].attendances.push({
+        status: record.status,
+        scheduledDate: new Date(courseSchedule.scheduled_date),
+      });
+    });
+
+    const consecutiveAbsencesReport = [];
+
+    Object.values(studentCourseAttendances).forEach(studentCourse => {
+      studentCourse.attendances.sort((a, b) => b.scheduledDate - a.scheduledDate);
+
+      let currentStreak = 0;
+
+      for (const attendance of studentCourse.attendances) {
+        if (attendance.status === 'absent') {
+          currentStreak++;
+          continue;
+        }
+
+        break;
       }
-      
-      if (maxConsecutive >= ATTENDANCE_THRESHOLDS.MIN_CONSECUTIVE_ABSENCES) {
+
+      if (currentStreak >= ATTENDANCE_THRESHOLDS.MIN_CONSECUTIVE_ABSENCES) {
         consecutiveAbsencesReport.push({
           course_code: studentCourse.courseCode,
           course_name: studentCourse.courseName,
           student_name: studentCourse.studentName,
-          consecutive_absences: maxConsecutive
+          consecutive_absences: currentStreak
         });
       }
     });
-    
+
     return { data: consecutiveAbsencesReport };
   });
 };
