@@ -1,4 +1,5 @@
 const BaseService = require('./base.service');
+const { Op } = require('sequelize');
 const AppError = require('../utils/app-error');
 const catchServiceAsync = require('../utils/catch-service-async');
 const { COURSE_TYPES, ATTENDANCE_THRESHOLDS } = require('../utils/constants');
@@ -234,6 +235,43 @@ module.exports = class AttendanceService extends BaseService {
       return { data: [] };
     }
 
+    const involvedCourseIds = [
+      ...new Set(
+        attendanceRecords
+          .map(record => record?.course_schedule?.course_id)
+          .filter(Boolean)
+      ),
+    ];
+
+    const lastScheduleRows = involvedCourseIds.length
+      ? await _courseSchedule.findAll({
+        attributes: [
+          'course_id',
+          [
+            _courseSchedule.sequelize.fn(
+              'MAX',
+              _courseSchedule.sequelize.col('scheduled_date')
+            ),
+            'last_scheduled_date',
+          ],
+        ],
+        where: {
+          course_id: {
+            [Op.in]: involvedCourseIds,
+          },
+        },
+        group: ['course_id'],
+        raw: true,
+      })
+      : [];
+
+    const latestScheduleDateByCourse = new Map(
+      lastScheduleRows.map(row => [
+        Number(row.course_id),
+        row.last_scheduled_date ? new Date(row.last_scheduled_date) : null,
+      ])
+    );
+
     const studentCourseAttendances = {};
 
     attendanceRecords.forEach(record => {
@@ -259,6 +297,14 @@ module.exports = class AttendanceService extends BaseService {
 
       const studentId = record.student_id;
       const courseId = courseSchedule.course_id;
+
+      const latestScheduleDate = latestScheduleDateByCourse.get(Number(courseId));
+      if (latestScheduleDate) {
+        latestScheduleDate.setHours(0, 0, 0, 0);
+        if (latestScheduleDate < today) {
+          return;
+        }
+      }
 
       const hasActiveEnrollmentInCourse = Array.isArray(student.coursesStudent)
         && student.coursesStudent.some(courseStudent =>
