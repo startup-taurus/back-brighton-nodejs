@@ -191,7 +191,7 @@ module.exports = class AttendanceService extends BaseService {
               where: {
                 status: 'active'
               },
-              attributes: ['id', 'course_name', 'course_number', ...(hasLastClassDate ? ['last_class_date'] : [])],
+              attributes: ['id', 'course_name', 'course_number', 'status', ...(hasLastClassDate ? ['last_class_date'] : [])],
               required: true
             }
           ],
@@ -242,6 +242,11 @@ module.exports = class AttendanceService extends BaseService {
       const student = record.student;
 
       if (!courseSchedule || !course || !student?.user) {
+        return;
+      }
+
+      const normalizedCourseStatus = String(course.status || '').trim().toLowerCase();
+      if (normalizedCourseStatus !== 'active') {
         return;
       }
 
