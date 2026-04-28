@@ -411,8 +411,14 @@ module.exports = class UserService extends BaseService {
       updateData.password = hashedPassword;
     }
 
-    const user = await _user.update(updateData, {where: {id}, transaction});
-    return {data: user};
+    await _user.update(updateData, {where: {id}, transaction});
+
+    const updatedUser = await _user.findByPk(id, {
+      transaction,
+      attributes: {exclude: ['password']},
+    });
+
+    return {data: updatedUser ? updatedUser.get({ plain: true }) : null};
   });
 
   updateUserStatus = catchServiceAsync(async (id, body) => {
