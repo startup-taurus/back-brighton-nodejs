@@ -18,6 +18,12 @@ module.exports = {
     host: process.env.DB_HOST,
     dialect: 'mysql',
     logging: false,
+    
+    pool: {
+      max: 20,
+      min: 2,
+      acquire: 15000,
+      idle: 10000
+    }
   },
-  // SWAGGER_PATH: __dirname.concat("/swagger/swaggerDEV.json"),
 };
