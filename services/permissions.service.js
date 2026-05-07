@@ -3,6 +3,7 @@ const BaseService = require('./base.service');
 const { Op } = require('sequelize');
 const { PERMISSIONS } = require('../utils/permissions');
 const { MODULES_ORDER, MODULE_RULES } = require('../utils/constants');
+const cache = require('../utils/cache');
 
 let _role = null;
 let _permission = null;
@@ -131,6 +132,7 @@ module.exports = class PermissionsService extends BaseService {
       await _role.update({ updated_at: now }, { where: { id: roleRecord.id }, transaction });
 
       await transaction.commit();
+      cache.del('authPerms', roleName);
       return { data: permissionIdentifiers, updated_at: now };
     } catch (error) {
       await transaction.rollback();
@@ -173,6 +175,7 @@ module.exports = class PermissionsService extends BaseService {
       });
 
       await Promise.all(operations);
+      cache.reset('authPerms');
       return { data: identifiers.length, message: 'Permissions synced successfully' };
     });
   });

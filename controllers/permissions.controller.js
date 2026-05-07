@@ -20,8 +20,8 @@ module.exports = class PermissionsController extends BaseController {
   });
 
   getMyPermissions = catchControllerAsync(async (req, res) => {
-    const result = await _permissionsService.getPermissionsForUser(req.user);
-    return appResponse(res, result);
+    const permissions = Array.isArray(req.user?.permissions) ? req.user.permissions : [];
+    return appResponse(res, { data: permissions });
   });
 
   getPermissionsByRole = catchControllerAsync(async (req, res) => {

@@ -17,6 +17,7 @@ let _professor = null;
 let _attendance = null;
 let _userService = null;
 let _courseSchedule = null;
+let _sequelize = null;
 
 module.exports = class ProfessorService extends BaseService {
   constructor({
@@ -27,6 +28,7 @@ module.exports = class ProfessorService extends BaseService {
     Attendance,
     UserService,
     CourseSchedule,
+    Sequelize,
   }) {
     super(Professor);
     _user = User.User;
@@ -35,6 +37,7 @@ module.exports = class ProfessorService extends BaseService {
     _student = Student.Student;
     _courseSchedule = CourseSchedule.CourseSchedule;
     _attendance = Attendance.Attendance;
+    _sequelize = Sequelize;
 
     _userService = UserService;
   }
@@ -580,176 +583,158 @@ module.exports = class ProfessorService extends BaseService {
 
     const professors = await _professor.findAll({
       where: {status: STATUS.ACTIVE},
-      include: [
-        {
-          model: _user,
-          as: 'user',
-          attributes: ['id', 'name', 'email'],
-          where: { status: STATUS.ACTIVE }
-        },
-        {
-          model: _course,
-          as: 'courses',
-          where: {status: STATUS.ACTIVE},
-          include: [
-            {
-              model: _student,
-              as: 'students',
-              through: {
-                attributes: [],
-                where: {
-                  is_retired: false
-                }
-              },
-              include: [{
-                model: _user,
-                as: 'user',
-                where: { status: STATUS.ACTIVE }
-              }]
-            },
-            {
-              model: _courseSchedule,
-              as: 'course_schedules',
-              include: [{model: _attendance}],
-            },
-          ],
-        },
-      ],
+      attributes: ['id', 'user_id'],
+      include: [{
+        model: _user,
+        as: 'user',
+        attributes: ['id', 'name', 'email'],
+        where: {status: STATUS.ACTIVE},
+        required: true,
+      }],
+      order: [['id', 'ASC']],
     });
 
-    if (!professors || professors.length === 0) {
-      return {data: {professors: []}};
+    if (!professors.length) return {data: {professors: []}};
+    const professorIds = professors.map((p) => p.id);
+
+    const courses = await _course.findAll({
+      where: {professor_id: {[Op.in]: professorIds}, status: STATUS.ACTIVE},
+      attributes: ['id', 'professor_id', 'course_name', 'course_number', 'schedule', 'start_date'],
+      raw: true,
+    });
+    const courseIds = courses.map((c) => c.id);
+
+    if (!courseIds.length) {
+      return {
+        data: {
+          professors: professors.map((p) => ({
+            professor_id: p.id,
+            professor_name: p.user.name,
+            total_courses: 0,
+            total_students: 0,
+            courses: [],
+          })),
+        },
+      };
     }
 
-    const professorsWithCourseDetails = professors.map((prof) => {
-      const currentProfessor = prof.toJSON();
-      
-      const activeCourses = currentProfessor.courses.filter((course) => {
-        const courseDates = course.course_schedules.map(
-          (schedule) => new Date(schedule.scheduled_date + 'T00:00:00')
-        );
-        const lastCourseDate = courseDates.length
-          ? new Date(Math.max(...courseDates.map((date) => date.getTime())))
-          : null;
-        
-        return !lastCourseDate || lastCourseDate >= now;
-      });
-      
-      const coursesWithDetails = activeCourses.map((course) => {
-        const schedule = course.schedule
-          ? scheduleStringToDates(course.schedule)
-          : null;
+    const scheduleAgg = await _sequelize.query(`
+      SELECT
+        cs.course_id,
+        MIN(cs.scheduled_date) AS first_date,
+        MAX(cs.scheduled_date) AS last_date,
+        MAX(CASE WHEN cs.scheduled_date = :today THEN 1 ELSE 0 END) AS has_today,
+        MAX(CASE WHEN cs.scheduled_date = :today AND EXISTS
+              (SELECT 1 FROM attendance a WHERE a.course_schedule_id = cs.id) THEN 1 ELSE 0 END) AS has_today_att
+      FROM course_schedule cs
+      WHERE cs.course_id IN (:courseIds)
+      GROUP BY cs.course_id
+    `, {replacements: {courseIds, today}, type: _sequelize.QueryTypes.SELECT});
 
-        const hasClassToday = course.course_schedules.some(
-          (schedule) => schedule.scheduled_date === today
-        );
+    const studentCountAgg = await _sequelize.query(`
+      SELECT cs.course_id, COUNT(DISTINCT cs.student_id) AS student_count
+      FROM course_student cs
+      INNER JOIN student s ON s.id = cs.student_id
+      INNER JOIN user u    ON u.id = s.user_id
+      WHERE cs.course_id IN (:courseIds)
+        AND cs.is_retired = false
+        AND u.status = :active
+      GROUP BY cs.course_id
+    `, {replacements: {courseIds, active: STATUS.ACTIVE}, type: _sequelize.QueryTypes.SELECT});
 
-        const hasBeenTakenAttendance = course.course_schedules.some(
-          (schedule) =>
-            schedule.scheduled_date === today && schedule.attendances.length > 0
-        );
+    const schedByCourse = {};
+    for (const row of scheduleAgg) schedByCourse[row.course_id] = row;
+    const countByCourse = {};
+    for (const row of studentCountAgg) countByCourse[row.course_id] = Number(row.student_count);
 
-        const courseDates = course.course_schedules.map(
-          (schedule) => new Date(schedule.scheduled_date)
-        );
+    const coursesByProf = {};
+    for (const c of courses) {
+      const sched = schedByCourse[c.id] || {};
+      const lastCourseDate = sched.last_date ? new Date(sched.last_date + 'T00:00:00') : null;
+      const firstCourseDate = sched.first_date ? new Date(sched.first_date + 'T00:00:00') : null;
 
-        const lastCourseDate = courseDates.length
-          ? new Date(Math.max(...courseDates.map((date) => date.getTime())))
-          : null;
+      if (lastCourseDate && lastCourseDate < now) continue;
 
-        const firstCourseDate = courseDates.length
-          ? new Date(Math.min(...courseDates.map((date) => date.getTime())))
-          : null;
+      const courseStartDate = c.start_date
+        ? new Date(c.start_date + 'T00:00:00')
+        : firstCourseDate;
+      const schedule = c.schedule ? scheduleStringToDates(c.schedule) : null;
+      const studentCount = countByCourse[c.id] || 0;
+      const hasClassTodayFlag = !!sched.has_today;
+      const hasAttendanceTodayFlag = !!sched.has_today_att;
 
-        const courseStartDate = course.start_date
-          ? new Date(course.start_date + 'T00:00:00')
-          : firstCourseDate;
+      let endThisMonth = false;
+      if (lastCourseDate) {
+        endThisMonth =
+          lastCourseDate.getMonth() + 1 === now.getMonth() + 1 &&
+          lastCourseDate.getFullYear() === now.getFullYear();
+      }
 
-        let endThisMonth = false;
-        if (lastCourseDate) {
-          const lastMonthClass = lastCourseDate.getMonth() + 1;
-          const yearLastClass = lastCourseDate.getFullYear();
-          endThisMonth =
-            lastMonthClass === now.getMonth() + 1 &&
-            yearLastClass === now.getFullYear();
+      let endsInTwoWeeks = false;
+      if (lastCourseDate) {
+        const t = lastCourseDate.getTime();
+        endsInTwoWeeks = t <= twoWeeksFromNow.getTime() && t >= now.getTime();
+      }
+
+      let startsInTwoWeeks = false;
+      if (courseStartDate) {
+        const t = courseStartDate.getTime();
+        startsInTwoWeeks = t <= twoWeeksFromNow.getTime() && t >= now.getTime();
+      }
+
+      let hasBeenTakenAttendance = false;
+      if (hasClassTodayFlag) {
+        if (hasAttendanceTodayFlag) {
+          hasBeenTakenAttendance = true;
+        } else {
+          const currentHour = now.getHours();
+          const currentMinutes = now.getMinutes();
+          const todaySchedule = schedule
+            ? schedule.find((s) => DAYS_OF_WEEK[s.day.toUpperCase()] === now.getDay())
+            : null;
+          if (!todaySchedule) {
+            hasBeenTakenAttendance = true;
+          } else {
+            const [startHour, startMinutes] = todaySchedule.startTime.split(':').map(Number);
+            const isPastStartTime =
+              currentHour > startHour ||
+              (currentHour === startHour && currentMinutes >= startMinutes);
+            hasBeenTakenAttendance = !isPastStartTime;
+          }
         }
+      }
 
-        let endsInTwoWeeks = false;
-        if (lastCourseDate) {
-          const lastCourseDateTime = lastCourseDate.getTime();
-          endsInTwoWeeks =
-            lastCourseDateTime <= twoWeeksFromNow.getTime() &&
-            lastCourseDateTime >= now.getTime();
-        }
+      const courseObj = {
+        course_id: c.id,
+        course_name: c.course_name,
+        course_number: c.course_number,
+        student_count: studentCount,
+        classSchedule: c.schedule,
+        schedule,
+        start_date: courseStartDate ? courseStartDate.toISOString().split('T')[0] : null,
+        end_date: lastCourseDate ? lastCourseDate.toISOString().split('T')[0] : null,
+        options: {
+          hasClassToday: hasClassTodayFlag,
+          hasBeenTakenAttendance: hasClassTodayFlag ? hasBeenTakenAttendance : false,
+          endThisMonth,
+          endsInTwoWeeks,
+          startsInTwoWeeks,
+          isAlreadyEnd: lastCourseDate && lastCourseDate < now,
+        },
+      };
 
-        let startsInTwoWeeks = false;
-        if (courseStartDate) {
-          const courseStartDateTime = courseStartDate.getTime();
-          startsInTwoWeeks =
-            courseStartDateTime <= twoWeeksFromNow.getTime() &&
-            courseStartDateTime >= now.getTime();
-        }
+      if (!coursesByProf[c.professor_id]) coursesByProf[c.professor_id] = [];
+      coursesByProf[c.professor_id].push(courseObj);
+    }
 
-        return {
-          course_id: course.id,
-          course_name: course.course_name,
-          course_number: course.course_number,
-          student_count: course.students.length,
-          classSchedule: course.schedule,
-          schedule,
-          start_date: courseStartDate ? courseStartDate.toISOString().split('T')[0] : null,
-          end_date: lastCourseDate ? lastCourseDate.toISOString().split('T')[0] : null,
-          options: {
-            hasClassToday,
-            hasBeenTakenAttendance: hasClassToday
-              ? (() => {
-                  if (hasBeenTakenAttendance) {
-                    return true;
-                  }
-                  const currentHour = now.getHours();
-                  const currentMinutes = now.getMinutes();
-                  const todaySchedule = schedule
-                    ? schedule.find((s) => {
-                        const dayOfWeek = now.getDay();
-                        return DAYS_OF_WEEK[s.day.toUpperCase()] === dayOfWeek;
-                      })
-                    : null;
-                  if (!todaySchedule) {
-                    return true;
-                  }
-                  const [startHour, startMinutes] = todaySchedule.startTime
-                    .split(':')
-                    .map(Number);
-                  const isPastStartTime =
-                    currentHour > startHour ||
-                    (currentHour === startHour &&
-                      currentMinutes >= startMinutes);
-                  return !isPastStartTime;
-                })()
-              : false,
-            endThisMonth,
-            endsInTwoWeeks,
-            startsInTwoWeeks,
-            isAlreadyEnd: lastCourseDate && lastCourseDate < now,
-          },
-        };
-      });
-
-      const totalCourses = activeCourses.length;
-      const totalStudents = activeCourses.reduce(
-        (acc, course) => acc + course.students.filter(student => 
-          !student.courseStudent?.is_retired && 
-          student.user?.status === STATUS.ACTIVE
-        ).length,
-        0
-      );
-
+    const professorsWithCourseDetails = professors.map((p) => {
+      const profCourses = coursesByProf[p.id] || [];
       return {
-        professor_id: currentProfessor.id,
-        professor_name: currentProfessor.user.name,
-        total_courses: totalCourses,
-        total_students: totalStudents,
-        courses: coursesWithDetails,
+        professor_id: p.id,
+        professor_name: p.user.name,
+        total_courses: profCourses.length,
+        total_students: profCourses.reduce((s, c) => s + c.student_count, 0),
+        courses: profCourses,
       };
     });
 

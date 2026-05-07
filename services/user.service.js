@@ -5,6 +5,7 @@ const {deleteFile} = require('../utils/upload');
 const {validateParameters, validateEmailFormat} = require('../utils/utils');
 const catchServiceAsync = require('../utils/catch-service-async');
 const {USER_TYPES, ERROR_MESSAGES} = require('../utils/constants');
+const cache = require('../utils/cache');
 let _user = null;
 let _course = null;
 let _authUtils = null;
@@ -418,6 +419,8 @@ module.exports = class UserService extends BaseService {
       attributes: {exclude: ['password']},
     });
 
+    cache.del('authUser', Number(id));
+
     return {data: updatedUser ? updatedUser.get({ plain: true }) : null};
   });
 
@@ -425,6 +428,7 @@ module.exports = class UserService extends BaseService {
     const {status} = body;
     validateParameters({id, status});
     const user = await _user.update({status}, {where: {id}});
+    cache.del('authUser', Number(id));
     return {data: user};
   });
 
