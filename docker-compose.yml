@@ -1,0 +1,12 @@
+services:
+  backend:
+    build: .
+    container_name: brighton-backend
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      PORT: 3000
+    ports:
+      - "3013:3000"
+    volumes:
+      - ./uploads:/app/uploads
