@@ -10,7 +10,6 @@ ENV NODE_ENV=production
 # RUN apk add --no-cache vips-dev
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
-RUN mkdir -p uploads && chown -R node:node /app
-USER node
+RUN mkdir -p uploads
 EXPOSE 3000
 CMD ["node", "index.js"]
