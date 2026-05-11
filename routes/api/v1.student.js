@@ -1,5 +1,8 @@
 const { Router } = require('express');
-const { requirePermissions } = require('../../middleware/teacherMiddleware');
+const {
+  requirePermissions,
+  requireAnyPermissions,
+} = require('../../middleware/teacherMiddleware');
 const { PERMISSIONS } = require('../../utils/permissions');
 module.exports = function ({ StudentController, AuthMiddleware }) {
   const router = Router();
@@ -43,7 +46,13 @@ module.exports = function ({ StudentController, AuthMiddleware }) {
   );
   router.put(
     '/reactivate-in-course',
-    [AuthMiddleware, requirePermissions(PERMISSIONS.EDIT_GRADES)],
+    [
+      AuthMiddleware,
+      requireAnyPermissions(
+        PERMISSIONS.EDIT_GRADES,
+        PERMISSIONS.TOGGLE_STUDENT_STATUS
+      ),
+    ],
     StudentController.reactivateStudentsInCourse
   );
   router.delete(
