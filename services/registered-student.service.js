@@ -80,6 +80,7 @@ module.exports = class RegisteredStudentService extends BaseService {
         billing_address: student.billing_address,
         where_hear_about_us: student.where_hear_about_us,
         schedule: student.schedule,
+        course_type: student.course_type,
       };
     });
 
@@ -135,6 +136,7 @@ module.exports = class RegisteredStudentService extends BaseService {
         billing_address: studentTransfer.billing_address,
         schedule: studentTransfer.schedule,
         where_hear_about_us: studentTransfer.where_hear_about_us,
+        course_type: studentTransfer.course_type,
       },
     };
   });
@@ -154,11 +156,9 @@ module.exports = class RegisteredStudentService extends BaseService {
       emergency_contact_relationship,
       age_category,
       level_id,
-      same_billing,
-      billing_address,
-      where_hear_about_us,
       birthday,
       schedule,
+      course_type,
     } = body;
 
     const normalizedIdNumber = id_number?.trim();
@@ -176,6 +176,7 @@ module.exports = class RegisteredStudentService extends BaseService {
       level_id,
       birthday,
       schedule,
+      course_type,
     };
 
     if (age_category === AGE_CATEGORY.KIDS) {
@@ -218,26 +219,24 @@ module.exports = class RegisteredStudentService extends BaseService {
       emergency_contact_relationship,
       age_category,
       level_id,
-      same_billing,
-      billing_address,
       birthday,
       schedule,
-      where_hear_about_us,
+      course_type,
     });
 
-    await sendEmail({
-      subject: 'Student Registration',
-      text: `A Student has been registered with the following details: 
-      \nName: ${first_name} ${middle_name} ${last_name} ${second_last_name}, ID: ${id_number}, 
-      Birthday: ${birthday}, Schedule: ${schedule},
-      \nPhone: ${phone_number}, Email: ${email}, Address: ${address} 
-      \nEmergency Contact: ${emergency_contact_name}, Phone: ${emergency_contact_phone}, Relationship: ${emergency_contact_relationship}
-      \nAge Category: ${age_category}, Level ID: ${level_id},
-      \nSame Billing: ${same_billing}, Billing Address ${
-        same_billing === 'yes' ? address : billing_address
-      },
-      \nWhere did you hear about us: ${where_hear_about_us}`,
-    });
+    try {
+      await sendEmail({
+        subject: 'Student Registration',
+        text: `A Student has been registered with the following details:
+        \nName: ${first_name} ${middle_name} ${last_name} ${second_last_name}, ID: ${id_number},
+        Birthday: ${birthday}, Schedule: ${schedule}, Modality: ${course_type},
+        \nPhone: ${phone_number}, Email: ${email}, Address: ${address}
+        \nEmergency Contact: ${emergency_contact_name}, Phone: ${emergency_contact_phone}, Relationship: ${emergency_contact_relationship}
+        \nAge Category: ${age_category}, Level ID: ${level_id}`,
+      });
+    } catch (emailError) {
+      console.error('Student registered but notification email failed:', emailError.message);
+    }
 
     return { data: student };
   });

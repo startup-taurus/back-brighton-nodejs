@@ -32,6 +32,10 @@ module.exports = class StudentModel {
             key: 'id',
           },
         },
+        course_type: {
+          type: DataTypes.STRING(32),
+          allowNull: true,
+        },
         profession: {
           type: DataTypes.STRING,
         },

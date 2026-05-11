@@ -378,10 +378,11 @@ module.exports = class StudentService extends BaseService {
       age_category,
       birth_date,
       phone_number,
+      course_type,
     } = body;
 
     const normalizedCedula = normalizeCedula(cedula);
-    
+
     validateParameters({
       name,
       cedula: normalizedCedula,
@@ -404,6 +405,7 @@ module.exports = class StudentService extends BaseService {
       cedula: normalizedCedula,
       profession,
       level_id,
+      course_type,
       status,
       book_given,
       age_category,

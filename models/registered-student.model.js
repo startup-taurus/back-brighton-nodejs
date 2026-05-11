@@ -80,6 +80,10 @@ module.exports = class RegisteredStudent {
           type: DataTypes.TEXT,
           allowNull: true,
         },
+        course_type: {
+          type: DataTypes.STRING(32),
+          allowNull: true,
+        },
         same_billing: {
           type: DataTypes.TEXT,
           allowNull: true,

@@ -352,6 +352,7 @@ module.exports = class AttendanceService extends BaseService {
 
       if (currentStreak >= ATTENDANCE_THRESHOLDS.MIN_CONSECUTIVE_ABSENCES) {
         consecutiveAbsencesReport.push({
+          course_id: studentCourse.courseId,
           course_code: studentCourse.courseCode,
           course_name: studentCourse.courseName,
           student_name: studentCourse.studentName,
