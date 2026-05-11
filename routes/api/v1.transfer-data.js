@@ -12,9 +12,16 @@ module.exports = function ({ TransferDataController, AuthMiddleware }) {
   router.post('/create', TransferDataController.createTransferData);
   router.put(
     '/approve/:transferDataId',
+    AuthMiddleware,
+    requirePermissions(PERMISSIONS.APPROVE_TRANSFER),
     TransferDataController.approveTransfer
   );
-  router.put('/reject/:transferDataId', TransferDataController.rejectTransfer);
+  router.put(
+    '/reject/:transferDataId',
+    AuthMiddleware,
+    requirePermissions(PERMISSIONS.REJECT_TRANSFER),
+    TransferDataController.rejectTransfer
+  );
   router.put('/update/:id', TransferDataController.updateTransferData);
   router.put('/update-status/:id', TransferDataController.updateTransferStatus);
   router.delete('/delete/:id', TransferDataController.deleteTransferData);

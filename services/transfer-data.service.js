@@ -410,7 +410,8 @@ module.exports = class TransferDataService extends BaseService {
       }
 
       await transaction.commit();
-      return this.getTransferData(newTD.id);
+      const created = await this.getTransferData(newTD.id);
+      return { data: created };
     } catch (err) {
       await transaction.rollback();
       throw err;

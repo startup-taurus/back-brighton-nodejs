@@ -158,23 +158,25 @@ module.exports = class PermissionsService extends BaseService {
       const existing = await _permission.findAll({ attributes: ['id', 'identifier'], transaction });
       const existsMap = new Set(existing.map(e => e.identifier));
 
-      const operations = identifiers.map(identifier => {
+      const toCreate = [];
+      for (const identifier of identifiers) {
         const module_id = getModuleId(identifier);
         const name = toTitle(identifier);
-        
+
         if (existsMap.has(identifier)) {
-          return _permission.update(
+          await _permission.update(
             { name, module_id, status: 1, updated_at: now },
             { where: { identifier }, transaction }
           );
+        } else {
+          toCreate.push({ name, module_id, identifier, description: null, status: 1 });
         }
-        return _permission.create(
-          { name, module_id, identifier, description: null, status: 1 },
-          { transaction }
-        );
-      });
+      }
 
-      await Promise.all(operations);
+      if (toCreate.length > 0) {
+        await _permission.bulkCreate(toCreate, { transaction });
+      }
+
       cache.reset('authPerms');
       return { data: identifiers.length, message: 'Permissions synced successfully' };
     });
