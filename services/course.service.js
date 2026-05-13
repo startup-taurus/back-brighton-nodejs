@@ -1040,7 +1040,7 @@ module.exports = class CourseService extends BaseService {
       deactivateStatus 
     });
 
-    const validDeactivateStatuses = [STATUS.INACTIVE, STATUS.COMPLETED];
+    const validDeactivateStatuses = [STATUS.INACTIVE];
     if (!validDeactivateStatuses.includes(deactivateStatus)) {
       throw new AppError(`Invalid deactivate status. Allowed: ${validDeactivateStatuses.join(', ')}`, 400);
     }
@@ -1071,7 +1071,7 @@ module.exports = class CourseService extends BaseService {
         },
         new_course: createResult.data,
       },
-      message: `Course ${existingCourse.course_name} has been ${deactivateStatus === STATUS.COMPLETED ? 'completed' : 'deactivated'}. New course created successfully.`,
+      message: `Course ${existingCourse.course_name} has been deactivated. New course created successfully.`,
     };
   });
 };
