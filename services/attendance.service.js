@@ -371,8 +371,23 @@ module.exports = class AttendanceService extends BaseService {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
+    const ongoingCourses = await _courseSchedule.findAll({
+      where: { scheduled_date: { [Op.gte]: today } },
+      attributes: ['course_id'],
+      group: ['course_id'],
+      raw: true,
+    });
+    const ongoingCourseIds = ongoingCourses.map((row) => Number(row.course_id));
+
+    if (ongoingCourseIds.length === 0) {
+      return { data: [] };
+    }
+
     const schedules = await _courseSchedule.findAll({
-      where: { scheduled_date: { [Op.lt]: today } },
+      where: {
+        scheduled_date: { [Op.lt]: today },
+        course_id: { [Op.in]: ongoingCourseIds },
+      },
       attributes: ['id', 'course_id', 'scheduled_date'],
       include: [
         {
