@@ -13,6 +13,7 @@ let _courseSchedule = null;
 let _courseService = null;
 let _courseScheduleService = null;
 let _courseStudent = null;
+let _professor = null;
 
 module.exports = class AttendanceService extends BaseService {
   constructor({
@@ -24,6 +25,7 @@ module.exports = class AttendanceService extends BaseService {
     CourseService,
     CourseScheduleService,
     CourseStudent,
+    Professor,
   }) {
     super(Attendance);
     _user = User.User;
@@ -34,6 +36,7 @@ module.exports = class AttendanceService extends BaseService {
     _courseService = CourseService;
     _courseScheduleService = CourseScheduleService;
     _courseStudent = CourseStudent.CourseStudent;
+    _professor = Professor.Professor;
   }
 
   initializeAttendanceStructure = (
@@ -362,5 +365,138 @@ module.exports = class AttendanceService extends BaseService {
     });
 
     return { data: consecutiveAbsencesReport };
+  });
+
+  getUntakenAttendanceReport = catchServiceAsync(async () => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const schedules = await _courseSchedule.findAll({
+      where: { scheduled_date: { [Op.lt]: today } },
+      attributes: ['id', 'course_id', 'scheduled_date'],
+      include: [
+        {
+          model: _course,
+          as: 'course',
+          required: true,
+          where: {
+            status: 'active',
+            course_type: {
+              [Op.notIn]: [COURSE_TYPES.PRIVATE, COURSE_TYPES.PRIVATE_ONLINE],
+            },
+          },
+          attributes: ['id', 'course_name', 'course_number', 'professor_id'],
+          include: [
+            {
+              model: _professor,
+              as: 'professor',
+              required: true,
+              attributes: ['id', 'user_id'],
+              include: [
+                {
+                  model: _user,
+                  as: 'user',
+                  required: true,
+                  attributes: ['name'],
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    });
+
+    if (!schedules || schedules.length === 0) {
+      return { data: [] };
+    }
+
+    const scheduleIds = schedules.map((schedule) => schedule.id);
+    const courseIds = [...new Set(schedules.map((schedule) => schedule.course_id))];
+
+    const attendances = await _attendance.findAll({
+      where: { course_schedule_id: { [Op.in]: scheduleIds } },
+      attributes: ['course_schedule_id', 'student_id', 'status'],
+      raw: true,
+    });
+
+    const enrollments = await _courseStudent.findAll({
+      where: {
+        course_id: { [Op.in]: courseIds },
+        is_retired: false,
+      },
+      attributes: ['course_id', 'student_id'],
+      include: [
+        {
+          model: _student,
+          required: true,
+          where: { status: 'active' },
+          attributes: ['id'],
+        },
+      ],
+    });
+
+    const activeStudentsByCourse = new Map();
+    enrollments.forEach((enrollment) => {
+      const courseId = Number(enrollment.course_id);
+      if (!activeStudentsByCourse.has(courseId)) {
+        activeStudentsByCourse.set(courseId, new Set());
+      }
+      activeStudentsByCourse.get(courseId).add(Number(enrollment.student_id));
+    });
+
+    const markedByScheduleAndStudent = new Map();
+    attendances.forEach((attendance) => {
+      const status = String(attendance.status || '').trim();
+      if (status === '') return;
+      const scheduleKey = Number(attendance.course_schedule_id);
+      if (!markedByScheduleAndStudent.has(scheduleKey)) {
+        markedByScheduleAndStudent.set(scheduleKey, new Set());
+      }
+      markedByScheduleAndStudent.get(scheduleKey).add(Number(attendance.student_id));
+    });
+
+    const courseReport = new Map();
+
+    schedules.forEach((schedule) => {
+      const courseId = Number(schedule.course_id);
+      const expectedActive = activeStudentsByCourse.get(courseId);
+
+      if (!expectedActive || expectedActive.size === 0) {
+        return;
+      }
+
+      const markedStudents = markedByScheduleAndStudent.get(Number(schedule.id)) || new Set();
+
+      let missingMark = false;
+      for (const studentId of expectedActive) {
+        if (!markedStudents.has(studentId)) {
+          missingMark = true;
+          break;
+        }
+      }
+
+      if (!missingMark) return;
+
+      const course = schedule.course;
+      const professor = course?.professor;
+      const professorUser = professor?.user;
+
+      if (!professor || !professorUser) return;
+
+      if (!courseReport.has(courseId)) {
+        courseReport.set(courseId, {
+          course_id: courseId,
+          course_code: course.course_number,
+          course_name: course.course_name,
+          professor_name: professorUser.name,
+          untaken_classes_count: 0,
+        });
+      }
+
+      const entry = courseReport.get(courseId);
+      entry.untaken_classes_count += 1;
+    });
+
+    return { data: Array.from(courseReport.values()) };
   });
 };

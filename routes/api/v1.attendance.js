@@ -18,5 +18,6 @@ module.exports = function ({ AttendanceController, AuthMiddleware }) {
     AttendanceController.createAttendance
   );
   router.get('/consecutive-absences-report', AttendanceController.getConsecutiveAbsencesReport);
+  router.get('/untaken-attendance-report', AttendanceController.getUntakenAttendanceReport);
   return router;
 };
