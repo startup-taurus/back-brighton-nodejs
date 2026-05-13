@@ -874,6 +874,31 @@ module.exports = class CourseService extends BaseService {
   updateCourseStatus = catchServiceAsync(async (id, body) => {
     const { status } = body;
     validateParameters({ id, status });
+
+    if (status === STATUS.ACTIVE) {
+      const current = await _course.findByPk(id, {
+        attributes: ['course_number'],
+        raw: true,
+      });
+      if (current) {
+        const conflict = await _course.findOne({
+          where: {
+            status: STATUS.ACTIVE,
+            course_number: current.course_number,
+            id: { [Op.ne]: id },
+          },
+          attributes: ['id', 'course_number', 'course_name'],
+          raw: true,
+        });
+        if (conflict) {
+          throw new AppError(
+            `Cannot activate: course number ${current.course_number} is already used by another active course (${conflict.course_name}).`,
+            400
+          );
+        }
+      }
+    }
+
     const course = await _course.update({ status }, { where: { id } });
     return { data: course };
   });
