@@ -5,6 +5,8 @@ const catchServiceAsync = require('../utils/catch-service-async');
 const { COURSE_TYPES, ATTENDANCE_THRESHOLDS } = require('../utils/constants');
 const { validateParameters, countAttendance } = require('../utils/utils');
 
+const ALLOWED_ATTENDANCE_STATUSES = ['present', 'absent', 'late', 'recovered'];
+
 let _user = null;
 let _course = null;
 let _student = null;
@@ -153,26 +155,28 @@ module.exports = class AttendanceService extends BaseService {
       student_id,
     });
 
-    const attendance = await _attendance.findOne({
-      where: {
-        course_schedule_id,
-        student_id,
-      },
-    });
-
-    let currentAttendance;
-
-    if (!attendance) {
-      currentAttendance = await _attendance.create({
-        course_schedule_id,
-        student_id,
-        status,
-      });
-    } else {
-      currentAttendance = await attendance.update({
-        status,
-      });
+    if (!ALLOWED_ATTENDANCE_STATUSES.includes(status)) {
+      throw new AppError(
+        `Invalid attendance status: "${status}". Allowed values: ${ALLOWED_ATTENDANCE_STATUSES.join(', ')}`,
+        400
+      );
     }
+
+    const sequelize = _attendance.sequelize;
+
+    const currentAttendance = await sequelize.transaction(async (transaction) => {
+      const [record, created] = await _attendance.findOrCreate({
+        where: { course_schedule_id, student_id },
+        defaults: { course_schedule_id, student_id, status },
+        transaction,
+      });
+
+      if (!created && record.status !== status) {
+        await record.update({ status }, { transaction });
+      }
+
+      return record;
+    });
 
     return { data: currentAttendance };
   });
