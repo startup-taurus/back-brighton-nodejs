@@ -372,162 +372,75 @@ module.exports = class AttendanceService extends BaseService {
   });
 
   getUntakenAttendanceReport = catchServiceAsync(async () => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    const sequelize = _course.sequelize;
 
-    const ongoingCourses = await _courseSchedule.findAll({
-      where: { scheduled_date: { [Op.gte]: today } },
-      attributes: ['course_id'],
-      group: ['course_id'],
-      raw: true,
-    });
-    const ongoingCourseIds = ongoingCourses.map((row) => Number(row.course_id));
-
-    if (ongoingCourseIds.length === 0) {
-      return { data: [] };
-    }
-
-    const schedules = await _courseSchedule.findAll({
-      where: {
-        scheduled_date: { [Op.lt]: today },
-        course_id: { [Op.in]: ongoingCourseIds },
-      },
-      attributes: ['id', 'course_id', 'scheduled_date'],
-      include: [
-        {
-          model: _course,
-          as: 'course',
-          required: true,
-          where: {
-            status: 'active',
-            course_type: {
-              [Op.notIn]: [COURSE_TYPES.PRIVATE, COURSE_TYPES.PRIVATE_ONLINE],
-            },
-          },
-          attributes: ['id', 'course_name', 'course_number', 'professor_id'],
-          include: [
-            {
-              model: _professor,
-              as: 'professor',
-              required: true,
-              attributes: ['id', 'user_id'],
-              include: [
-                {
-                  model: _user,
-                  as: 'user',
-                  required: true,
-                  attributes: ['name'],
-                },
-              ],
-            },
-          ],
+    const rows = await sequelize.query(
+      `SELECT
+         c.id AS course_id,
+         c.course_number AS course_code,
+         c.course_name,
+         prof_user.name AS professor_name,
+         COUNT(DISTINCT CONCAT(csch.id, '-', cs.student_id)) AS untaken_classes_count
+       FROM course c
+       INNER JOIN professor p ON p.id = c.professor_id
+       INNER JOIN user prof_user ON prof_user.id = p.user_id
+       INNER JOIN course_schedule csch
+         ON csch.course_id = c.id
+         AND csch.scheduled_date < CURDATE()
+       INNER JOIN course_student cs
+         ON cs.course_id = c.id
+         AND cs.is_retired = 0
+         AND cs.enrollment_date <= csch.scheduled_date
+         AND NOT EXISTS (
+           SELECT 1 FROM course_student cs_retired
+           WHERE cs_retired.course_id = cs.course_id
+             AND cs_retired.student_id = cs.student_id
+             AND cs_retired.is_retired = 1
+         )
+       INNER JOIN student s
+         ON s.id = cs.student_id
+         AND s.status <> 'inactive'
+       INNER JOIN user stu_user
+         ON stu_user.id = s.user_id
+         AND stu_user.isActive = 1
+       WHERE c.status = 'active'
+         AND c.course_type NOT IN (:privateType, :privateOnlineType)
+         AND EXISTS (
+           SELECT 1 FROM course_schedule csch_f
+           WHERE csch_f.course_id = c.id
+             AND csch_f.scheduled_date >= CURDATE()
+         )
+         AND NOT EXISTS (
+           SELECT 1 FROM cancelled_lesson cl
+           WHERE cl.course_id = c.id
+             AND DATE(cl.cancel_date) = DATE(csch.scheduled_date)
+         )
+         AND NOT EXISTS (
+           SELECT 1 FROM attendance a
+           WHERE a.course_schedule_id = csch.id
+             AND a.student_id = cs.student_id
+             AND a.status IS NOT NULL AND a.status <> ''
+         )
+       GROUP BY c.id, c.course_number, c.course_name, prof_user.name
+       HAVING untaken_classes_count > 0
+       ORDER BY untaken_classes_count DESC`,
+      {
+        type: sequelize.QueryTypes.SELECT,
+        replacements: {
+          privateType: COURSE_TYPES.PRIVATE,
+          privateOnlineType: COURSE_TYPES.PRIVATE_ONLINE,
         },
-      ],
-    });
-
-    if (!schedules || schedules.length === 0) {
-      return { data: [] };
-    }
-
-    const scheduleIds = schedules.map((schedule) => schedule.id);
-    const courseIds = [...new Set(schedules.map((schedule) => schedule.course_id))];
-
-    const attendances = await _attendance.findAll({
-      where: { course_schedule_id: { [Op.in]: scheduleIds } },
-      attributes: ['course_schedule_id', 'student_id', 'status'],
-      raw: true,
-    });
-
-    const enrollments = await _courseStudent.findAll({
-      where: {
-        course_id: { [Op.in]: courseIds },
-        is_retired: false,
-      },
-      attributes: ['course_id', 'student_id', 'enrollment_date'],
-      include: [
-        {
-          model: _student,
-          required: true,
-          where: { status: 'active' },
-          attributes: ['id'],
-        },
-      ],
-    });
-
-    const activeStudentsByCourse = new Map();
-    enrollments.forEach((enrollment) => {
-      const courseId = Number(enrollment.course_id);
-      const studentId = Number(enrollment.student_id);
-      const enrollmentDate = new Date(enrollment.enrollment_date);
-      enrollmentDate.setHours(0, 0, 0, 0);
-
-      if (!activeStudentsByCourse.has(courseId)) {
-        activeStudentsByCourse.set(courseId, new Map());
       }
-      activeStudentsByCourse.get(courseId).set(studentId, enrollmentDate.getTime());
-    });
+    );
 
-    const markedByScheduleAndStudent = new Map();
-    attendances.forEach((attendance) => {
-      const status = String(attendance.status || '').trim();
-      if (status === '') return;
-      const scheduleKey = Number(attendance.course_schedule_id);
-      if (!markedByScheduleAndStudent.has(scheduleKey)) {
-        markedByScheduleAndStudent.set(scheduleKey, new Set());
-      }
-      markedByScheduleAndStudent.get(scheduleKey).add(Number(attendance.student_id));
-    });
-
-    const courseReport = new Map();
-
-    schedules.forEach((schedule) => {
-      const courseId = Number(schedule.course_id);
-      const expectedActiveMap = activeStudentsByCourse.get(courseId);
-
-      if (!expectedActiveMap || expectedActiveMap.size === 0) {
-        return;
-      }
-
-      const scheduleDate = new Date(schedule.scheduled_date);
-      scheduleDate.setHours(0, 0, 0, 0);
-      const scheduleDateMs = scheduleDate.getTime();
-
-      const markedStudents = markedByScheduleAndStudent.get(Number(schedule.id)) || new Set();
-
-      let missingMark = false;
-      let anyEligible = false;
-      for (const [studentId, enrollmentDateMs] of expectedActiveMap) {
-        if (enrollmentDateMs > scheduleDateMs) continue;
-        anyEligible = true;
-        if (!markedStudents.has(studentId)) {
-          missingMark = true;
-          break;
-        }
-      }
-
-      if (!anyEligible) return;
-      if (!missingMark) return;
-
-      const course = schedule.course;
-      const professor = course?.professor;
-      const professorUser = professor?.user;
-
-      if (!professor || !professorUser) return;
-
-      if (!courseReport.has(courseId)) {
-        courseReport.set(courseId, {
-          course_id: courseId,
-          course_code: course.course_number,
-          course_name: course.course_name,
-          professor_name: professorUser.name,
-          untaken_classes_count: 0,
-        });
-      }
-
-      const entry = courseReport.get(courseId);
-      entry.untaken_classes_count += 1;
-    });
-
-    return { data: Array.from(courseReport.values()) };
+    return {
+      data: rows.map((row) => ({
+        course_id: Number(row.course_id),
+        course_code: row.course_code,
+        course_name: row.course_name,
+        professor_name: row.professor_name,
+        untaken_classes_count: Number(row.untaken_classes_count),
+      })),
+    };
   });
 };
