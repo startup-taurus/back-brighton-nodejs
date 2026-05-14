@@ -443,7 +443,7 @@ module.exports = class AttendanceService extends BaseService {
         course_id: { [Op.in]: courseIds },
         is_retired: false,
       },
-      attributes: ['course_id', 'student_id'],
+      attributes: ['course_id', 'student_id', 'enrollment_date'],
       include: [
         {
           model: _student,
@@ -457,10 +457,14 @@ module.exports = class AttendanceService extends BaseService {
     const activeStudentsByCourse = new Map();
     enrollments.forEach((enrollment) => {
       const courseId = Number(enrollment.course_id);
+      const studentId = Number(enrollment.student_id);
+      const enrollmentDate = new Date(enrollment.enrollment_date);
+      enrollmentDate.setHours(0, 0, 0, 0);
+
       if (!activeStudentsByCourse.has(courseId)) {
-        activeStudentsByCourse.set(courseId, new Set());
+        activeStudentsByCourse.set(courseId, new Map());
       }
-      activeStudentsByCourse.get(courseId).add(Number(enrollment.student_id));
+      activeStudentsByCourse.get(courseId).set(studentId, enrollmentDate.getTime());
     });
 
     const markedByScheduleAndStudent = new Map();
@@ -478,22 +482,30 @@ module.exports = class AttendanceService extends BaseService {
 
     schedules.forEach((schedule) => {
       const courseId = Number(schedule.course_id);
-      const expectedActive = activeStudentsByCourse.get(courseId);
+      const expectedActiveMap = activeStudentsByCourse.get(courseId);
 
-      if (!expectedActive || expectedActive.size === 0) {
+      if (!expectedActiveMap || expectedActiveMap.size === 0) {
         return;
       }
+
+      const scheduleDate = new Date(schedule.scheduled_date);
+      scheduleDate.setHours(0, 0, 0, 0);
+      const scheduleDateMs = scheduleDate.getTime();
 
       const markedStudents = markedByScheduleAndStudent.get(Number(schedule.id)) || new Set();
 
       let missingMark = false;
-      for (const studentId of expectedActive) {
+      let anyEligible = false;
+      for (const [studentId, enrollmentDateMs] of expectedActiveMap) {
+        if (enrollmentDateMs > scheduleDateMs) continue;
+        anyEligible = true;
         if (!markedStudents.has(studentId)) {
           missingMark = true;
           break;
         }
       }
 
+      if (!anyEligible) return;
       if (!missingMark) return;
 
       const course = schedule.course;
